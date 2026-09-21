@@ -89,7 +89,10 @@ final class HealthKitBridge: ObservableObject {
         // Apple Health; NOOP surfaces them as daily aggregates (mean/min/max glucose, total daily
         // insulin, carbs) purely for informational trends. NEVER in quantityWriteIds: NOOP must never
         // author glucose/insulin/carb samples, and this display is not for treatment decisions.
-        .bloodGlucose, .insulinDelivery, .dietaryCarbohydrates
+        .bloodGlucose, .insulinDelivery, .dietaryCarbohydrates,
+        // Body / vitals extras useful to a diabetic athlete — READ-ONLY. Blood pressure, hydration
+        // and waist circumference; never written back.
+        .bloodPressureSystolic, .bloodPressureDiastolic, .dietaryWater, .waistCircumference
     ]
     private static let quantityWriteIds: [HKQuantityTypeIdentifier] = [
         .restingHeartRate, .heartRateVariabilitySDNN, .oxygenSaturation, .respiratoryRate
@@ -337,28 +340,44 @@ final class HealthKitBridge: ObservableObject {
             var a = agg(day); a.bmi = v; byDay[day] = a
         }
 
-        // Diabetes data — READ-ONLY daily aggregates (from an AID app like Loop writing into Health).
-        // Blood glucose is a discrete reading: mean is the headline (tracks GMI/estimated A1c), with
-        // daily low/high for context. Read in mg/dL — HealthKit converts on read, so the value is
-        // unit-unambiguous regardless of how the sample was stored. Insulin delivery and carbs are
-        // cumulative quantities, so the day's total is the natural aggregate (total daily insulin dose,
-        // total carbs). NOT for treatment decisions — Health lags the CGM/pump; see the header note.
-        let mgdL = HKUnit(from: "mg/dL")
-        await collect(.bloodGlucose, unit: mgdL, start: start, end: end, op: .discreteAverage) { day, v in
-            var a = agg(day); a.glucoseAvg = v; byDay[day] = a
-        }
-        await collect(.bloodGlucose, unit: mgdL, start: start, end: end, op: .discreteMin) { day, v in
-            var a = agg(day); a.glucoseMin = v; byDay[day] = a
-        }
-        await collect(.bloodGlucose, unit: mgdL, start: start, end: end, op: .discreteMax) { day, v in
-            var a = agg(day); a.glucoseMax = v; byDay[day] = a
-        }
+        // Diabetes & metabolic data — READ-ONLY (from an AID app like Loop writing into Health).
+        // Insulin delivery and carbs are cumulative quantities → the day's total is the natural
+        // aggregate (total daily insulin dose, total carbs). The RICHER glucose KPIs (Time-in-Range,
+        // variability, hypo events, overnight lows) and the basal/bolus split can't come from a
+        // statistics query — they need per-reading counting — so they're computed by the raw-sample
+        // reducers further down. NOT a treatment surface: Health lags the CGM/pump (see header note).
         await collect(.insulinDelivery, unit: .internationalUnit(), start: start, end: end, op: .cumulativeSum) { day, v in
             var a = agg(day); a.insulinTotal = v; byDay[day] = a
         }
         await collect(.dietaryCarbohydrates, unit: .gram(), start: start, end: end, op: .cumulativeSum) { day, v in
             var a = agg(day); a.carbsG = v; byDay[day] = a
         }
+
+        // Body / vitals extras useful to a diabetic athlete — READ-ONLY. Blood pressure (mmHg, daily
+        // mean), hydration (litres/day, summed), waist circumference (cm, latest of day).
+        await collect(.bloodPressureSystolic, unit: .millimeterOfMercury(), start: start, end: end, op: .discreteAverage) { day, v in
+            var a = agg(day); a.bpSystolic = v; byDay[day] = a
+        }
+        await collect(.bloodPressureDiastolic, unit: .millimeterOfMercury(), start: start, end: end, op: .discreteAverage) { day, v in
+            var a = agg(day); a.bpDiastolic = v; byDay[day] = a
+        }
+        await collect(.dietaryWater, unit: .liter(), start: start, end: end, op: .cumulativeSum) { day, v in
+            var a = agg(day); a.waterL = v; byDay[day] = a
+        }
+        await collect(.waistCircumference, unit: .meterUnit(with: .centi), start: start, end: end, op: .discreteMostRecent) { day, v in
+            var a = agg(day); a.waistCm = v; byDay[day] = a
+        }
+
+        // Rich glucose KPIs from raw CGM readings (mean/min/max feed the daily aggregate below; the
+        // band %s, variability, hypo events and overnight lows are emitted as their own metric points).
+        // The same readings drive the glucose-around-exercise linkage once workouts are read.
+        let glucoseReadings = await collectGlucoseReadings(start: start, end: end)
+        let glucoseStats = DiabetesMetrics.glucoseDaily(glucoseReadings)
+        for (day, g) in glucoseStats {
+            var a = agg(day); a.glucoseAvg = g.mean; a.glucoseMin = g.min; a.glucoseMax = g.max; byDay[day] = a
+        }
+        // Insulin basal/bolus split (statistics gives only the combined total above).
+        let insulinStats = DiabetesMetrics.insulinDaily(await collectInsulinDoses(start: start, end: end))
 
         // Sleep minutes per day (asleep stages summed; attributed to wake day).
         await collectSleep(start: start, end: end) { day, asleepMin, deepMin, remMin, coreMin in
@@ -413,17 +432,40 @@ final class HealthKitBridge: ObservableObject {
                 glucoseMin: a.glucoseMin,
                 glucoseMax: a.glucoseMax,
                 insulinTotal: a.insulinTotal,
-                carbsG: a.carbsG
+                carbsG: a.carbsG,
+                bpSystolic: a.bpSystolic,
+                bpDiastolic: a.bpDiastolic,
+                waterL: a.waterL,
+                waistCm: a.waistCm
             )
         }
-        let points = AppleHealthAggregator.metricPoints(aggregates)
+        var points = AppleHealthAggregator.metricPoints(aggregates)
             .map { MetricPoint(day: $0.day, key: $0.key, value: $0.value) }
+        // Advanced diabetes KPIs that don't live on the shared AppleDailyAggregate model — emitted
+        // straight into metricSeries so Explore/Compare/correlations pick them up like any other key.
+        // Every value is a real measurement; a day with no glucose data emits nothing (never a zero).
+        points.append(contentsOf: diabetesMetricPoints(glucose: glucoseStats, insulin: insulinStats))
 
         // Workouts the user logged in Apple Health (Apple Watch rings, gym apps, etc.). macOS already
         // imports these from a static Health export and Android reads them from Health Connect; iOS now
         // reads them live on-device too, so the platforms reach parity. ON-DEVICE ONLY: this is a plain
         // HealthKit read of workouts NOOP did NOT author, never any cloud/3rd-party API. (#835)
         let workoutRows = await collectWorkouts(start: start, end: end)
+
+        // Glucose response around exercise (Tier 4): the lowest glucose (and hypo count) inside each
+        // workout window, extended past the session end to catch the acute post-exercise drop. Reuses
+        // the glucose readings already fetched — no extra query. A day only appears when a real reading
+        // fell inside a workout window, so "no data" stays "no data" (never a fabricated value).
+        let workoutWindows = workoutRows.map {
+            WorkoutWindow(start: Double($0.startTs), end: Double($0.endTs),
+                          day: HealthKitBridge.dayString(Date(timeIntervalSince1970: TimeInterval($0.startTs))))
+        }
+        for (day, p) in DiabetesMetrics.postWorkoutGlucose(readings: glucoseReadings, workouts: workoutWindows) {
+            if let m = p.minMgdl {
+                points.append(MetricPoint(day: day, key: "glucose_postex_min", value: m))
+                points.append(MetricPoint(day: day, key: "glucose_postex_lows", value: Double(p.lows)))
+            }
+        }
 
         // Persist all the apple-health rows AND write back, advancing lastSync only when the WHOLE
         // round-trip succeeds. The three read-side upserts used to be swallowed by `try?`, so a failed
@@ -528,6 +570,7 @@ final class HealthKitBridge: ObservableObject {
         var asleepMin: Double?; var deepMin: Double?; var remMin: Double?; var coreMin: Double?
         var glucoseAvg: Double?; var glucoseMin: Double?; var glucoseMax: Double?
         var insulinTotal: Double?; var carbsG: Double?
+        var bpSystolic: Double?; var bpDiastolic: Double?; var waterL: Double?; var waistCm: Double?
     }
 
     /// Excludes NOOP's own write-back samples from reads, so the two-way sync never reads its own
@@ -602,6 +645,93 @@ final class HealthKitBridge: ObservableObject {
             }
             store.execute(q)
         }
+    }
+
+    // MARK: - Diabetes (rich KPIs from raw samples)
+
+    /// Fetch raw CGM readings over `[start, end)` as `GlucoseReading`s (ascending by time), each
+    /// bucketed into its local civil day with a local minute-of-day (for the overnight window). Read
+    /// in mg/dL — HealthKit converts on read, so the value is unit-unambiguous. ON-DEVICE ONLY: a plain
+    /// HealthKit read of samples NOOP did not author. Feeds `DiabetesMetrics` for every glucose KPI.
+    private func collectGlucoseReadings(start: Date, end: Date) async -> [GlucoseReading] {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .bloodGlucose) else { return [] }
+        let mgdL = HKUnit(from: "mg/dL")
+        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate),
+            Self.notNoopAuthored,
+        ])
+        return await withCheckedContinuation { (cont: CheckedContinuation<[GlucoseReading], Never>) in
+            let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+            let q = HKSampleQuery(sampleType: type, predicate: predicate,
+                                  limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
+                var out: [GlucoseReading] = []
+                for case let s as HKQuantitySample in samples ?? [] {
+                    let comps = Calendar.current.dateComponents([.hour, .minute], from: s.startDate)
+                    out.append(GlucoseReading(
+                        ts: s.startDate.timeIntervalSince1970,
+                        day: HealthKitBridge.dayString(s.startDate),
+                        minutesLocal: (comps.hour ?? 0) * 60 + (comps.minute ?? 0),
+                        mgdl: s.quantity.doubleValue(for: mgdL)))
+                }
+                cont.resume(returning: out)
+            }
+            store.execute(q)
+        }
+    }
+
+    /// Fetch insulin-delivery samples over `[start, end)` tagged basal/bolus/unknown by the HealthKit
+    /// delivery-reason metadata, in international units, bucketed by local civil day. ON-DEVICE ONLY.
+    private func collectInsulinDoses(start: Date, end: Date) async -> [InsulinDose] {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .insulinDelivery) else { return [] }
+        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate),
+            Self.notNoopAuthored,
+        ])
+        return await withCheckedContinuation { (cont: CheckedContinuation<[InsulinDose], Never>) in
+            let q = HKSampleQuery(sampleType: type, predicate: predicate,
+                                  limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, _ in
+                var out: [InsulinDose] = []
+                for case let s as HKQuantitySample in samples ?? [] {
+                    let kind: InsulinDose.Kind
+                    if let num = s.metadata?[HKMetadataKeyInsulinDeliveryReason] as? NSNumber,
+                       let reason = HKInsulinDeliveryReason(rawValue: num.intValue) {
+                        kind = reason == .basal ? .basal : .bolus
+                    } else {
+                        kind = .unknown
+                    }
+                    out.append(InsulinDose(day: HealthKitBridge.dayString(s.startDate),
+                                           units: s.quantity.doubleValue(for: .internationalUnit()),
+                                           kind: kind))
+                }
+                cont.resume(returning: out)
+            }
+            store.execute(q)
+        }
+    }
+
+    /// Flatten the rich glucose + insulin daily stats into metric points. The band percentages, hypo
+    /// count and basal/bolus split are emitted for every day that HAS data — a 0% or 0-count is a real,
+    /// good result, not "missing" — while variability and overnight values appear only when defined.
+    /// A day with no readings never enters the input dicts, so the UI shows an honest "—" instead.
+    private func diabetesMetricPoints(glucose: [String: GlucoseDayStats],
+                                      insulin: [String: InsulinDayStats]) -> [MetricPoint] {
+        var out: [MetricPoint] = []
+        for (day, g) in glucose {
+            out.append(MetricPoint(day: day, key: "glucose_tir", value: g.tirPct))
+            out.append(MetricPoint(day: day, key: "glucose_tbr", value: g.tbrPct))
+            out.append(MetricPoint(day: day, key: "glucose_tbr_severe", value: g.tbrSeverePct))
+            out.append(MetricPoint(day: day, key: "glucose_tar", value: g.tarPct))
+            out.append(MetricPoint(day: day, key: "glucose_tar_high", value: g.tarHighPct))
+            out.append(MetricPoint(day: day, key: "glucose_hypos", value: Double(g.hypoEvents)))
+            if let cv = g.cvPct { out.append(MetricPoint(day: day, key: "glucose_cv", value: cv)) }
+            if let ovm = g.overnightMean { out.append(MetricPoint(day: day, key: "glucose_overnight_avg", value: ovm)) }
+            if let ovl = g.overnightMin { out.append(MetricPoint(day: day, key: "glucose_overnight_min", value: ovl)) }
+        }
+        for (day, i) in insulin {
+            out.append(MetricPoint(day: day, key: "insulin_basal", value: i.basal))
+            out.append(MetricPoint(day: day, key: "insulin_bolus", value: i.bolus))
+        }
+        return out
     }
 
     // MARK: - Workouts (#835)

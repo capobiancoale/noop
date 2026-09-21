@@ -51,6 +51,13 @@ public struct AppleDailyAggregate: Equatable, Sendable {
     public let insulinTotal: Double?
     public let carbsG: Double?
 
+    // Body / vitals extras useful to a diabetic athlete (read-only). Blood pressure in mmHg,
+    // hydration in litres, waist circumference in cm.
+    public let bpSystolic: Double?
+    public let bpDiastolic: Double?
+    public let waterL: Double?
+    public let waistCm: Double?
+
     public init(
         day: String,
         restingHr: Double? = nil,
@@ -78,7 +85,11 @@ public struct AppleDailyAggregate: Equatable, Sendable {
         glucoseMin: Double? = nil,
         glucoseMax: Double? = nil,
         insulinTotal: Double? = nil,
-        carbsG: Double? = nil
+        carbsG: Double? = nil,
+        bpSystolic: Double? = nil,
+        bpDiastolic: Double? = nil,
+        waterL: Double? = nil,
+        waistCm: Double? = nil
     ) {
         self.day = day
         self.restingHr = restingHr
@@ -107,6 +118,10 @@ public struct AppleDailyAggregate: Equatable, Sendable {
         self.glucoseMax = glucoseMax
         self.insulinTotal = insulinTotal
         self.carbsG = carbsG
+        self.bpSystolic = bpSystolic
+        self.bpDiastolic = bpDiastolic
+        self.waterL = waterL
+        self.waistCm = waistCm
     }
 }
 
@@ -319,6 +334,10 @@ public enum AppleHealthAggregator {
             add("glucose_max", d.glucoseMax)
             add("insulin_total", d.insulinTotal)
             add("carbs_g", d.carbsG)
+            add("bp_systolic", d.bpSystolic)
+            add("bp_diastolic", d.bpDiastolic)
+            add("water", d.waterL)
+            add("waist", d.waistCm)
         }
         return out
     }

@@ -1,6 +1,7 @@
 import SwiftUI
 import StrandDesign
 import WhoopStore
+import StrandImport
 import Foundation
 
 // MARK: - Apple Health (per-source page) — locked component system
@@ -101,7 +102,13 @@ struct AppleHealthView: View {
         "resting_hr", "hrv", "spo2", "resp_rate", "asleep_min",
         "weight", "body_fat", "lean_mass", "bmi",
         // Diabetes data written into Health by an AID app (e.g. Loop). Read-only, informational.
-        "glucose_avg", "glucose_min", "glucose_max", "insulin_total", "carbs_g"
+        "glucose_avg", "glucose_min", "glucose_max",
+        "glucose_tir", "glucose_tbr", "glucose_tbr_severe", "glucose_tar", "glucose_tar_high",
+        "glucose_cv", "glucose_hypos", "glucose_overnight_avg", "glucose_overnight_min",
+        "insulin_total", "insulin_basal", "insulin_bolus", "carbs_g",
+        "glucose_postex_min", "glucose_postex_lows",
+        // Vitals/body extras for a diabetic athlete.
+        "bp_systolic", "bp_diastolic", "water", "waist"
     ]
 
     // yyyy-MM-dd → Date (en_US_POSIX / UTC), per the project's date contract.
@@ -604,6 +611,28 @@ struct AppleHealthView: View {
             chartCard(title: "BMI", key: "bmi",
                       gradient: purpleGradient, fallback: 16...35,
                       fmt: { String(format: "%.1f", $0) })
+            // Vitals extras (blood pressure, hydration, waist) — shown only when Apple Health actually
+            // carries them, so a user without these never sees an empty card. Read-only.
+            if !raw("bp_systolic").isEmpty {
+                chartCard(title: "Blood pressure (systolic)", key: "bp_systolic",
+                          gradient: roseGradient, fallback: 90...160,
+                          fmt: { "\(Int($0.rounded())) mmHg" })
+            }
+            if !raw("bp_diastolic").isEmpty {
+                chartCard(title: "Blood pressure (diastolic)", key: "bp_diastolic",
+                          gradient: roseGradient, fallback: 50...100,
+                          fmt: { "\(Int($0.rounded())) mmHg" })
+            }
+            if !raw("water").isEmpty {
+                chartCard(title: "Hydration", key: "water",
+                          gradient: cyanGradient, fallback: 0...4,
+                          fmt: { String(format: "%.1f L", $0) })
+            }
+            if !raw("waist").isEmpty {
+                chartCard(title: "Waist", key: "waist",
+                          gradient: amberGradient, fallback: 60...120,
+                          fmt: { String(format: "%.1f cm", $0) })
+            }
         }
     }
 
@@ -621,27 +650,97 @@ struct AppleHealthView: View {
     /// Loop writing glucose/insulin/carbs). Gates the whole Glucose section so users without any of
     /// this data never see an empty diabetes panel.
     private var hasGlucoseData: Bool {
-        !raw("glucose_avg").isEmpty || !raw("insulin_total").isEmpty || !raw("carbs_g").isEmpty
+        !raw("glucose_avg").isEmpty || !raw("insulin_total").isEmpty
+            || !raw("carbs_g").isEmpty || !raw("glucose_tir").isEmpty
     }
 
-    /// Diabetes data written into Apple Health by an automated-insulin-delivery app (e.g. Loop): the
-    /// day's mean glucose, total delivered insulin, and carbs. READ-ONLY and informational — Apple
-    /// Health lags the CGM/pump, so this is never a treatment surface; the CGM app and Loop remain the
-    /// source of truth for any dosing decision.
+    /// Diabetes dashboard from Apple Health (an automated-insulin-delivery app such as Loop): headline
+    /// KPIs (Time-in-Range, GMI, variability, insulin, basal:bolus, overnight & post-exercise lows)
+    /// plus trend charts. READ-ONLY and informational — Apple Health lags the CGM/pump, so this is
+    /// never a treatment surface; the CGM app and Loop remain the source of truth for any dosing
+    /// decision. Every tile/chart shows "—" or "No readings recorded." when its data is absent.
     private var glucoseSection: some View {
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             SectionHeader("Glucose & Insulin", overline: "From Apple Health",
                           trailing: range.caption)
+            glucoseTiles
             chartCard(title: "Glucose (daily average)", key: "glucose_avg",
                       gradient: roseGradient, fallback: 70...180,
                       fmt: { "\(Int($0.rounded())) mg/dL" })
+            chartCard(title: "Time in range", key: "glucose_tir",
+                      gradient: cyanGradient, fallback: 0...100,
+                      fmt: { "\(Int($0.rounded()))%" })
             chartCard(title: "Insulin (total per day)", key: "insulin_total",
-                      gradient: cyanGradient, fallback: 0...60,
+                      gradient: accentGradient, fallback: 0...60,
                       fmt: { String(format: "%.1f U", $0) })
             chartCard(title: "Carbs (per day)", key: "carbs_g",
                       gradient: amberGradient, fallback: 0...300,
                       fmt: { "\(intString($0)) g" })
         }
+    }
+
+    /// Headline diabetes KPIs as StatTiles. Series-backed tiles show the window mean (or "—" with no
+    /// data via `statTile`); GMI and the basal:bolus split are computed from the same windows and also
+    /// fall back to "—" when their inputs are absent — never a fabricated number.
+    private var glucoseTiles: some View {
+        LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 168), spacing: NoopMetrics.gap)],
+            alignment: .leading,
+            spacing: NoopMetrics.gap
+        ) {
+            statTile(key: "glucose_tir", label: "Time in Range",
+                     accent: StrandPalette.metricCyan, unit: "%",
+                     aggregate: .mean, fmt: { "\(Int($0.rounded()))" })
+            gmiTile
+            statTile(key: "glucose_avg", label: "Avg Glucose",
+                     accent: StrandPalette.metricRose, unit: "mg/dL",
+                     aggregate: .mean, fmt: { "\(Int($0.rounded()))" })
+            statTile(key: "glucose_cv", label: "Variability",
+                     accent: StrandPalette.metricPurple, unit: "%",
+                     aggregate: .mean, fmt: { "\(Int($0.rounded()))" })
+            statTile(key: "glucose_tbr", label: "Time Below",
+                     accent: StrandPalette.metricAmber, unit: "%",
+                     aggregate: .mean, fmt: { String(format: "%.1f", $0) })
+            statTile(key: "insulin_total", label: "Insulin / day",
+                     accent: StrandPalette.accent, unit: "U",
+                     aggregate: .mean, fmt: { String(format: "%.1f", $0) })
+            basalBolusTile
+            statTile(key: "glucose_overnight_min", label: "Overnight Low",
+                     accent: StrandPalette.metricPurple, unit: "mg/dL",
+                     aggregate: .mean, fmt: { "\(Int($0.rounded()))" })
+            statTile(key: "glucose_postex_min", label: "Post-exercise Low",
+                     accent: StrandPalette.metricCyan, unit: "mg/dL",
+                     aggregate: .mean, fmt: { "\(Int($0.rounded()))" })
+        }
+    }
+
+    /// GMI (Glucose Management Indicator / estimated A1c) from the window's mean glucose. "—" when
+    /// there is no glucose in the window.
+    private var gmiTile: some View {
+        let vals = resolvedWindow("glucose_avg").map(\.value)
+        let gmi = mean(vals).flatMap { DiabetesMetrics.gmiPercent(meanMgdl: $0) }
+        return StatTile(
+            label: "GMI / est. A1c",
+            value: gmi.map { String(format: "%.1f%%", $0) } ?? "—",
+            caption: gmi != nil ? String(localized: "est. from avg glucose") : nil,
+            accent: gmi != nil ? StrandPalette.metricPurple : StrandPalette.textTertiary
+        )
+    }
+
+    /// Basal : bolus split (percentage of total delivered insulin) over the window. "—" without any
+    /// insulin data — Loop only writes a basal/bolus reason on samples it authored.
+    private var basalBolusTile: some View {
+        let basal = resolvedWindow("insulin_basal").map(\.value).reduce(0, +)
+        let bolus = resolvedWindow("insulin_bolus").map(\.value).reduce(0, +)
+        let total = basal + bolus
+        let hasData = !resolvedWindow("insulin_basal").isEmpty || !resolvedWindow("insulin_bolus").isEmpty
+        let pctBasal = total > 0 ? Int((basal / total * 100).rounded()) : nil
+        return StatTile(
+            label: "Basal : Bolus",
+            value: (hasData && pctBasal != nil) ? "\(pctBasal!) / \(100 - pctBasal!)" : "—",
+            caption: (hasData && pctBasal != nil) ? String(localized: "% basal / bolus") : nil,
+            accent: hasData ? StrandPalette.accent : StrandPalette.textTertiary
+        )
     }
 
     /// One uniform ChartCard for a metric series: header + TrendChart body (same
