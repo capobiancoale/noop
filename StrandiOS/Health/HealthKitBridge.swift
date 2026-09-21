@@ -84,7 +84,12 @@ final class HealthKitBridge: ObservableObject {
         .basalEnergyBurned, .vo2Max,
         // Body composition — READ-ONLY (#20). Imported under the apple-health source like the file
         // importer already ingests; deliberately NOT in quantityWriteIds (we never write these back).
-        .bodyMass, .bodyFatPercentage, .leanBodyMass, .bodyMassIndex
+        .bodyMass, .bodyFatPercentage, .leanBodyMass, .bodyMassIndex,
+        // Diabetes data — READ-ONLY. An automated-insulin-delivery app (e.g. Loop) writes these into
+        // Apple Health; NOOP surfaces them as daily aggregates (mean/min/max glucose, total daily
+        // insulin, carbs) purely for informational trends. NEVER in quantityWriteIds: NOOP must never
+        // author glucose/insulin/carb samples, and this display is not for treatment decisions.
+        .bloodGlucose, .insulinDelivery, .dietaryCarbohydrates
     ]
     private static let quantityWriteIds: [HKQuantityTypeIdentifier] = [
         .restingHeartRate, .heartRateVariabilitySDNN, .oxygenSaturation, .respiratoryRate
@@ -332,6 +337,29 @@ final class HealthKitBridge: ObservableObject {
             var a = agg(day); a.bmi = v; byDay[day] = a
         }
 
+        // Diabetes data — READ-ONLY daily aggregates (from an AID app like Loop writing into Health).
+        // Blood glucose is a discrete reading: mean is the headline (tracks GMI/estimated A1c), with
+        // daily low/high for context. Read in mg/dL — HealthKit converts on read, so the value is
+        // unit-unambiguous regardless of how the sample was stored. Insulin delivery and carbs are
+        // cumulative quantities, so the day's total is the natural aggregate (total daily insulin dose,
+        // total carbs). NOT for treatment decisions — Health lags the CGM/pump; see the header note.
+        let mgdL = HKUnit(from: "mg/dL")
+        await collect(.bloodGlucose, unit: mgdL, start: start, end: end, op: .discreteAverage) { day, v in
+            var a = agg(day); a.glucoseAvg = v; byDay[day] = a
+        }
+        await collect(.bloodGlucose, unit: mgdL, start: start, end: end, op: .discreteMin) { day, v in
+            var a = agg(day); a.glucoseMin = v; byDay[day] = a
+        }
+        await collect(.bloodGlucose, unit: mgdL, start: start, end: end, op: .discreteMax) { day, v in
+            var a = agg(day); a.glucoseMax = v; byDay[day] = a
+        }
+        await collect(.insulinDelivery, unit: .internationalUnit(), start: start, end: end, op: .cumulativeSum) { day, v in
+            var a = agg(day); a.insulinTotal = v; byDay[day] = a
+        }
+        await collect(.dietaryCarbohydrates, unit: .gram(), start: start, end: end, op: .cumulativeSum) { day, v in
+            var a = agg(day); a.carbsG = v; byDay[day] = a
+        }
+
         // Sleep minutes per day (asleep stages summed; attributed to wake day).
         await collectSleep(start: start, end: end) { day, asleepMin, deepMin, remMin, coreMin in
             var a = agg(day)
@@ -380,7 +408,12 @@ final class HealthKitBridge: ObservableObject {
                 asleepMin: a.asleepMin,
                 deepMin: a.deepMin,
                 remMin: a.remMin,
-                coreMin: a.coreMin
+                coreMin: a.coreMin,
+                glucoseAvg: a.glucoseAvg,
+                glucoseMin: a.glucoseMin,
+                glucoseMax: a.glucoseMax,
+                insulinTotal: a.insulinTotal,
+                carbsG: a.carbsG
             )
         }
         let points = AppleHealthAggregator.metricPoints(aggregates)
@@ -493,6 +526,8 @@ final class HealthKitBridge: ObservableObject {
         var activeKcal: Double?; var basalKcal: Double?; var vo2max: Double?
         var weightKg: Double?; var bodyFatPct: Double?; var leanMassKg: Double?; var bmi: Double?
         var asleepMin: Double?; var deepMin: Double?; var remMin: Double?; var coreMin: Double?
+        var glucoseAvg: Double?; var glucoseMin: Double?; var glucoseMax: Double?
+        var insulinTotal: Double?; var carbsG: Double?
     }
 
     /// Excludes NOOP's own write-back samples from reads, so the two-way sync never reads its own
@@ -523,6 +558,7 @@ final class HealthKitBridge: ObservableObject {
                     case .cumulativeSum:     q = stats.sumQuantity()
                     case .discreteAverage:   q = stats.averageQuantity()
                     case .discreteMax:       q = stats.maximumQuantity()
+                    case .discreteMin:       q = stats.minimumQuantity()
                     case .discreteMostRecent: q = stats.mostRecentQuantity()
                     default:                 q = stats.averageQuantity()
                     }

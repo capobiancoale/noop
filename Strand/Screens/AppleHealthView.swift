@@ -99,7 +99,9 @@ struct AppleHealthView: View {
     private static let seriesKeys = [
         "steps", "active_kcal", "vo2max",
         "resting_hr", "hrv", "spo2", "resp_rate", "asleep_min",
-        "weight", "body_fat", "lean_mass", "bmi"
+        "weight", "body_fat", "lean_mass", "bmi",
+        // Diabetes data written into Health by an AID app (e.g. Loop). Read-only, informational.
+        "glucose_avg", "glucose_min", "glucose_max", "insulin_total", "carbs_g"
     ]
 
     // yyyy-MM-dd → Date (en_US_POSIX / UTC), per the project's date contract.
@@ -231,6 +233,7 @@ struct AppleHealthView: View {
                     activitySection
                     bodySection
                     sleepSection
+                    if hasGlucoseData { glucoseSection }
                 }
             }
         }
@@ -611,6 +614,33 @@ struct AppleHealthView: View {
             chartCard(title: "Asleep", key: "asleep_min",
                       gradient: purpleGradient, fallback: 240...600,
                       fmt: { durationString($0) })
+        }
+    }
+
+    /// True when Apple Health actually carries diabetes data (an automated-insulin-delivery app like
+    /// Loop writing glucose/insulin/carbs). Gates the whole Glucose section so users without any of
+    /// this data never see an empty diabetes panel.
+    private var hasGlucoseData: Bool {
+        !raw("glucose_avg").isEmpty || !raw("insulin_total").isEmpty || !raw("carbs_g").isEmpty
+    }
+
+    /// Diabetes data written into Apple Health by an automated-insulin-delivery app (e.g. Loop): the
+    /// day's mean glucose, total delivered insulin, and carbs. READ-ONLY and informational — Apple
+    /// Health lags the CGM/pump, so this is never a treatment surface; the CGM app and Loop remain the
+    /// source of truth for any dosing decision.
+    private var glucoseSection: some View {
+        VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+            SectionHeader("Glucose & Insulin", overline: "From Apple Health",
+                          trailing: range.caption)
+            chartCard(title: "Glucose (daily average)", key: "glucose_avg",
+                      gradient: roseGradient, fallback: 70...180,
+                      fmt: { "\(Int($0.rounded())) mg/dL" })
+            chartCard(title: "Insulin (total per day)", key: "insulin_total",
+                      gradient: cyanGradient, fallback: 0...60,
+                      fmt: { String(format: "%.1f U", $0) })
+            chartCard(title: "Carbs (per day)", key: "carbs_g",
+                      gradient: amberGradient, fallback: 0...300,
+                      fmt: { "\(intString($0)) g" })
         }
     }
 

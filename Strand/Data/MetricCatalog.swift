@@ -99,7 +99,7 @@ struct MetricDescriptor: Identifiable, Hashable {
 /// Canonical catalog — mirrors the WHOOP "Trend View" plus Apple Health body metrics.
 /// Keys match exactly what the importers write into metricSeries.
 enum MetricCatalog {
-    static let categories = ["Heart", "Charge", "Rest", "Effort", "Health", "Nutrition", "Mind"]
+    static let categories = ["Heart", "Charge", "Rest", "Effort", "Health", "Nutrition", "Glucose", "Mind"]
 
     static let all: [MetricDescriptor] = [
         // ── Heart
@@ -166,6 +166,16 @@ enum MetricCatalog {
         d("carbs_g", String(localized: "Carbs"), "Nutrition", "g", "nutrition-csv", "c.circle", 0, nil),
         d("fat_g", String(localized: "Fat"), "Nutrition", "g", "nutrition-csv", "f.circle", 0, nil),
 
+        // ── Glucose (read-only, from an automated-insulin-delivery app like Loop via Apple Health).
+        // Informational trends only — Apple Health lags the CGM/pump, so these are NOT for treatment
+        // decisions. Glucose in mg/dL (daily mean/low/high), insulin as total daily dose, carbs in grams.
+        // `carbs_g` also exists under nutrition-csv; the (key, source) id keeps the two distinct.
+        d("glucose_avg", String(localized: "Glucose (avg)"), "Glucose", "mg/dL", "apple-health", "drop.fill", 0, nil),
+        d("glucose_min", String(localized: "Glucose (low)"), "Glucose", "mg/dL", "apple-health", "arrow.down.circle", 0, nil),
+        d("glucose_max", String(localized: "Glucose (high)"), "Glucose", "mg/dL", "apple-health", "arrow.up.circle", 0, nil),
+        d("insulin_total", String(localized: "Insulin (total)"), "Glucose", "U", "apple-health", "syringe", 1, nil),
+        d("carbs_g", String(localized: "Carbs"), "Glucose", "g", "apple-health", "fork.knife", 0, nil),
+
         // ── Mind (daily mood check-in, 1–5; non-clinical self-tracking)
         d("mood", String(localized: "Mood"), "Mind", "/5", "noop-mood", "face.smiling", 0, true),
 
@@ -202,6 +212,7 @@ enum MetricCatalog {
         case "Effort":    return String(localized: "Effort")
         case "Health":    return String(localized: "Health")
         case "Nutrition": return String(localized: "Nutrition")
+        case "Glucose":   return String(localized: "Glucose")
         case "Mind":      return String(localized: "Mind")
         default:          return category
         }
