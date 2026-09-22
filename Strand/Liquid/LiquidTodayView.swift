@@ -868,7 +868,14 @@ struct LiquidTodayView: View {
         // Prior-day vitals carry, resolved ONCE here (never in body). Bound to today's own key so it can't
         // echo today's still-forming row; only on today (a past day's own row is the whole story).
         let tkey = cachedDisplayDay?.day ?? selectedDayKey
+        // Staleness cap for today's carry-forwards: a vital / step / glucose value older than this is NOT
+        // shown as "today" — otherwise a days-old reading (e.g. an HR from when the strap was last worn)
+        // reads as a current one when the user hasn't recorded today. 2 days keeps the legitimate
+        // overnight-rollover carry (yesterday's vitals before tonight scores) while dropping anything
+        // older to an honest "—". Same spirit as the `freshRestScore` gate already applied to Rest.
+        let freshCutoff = Repository.localDayKey(Calendar.current.date(byAdding: .day, value: -2, to: Date()) ?? Date())
         cachedVitalsDay = (selectedDayOffset == 0) ? Repository.lastVitalsDay(days: repo.days, todayKey: tkey) : nil
+        if let v = cachedVitalsDay, v.day < freshCutoff { cachedVitalsDay = nil }
 
         let cal = Calendar.current
         let dayStart = cal.startOfDay(for: selectedLogicalDay)
@@ -916,7 +923,7 @@ struct LiquidTodayView: View {
         // `.last` value) instead of that day's. Mirrors the classic Today's stepsEstByDay[selectedDayKey].
         let stepsSeries = await stepsA
         let stepsByDay = Dictionary(stepsSeries.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
-        stepsEst = stepsByDay[selectedDayKey] ?? (selectedDayOffset == 0 ? stepsSeries.last?.value : nil)
+        stepsEst = stepsByDay[selectedDayKey] ?? (selectedDayOffset == 0 ? stepsSeries.last.flatMap { $0.day >= freshCutoff ? $0.value : nil } : nil)
         hrValues = (await hrA).map { $0.bpm }
         workouts = await wkA
 
@@ -924,7 +931,11 @@ struct LiquidTodayView: View {
         // at offset 0 — mirrors stepsEst above. A missing day stays nil so the row simply doesn't show.
         func dayKeyed(_ s: [(day: String, value: Double)]) -> Double? {
             let byDay = Dictionary(s.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
-            return byDay[selectedDayKey] ?? (selectedDayOffset == 0 ? s.last?.value : nil)
+            if let v = byDay[selectedDayKey] { return v }
+            // Carry the latest reading onto today only when it's recent (freshCutoff); a days-old glucose
+            // value must not read as today's. Older ⇒ nil ⇒ the row/section hides.
+            guard selectedDayOffset == 0, let last = s.last, last.day >= freshCutoff else { return nil }
+            return last.value
         }
         glucoseAvg = dayKeyed(await gAvgA)
         glucoseTir = dayKeyed(await gTirA)
