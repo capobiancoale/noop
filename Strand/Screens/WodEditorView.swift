@@ -1,0 +1,238 @@
+#if os(iOS)
+import SwiftUI
+import WhoopStore
+
+// MARK: - WOD editor (create / edit)
+//
+// A plain SwiftUI Form to log or edit one WOD: type, name, date, format, optional time cap, a dynamic
+// list of movements (name + reps + load), the result on the WOD's own scale, RPE and notes. Builds a
+// `WodLogRow` and saves it through `Repository.saveWod`. Kept deliberately native (Form) so it is
+// robust and familiar; the surrounding app chrome comes from the pushing/ presenting screen.
+
+struct WodEditorView: View {
+    @EnvironmentObject private var repo: Repository
+    @Environment(\.dismiss) private var dismiss
+
+    /// The row being edited, or nil to create a new one.
+    let existing: WodLogRow?
+    /// Called after a successful save or delete so the list can refresh.
+    let onSaved: () -> Void
+
+    init(existing: WodLogRow?, onSaved: @escaping () -> Void) {
+        self.existing = existing
+        self.onSaved = onSaved
+    }
+
+    // Editable movement row (strings for the numeric fields; parsed on save).
+    private struct EditMovement: Identifiable {
+        let id = UUID()
+        var name = ""
+        var reps = ""
+        var weight = ""
+    }
+
+    @State private var type = "CrossFit"
+    @State private var title = ""
+    @State private var date = Date()
+    @State private var format = "For Time"
+    @State private var timeCapMin = ""
+    @State private var movements: [EditMovement] = [EditMovement()]
+    @State private var resultKind: WodResultKind = .time
+    @State private var resMin = ""
+    @State private var resSec = ""
+    @State private var resRounds = ""
+    @State private var resReps = ""
+    @State private var resWeight = ""
+    @State private var rpe = 0.0
+    @State private var notes = ""
+
+    private let types = ["CrossFit", "Weightlifting", "Hyrox", "Running", "Rowing", "Other"]
+    private let formats = ["For Time", "AMRAP", "EMOM", "Strength", "Intervals", "Other"]
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Workout") {
+                    Picker("Type", selection: $type) { ForEach(types, id: \.self) { Text($0) } }
+                    TextField("Name (e.g. Fran, Back Squat 5×5)", text: $title)
+                    DatePicker("Date", selection: $date, displayedComponents: [.date, .hourAndMinute])
+                    Picker("Format", selection: $format) { ForEach(formats, id: \.self) { Text($0) } }
+                    HStack {
+                        Text("Time cap (min)")
+                        Spacer()
+                        TextField("—", text: $timeCapMin)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 80)
+                    }
+                }
+
+                Section("Movements") {
+                    ForEach($movements) { $m in
+                        VStack(spacing: 6) {
+                            TextField("Movement (e.g. Thruster, Pull-up)", text: $m.name)
+                            HStack(spacing: 10) {
+                                TextField("Reps", text: $m.reps).keyboardType(.numberPad)
+                                Divider()
+                                TextField("Weight (kg)", text: $m.weight).keyboardType(.decimalPad)
+                            }
+                            .font(.subheadline)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                    .onDelete { movements.remove(atOffsets: $0) }
+                    Button { movements.append(EditMovement()) } label: {
+                        Label("Add movement", systemImage: "plus")
+                    }
+                }
+
+                Section("Result") {
+                    Picker("Score", selection: $resultKind) {
+                        Text("Time").tag(WodResultKind.time)
+                        Text("Rounds + reps").tag(WodResultKind.roundsReps)
+                        Text("Reps").tag(WodResultKind.reps)
+                        Text("Weight").tag(WodResultKind.weight)
+                        Text("None").tag(WodResultKind.none)
+                    }
+                    resultFields
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("RPE")
+                            Spacer()
+                            Text(rpe > 0 ? String(Int(rpe)) : "—").foregroundStyle(.secondary)
+                        }
+                        Slider(value: $rpe, in: 0...10, step: 1)
+                    }
+                }
+
+                Section("Notes") {
+                    TextField("Notes", text: $notes, axis: .vertical).lineLimit(1...4)
+                }
+
+                if existing != nil {
+                    Section {
+                        Button("Delete WOD", role: .destructive) {
+                            if let id = existing?.id {
+                                Task { await repo.deleteWod(id: id); onSaved() }
+                            }
+                            dismiss()
+                        }
+                    }
+                }
+            }
+            .navigationTitle(existing == nil ? "Log WOD" : "Edit WOD")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { save() }
+                        .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+            .onAppear { if let e = existing { prefill(e) } }
+        }
+    }
+
+    /// The result inputs for the selected scoring kind.
+    @ViewBuilder private var resultFields: some View {
+        switch resultKind {
+        case .time:
+            HStack {
+                Text("Time")
+                Spacer()
+                TextField("min", text: $resMin).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 54)
+                Text(":")
+                TextField("sec", text: $resSec).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 54)
+            }
+        case .roundsReps:
+            HStack {
+                Text("Rounds")
+                TextField("0", text: $resRounds).keyboardType(.numberPad).multilineTextAlignment(.trailing)
+                Text("+ reps")
+                TextField("0", text: $resReps).keyboardType(.numberPad).multilineTextAlignment(.trailing)
+            }
+        case .reps:
+            HStack {
+                Text("Total reps")
+                Spacer()
+                TextField("0", text: $resReps).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 90)
+            }
+        case .weight:
+            HStack {
+                Text("Weight (kg)")
+                Spacer()
+                TextField("0", text: $resWeight).keyboardType(.decimalPad).multilineTextAlignment(.trailing).frame(width: 90)
+            }
+        case .none:
+            EmptyView()
+        }
+    }
+
+    // MARK: Prefill (edit) + save
+
+    private func prefill(_ e: WodLogRow) {
+        type = e.type
+        title = e.title
+        date = Date(timeIntervalSince1970: TimeInterval(e.ts))
+        format = e.format ?? "For Time"
+        timeCapMin = e.timeCapS.map { String($0 / 60) } ?? ""
+        movements = e.movements.isEmpty ? [EditMovement()] : e.movements.map {
+            var m = EditMovement(); m.name = $0.name
+            m.reps = $0.reps.map(String.init) ?? ""
+            m.weight = $0.weightKg.map(WodFormat.trimmed) ?? ""
+            return m
+        }
+        resultKind = e.resultKind
+        if let s = e.resultSeconds { resMin = String(s / 60); resSec = String(s % 60) }
+        resRounds = e.resultRounds.map(String.init) ?? ""
+        resReps = e.resultReps.map(String.init) ?? ""
+        resWeight = e.resultWeightKg.map(WodFormat.trimmed) ?? ""
+        rpe = e.rpe ?? 0
+        notes = e.notes ?? ""
+    }
+
+    private func save() {
+        let ts = Int(date.timeIntervalSince1970)
+        let movs: [WodMovement] = movements.compactMap { m in
+            let n = m.name.trimmingCharacters(in: .whitespaces)
+            guard !n.isEmpty else { return nil }
+            return WodMovement(name: n,
+                               reps: Int(m.reps.trimmingCharacters(in: .whitespaces)),
+                               weightKg: parseDouble(m.weight))
+        }
+        let row = WodLogRow(
+            id: existing?.id ?? UUID().uuidString,
+            ts: ts,
+            day: Self.dayKey.string(from: date),
+            type: type,
+            title: title.trimmingCharacters(in: .whitespaces),
+            format: format,
+            timeCapS: Int(timeCapMin.trimmingCharacters(in: .whitespaces)).map { $0 * 60 },
+            resultKind: resultKind,
+            resultSeconds: resultKind == .time ? ((Int(resMin) ?? 0) * 60 + (Int(resSec) ?? 0)) : nil,
+            resultRounds: resultKind == .roundsReps ? Int(resRounds) : nil,
+            resultReps: (resultKind == .roundsReps || resultKind == .reps) ? Int(resReps) : nil,
+            resultWeightKg: resultKind == .weight ? parseDouble(resWeight) : nil,
+            rpe: rpe > 0 ? rpe : nil,
+            notes: notes.trimmingCharacters(in: .whitespaces).isEmpty ? nil : notes,
+            movements: movs,
+            createdTs: existing?.createdTs ?? Int(Date().timeIntervalSince1970))
+        )
+        Task { await repo.saveWod(row); onSaved() }
+        dismiss()
+    }
+
+    /// Parse a weight allowing a comma decimal separator (Italian locale). Blank → nil.
+    private func parseDouble(_ s: String) -> Double? {
+        let t = s.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
+        return t.isEmpty ? nil : Double(t)
+    }
+
+    /// Canonical yyyy-MM-dd (local) day key, matching the store's day contract.
+    private static let dayKey: DateFormatter = {
+        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"; f.timeZone = .current; return f
+    }()
+}
+
+#endif

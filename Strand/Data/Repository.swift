@@ -527,6 +527,20 @@ final class Repository: ObservableObject {
     /// Expose the shared store handle (used by the importer to persist mapped rows).
     func storeHandle() async -> WhoopStore? { await ensureStore() }
 
+    // MARK: - WOD / strength log (user-authored, on-device)
+
+    /// Save (create or edit) one user-logged WOD.
+    func saveWod(_ r: WodLogRow) async { guard let s = await ensureStore() else { return }; try? await s.upsertWod(r) }
+
+    /// All logged WODs, newest first.
+    func allWods() async -> [WodLogRow] { guard let s = await ensureStore() else { return [] }; return (try? await s.allWods()) ?? [] }
+
+    /// Every attempt at one WOD title, newest first (progress history).
+    func wodHistory(title: String) async -> [WodLogRow] { guard let s = await ensureStore() else { return [] }; return (try? await s.wods(title: title)) ?? [] }
+
+    /// Delete one logged WOD by id.
+    func deleteWod(id: String) async { guard let s = await ensureStore() else { return }; try? await s.deleteWod(id: id) }
+
     /// CAPTURE-D (#797): the on-device DATA VOLUME read FRESH from the STORE (never the `@Published`
     /// dashboard caches), for the Display & Performance test mode's `dataVolume` line. dbRows is the raw
     /// decoded-stream footprint; importedDays is the count of imported daily-metric rows under the active

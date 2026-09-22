@@ -301,6 +301,7 @@ struct RootTabView: View {
                 moreSection("Body") {
                     MoreRow("Live", "waveform.path.ecg") { LiveView() }
                     MoreRow("Workouts", "figure.run") { WorkoutsView() }
+                    MoreRow("WOD Log", "figure.strengthtraining.traditional") { WodLogView() }
                     MoreRow("Health", "heart.text.square.fill") { HealthView() }
                     MoreRow("Lab Book", "books.vertical.fill") { LabBookView() }
                     MoreRow("Stress", "bolt.heart.fill") { StressView() }
