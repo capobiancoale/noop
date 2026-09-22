@@ -130149,6 +130149,106 @@
           }
         }
       }
+    },
+    "Import from CSV file": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa da file CSV"
+          }
+        }
+      }
+    },
+    "Copy CSV template": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia modello CSV"
+          }
+        }
+      }
+    },
+    "Or import a spreadsheet": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oppure importa un foglio di calcolo"
+          }
+        }
+      }
+    },
+    "One row per movement; columns date, name, movement, reps, rx_kg, my_kg, result… Rows with the same date + name become one WOD.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una riga per movimento; colonne date, name, movement, reps, rx_kg, my_kg, result… Le righe con stessa data + nome diventano un unico WOD."
+          }
+        }
+      }
+    },
+    "Template copied — paste it into a spreadsheet.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modello copiato — incollalo in un foglio di calcolo."
+          }
+        }
+      }
+    },
+    "Couldn't read that file.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile leggere il file."
+          }
+        }
+      }
+    },
+    "That file is too large.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il file è troppo grande."
+          }
+        }
+      }
+    },
+    "No WODs found — check the columns (date, name, movement…).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun WOD trovato — controlla le colonne (date, name, movement…)."
+          }
+        }
+      }
+    },
+    "Imported %lld WODs · %lld rows skipped.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importati %lld WOD · %lld righe saltate."
+          }
+        }
+      }
+    },
+    "Imported %lld WODs.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importati %lld WOD."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -1,7 +1,9 @@
 #if os(iOS)
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 import WhoopStore
+import StrandImport
 
 // MARK: - WOD import (paste text → structured WODs)
 //
@@ -21,6 +23,7 @@ struct WodImportView: View {
     @State private var parsed: [WodLogRow] = []
     @State private var didParse = false
     @State private var saving = false
+    @State private var csvNote: String?
 
     var body: some View {
         NavigationStack {
@@ -46,6 +49,23 @@ struct WodImportView: View {
                         Label("Analyze", systemImage: "wand.and.stars")
                     }
                     .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+
+                Section {
+                    Button { chooseCsvFile() } label: {
+                        Label("Import from CSV file", systemImage: "tablecells")
+                    }
+                    Button { copyCsvTemplate() } label: {
+                        Label("Copy CSV template", systemImage: "list.bullet.rectangle")
+                    }
+                } header: {
+                    Text("Or import a spreadsheet")
+                } footer: {
+                    if let note = csvNote {
+                        Text(note).foregroundStyle(.secondary)
+                    } else {
+                        Text("One row per movement; columns date, name, movement, reps, rx_kg, my_kg, result… Rows with the same date + name become one WOD.")
+                    }
                 }
 
                 if didParse {
@@ -87,6 +107,37 @@ struct WodImportView: View {
 
     private func copyAIPrompt() {
         UIPasteboard.general.string = WodTextImport.aiPrompt
+    }
+
+    private func copyCsvTemplate() {
+        UIPasteboard.general.string = WodCsvImport.template
+        csvNote = String(localized: "Template copied — paste it into a spreadsheet.")
+    }
+
+    private func chooseCsvFile() {
+        Task {
+            guard let url = await DocumentPicker.importFile([.commaSeparatedText, .plainText]) else { return }
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            guard let data = try? Data(contentsOf: url) else {
+                csvNote = String(localized: "Couldn't read that file.")
+                return
+            }
+            let result = WodCsvImport.parse(data: data)
+            guard !result.fileTooLarge else {
+                csvNote = String(localized: "That file is too large.")
+                return
+            }
+            parsed = result.wods
+            didParse = true
+            if result.wods.isEmpty {
+                csvNote = String(localized: "No WODs found — check the columns (date, name, movement…).")
+            } else if result.skippedRows > 0 {
+                csvNote = String(localized: "Imported \(result.importedWods) WODs · \(result.skippedRows) rows skipped.")
+            } else {
+                csvNote = String(localized: "Imported \(result.importedWods) WODs.")
+            }
+        }
     }
 
     private func saveAll() {

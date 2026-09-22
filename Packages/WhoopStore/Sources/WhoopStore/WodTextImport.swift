@@ -280,7 +280,7 @@ public enum WodTextImport {
     }
 
     /// A rep field → (single count, scheme). A plain integer is a count; anything else is a scheme.
-    static func parseReps(_ raw: String) -> (Int?, String?) {
+    public static func parseReps(_ raw: String) -> (Int?, String?) {
         let v = raw.trimmingCharacters(in: .whitespaces)
         if v.isEmpty { return (nil, nil) }
         if let n = Int(v) { return (n, nil) }
@@ -290,7 +290,7 @@ public enum WodTextImport {
     // MARK: Result
 
     /// Parse a result string into (kind, seconds, rounds, reps, weightKg). Falls back to `.none`.
-    static func parseResult(_ raw: String?, format: String?) -> (WodResultKind, Int?, Int?, Int?, Double?) {
+    public static func parseResult(_ raw: String?, format: String?) -> (WodResultKind, Int?, Int?, Int?, Double?) {
         guard let raw = raw?.trimmingCharacters(in: .whitespaces), !raw.isEmpty else {
             return (.none, nil, nil, nil, nil)
         }
@@ -372,7 +372,7 @@ public enum WodTextImport {
     }
 
     /// Interpret an RX/Scaled value. When the label itself is "scaled", an empty value means scaled.
-    static func parseRx(label: String, value: String) -> Bool? {
+    public static func parseRx(label: String, value: String) -> Bool? {
         let v = value.lowercased().trimmingCharacters(in: .whitespaces)
         if v.isEmpty { return label == "scaled" ? false : (label == "rx" ? true : nil) }
         if ["rx", "yes", "y", "sì", "si", "true", "1", "prescritto"].contains(v) { return true }
@@ -384,7 +384,7 @@ public enum WodTextImport {
     }
 
     /// First numeric run in a string, comma or dot decimal, ignoring surrounding text/units.
-    static func firstDouble(_ s: String) -> Double? {
+    public static func firstDouble(_ s: String) -> Double? {
         var num = ""
         var started = false
         for ch in s {
@@ -397,7 +397,7 @@ public enum WodTextImport {
     }
 
     /// Parse a date in the common shapes; nil if unrecognised.
-    static func parseDate(_ s: String, calendar: Calendar) -> Date? {
+    public static func parseDate(_ s: String, calendar: Calendar) -> Date? {
         let v = s.trimmingCharacters(in: .whitespaces)
         guard !v.isEmpty else { return nil }
         let low = v.lowercased()
@@ -420,7 +420,7 @@ public enum WodTextImport {
     }
 
     /// Canonical yyyy-MM-dd (local) day key, matching the store's day contract.
-    static func dayKey(_ date: Date, calendar: Calendar) -> String {
+    public static func dayKey(_ date: Date, calendar: Calendar) -> String {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "yyyy-MM-dd"
