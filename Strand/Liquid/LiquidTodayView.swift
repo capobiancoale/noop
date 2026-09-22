@@ -33,6 +33,12 @@ struct LiquidTodayView: View {
     @State private var stepsEst: Double?           // steps_est, day-keyed to the selected day (fallback)
     @State private var hrValues: [Double] = []     // hrBuckets since midnight → 5-min means
     @State private var workouts: [WorkoutRow] = [] // newest-first
+    // Diabetes recap (apple-health, day-keyed to the selected day). Nil ⇒ the row/section is hidden,
+    // never a fabricated zero. Populated from the apple-health metric series in load().
+    @State private var glucoseAvg: Double?         // glucose_avg
+    @State private var glucoseTir: Double?         // glucose_tir (%)
+    @State private var carbsToday: Double?         // carbs_g (apple-health)
+    @State private var insulinToday: Double?       // insulin_total (U)
 
     // sheets / expanders
     @State private var guideSection: ScoreSection?
@@ -195,6 +201,7 @@ struct LiquidTodayView: View {
                     recoveryVitalsSection
                     keyMetricsSection
                     lastWorkoutsSection
+                    if hasGlucoseToday { glucoseTodaySection }
                     dataSourcesSection
                     Color.clear.frame(height: 90) // floating tab-bar clearance
                 }
@@ -678,6 +685,44 @@ struct LiquidTodayView: View {
         }
     }
 
+    // MARK: - Glucose recap (apple-health)
+
+    /// True when the selected day carries any diabetes data — gates the whole recap card so users
+    /// without glucose/insulin/carbs in Apple Health never see it.
+    private var hasGlucoseToday: Bool { glucoseAvg != nil || carbsToday != nil || insulinToday != nil }
+
+    /// Diabetes recap on Today: glucose average, time-in-range, carbs and insulin for the selected day,
+    /// read from Apple Health (an AID app such as Loop). READ-ONLY / informational — Health lags the
+    /// CGM/pump, so this is never a treatment surface. Each row shows only when its value is present.
+    private var glucoseTodaySection: some View {
+        card {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("GLUCOSE & INSULIN").font(StrandFont.overline).tracking(1.6)
+                        .foregroundStyle(StrandPalette.textSecondary)
+                    Spacer()
+                    Text("Apple Health").font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                }
+                if glucoseAvg != nil {
+                    vitalRow("Glucose (avg)", unitText(glucoseAvg, "mg/dL"),
+                             StrandPalette.metricRose, fracOver(glucoseAvg, 250))
+                }
+                if glucoseTir != nil {
+                    vitalRow("Time in range", unitText(glucoseTir, "%"),
+                             StrandPalette.metricCyan, glucoseTir.map { max(0, min(1, $0 / 100)) })
+                }
+                if carbsToday != nil {
+                    vitalRow("Carbs", unitText(carbsToday, "g"),
+                             StrandPalette.metricAmber, fracOver(carbsToday, 300))
+                }
+                if insulinToday != nil {
+                    vitalRow("Insulin", unitText(insulinToday, "U", decimals: 1),
+                             StrandPalette.accent, fracOver(insulinToday, 60))
+                }
+            }
+        }
+    }
+
     // MARK: - Key metrics grid
 
     private var keyMetricsSection: some View {
@@ -840,6 +885,11 @@ struct LiquidTodayView: View {
         async let stepsA = repo.exploreSeries(key: "steps_est", source: "my-whoop")
         async let hrA = repo.hrBuckets(from: from, to: to, bucketSeconds: 300)
         async let wkA = repo.workoutRows()
+        // Diabetes recap series (apple-health). Daily metrics, so day-keyed like steps below.
+        async let gAvgA = repo.series(key: "glucose_avg", source: "apple-health")
+        async let gTirA = repo.series(key: "glucose_tir", source: "apple-health")
+        async let carbA = repo.series(key: "carbs_g", source: "apple-health")
+        async let insA  = repo.series(key: "insulin_total", source: "apple-health")
 
         let restSeries = await restA
         let restByDay = Dictionary(restSeries.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
@@ -869,6 +919,17 @@ struct LiquidTodayView: View {
         stepsEst = stepsByDay[selectedDayKey] ?? (selectedDayOffset == 0 ? stepsSeries.last?.value : nil)
         hrValues = (await hrA).map { $0.bpm }
         workouts = await wkA
+
+        // Day-key each diabetes series to the selected day (they're daily), with a latest fallback only
+        // at offset 0 — mirrors stepsEst above. A missing day stays nil so the row simply doesn't show.
+        func dayKeyed(_ s: [(day: String, value: Double)]) -> Double? {
+            let byDay = Dictionary(s.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
+            return byDay[selectedDayKey] ?? (selectedDayOffset == 0 ? s.last?.value : nil)
+        }
+        glucoseAvg = dayKeyed(await gAvgA)
+        glucoseTir = dayKeyed(await gTirA)
+        carbsToday = dayKeyed(await carbA)
+        insulinToday = dayKeyed(await insA)
 
         // First load done — bring the hero gauges + sky to life now the launch churn has settled.
         if !dataLoaded { withAnimation(.easeIn(duration: 0.4)) { dataLoaded = true } }

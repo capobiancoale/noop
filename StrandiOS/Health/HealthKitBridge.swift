@@ -285,9 +285,19 @@ final class HealthKitBridge: ObservableObject {
         defer { syncing = false }
         guard let store = await repo.storeHandle() else { return }
 
+        // One-time deep backfill: the routine sync only pulls 30 days, which is too little history for
+        // a metric to unlock the Month/3M/… range chips (they gate on the data's own span). On the FIRST
+        // authorized sync we widen the window to ~14 months so all of Apple Health's history — glucose,
+        // insulin, carbs and vitals included — lands at once and the ranges become selectable. Bounded
+        // and persisted so it runs once; only glucose is read raw (bounded, ~a few MB), everything else
+        // is a server-side daily statistics query, so this stays cheap. (#ranges)
+        let deepKey = "hkDeepBackfill.v1"
+        let needDeepBackfill = !UserDefaults.standard.bool(forKey: deepKey)
+        let effectiveDays = needDeepBackfill ? max(days, 430) : days
+
         let cal = Calendar.current
         let end = Date()
-        guard let start = cal.date(byAdding: .day, value: -days, to: cal.startOfDay(for: end)) else { return }
+        guard let start = cal.date(byAdding: .day, value: -effectiveDays, to: cal.startOfDay(for: end)) else { return }
 
         var byDay: [String: DayAgg] = [:]
         func agg(_ day: String) -> DayAgg { byDay[day] ?? DayAgg() }
@@ -478,6 +488,8 @@ final class HealthKitBridge: ObservableObject {
             try await store.upsertMetricSeries(points, deviceId: appleDeviceId)
             if !workoutRows.isEmpty { try await store.upsertWorkouts(workoutRows, deviceId: appleDeviceId) }
             try await writeBack(whoopStore: store)
+            // The deep backfill has now landed — mark it done so later syncs use the light 30-day window.
+            if needDeepBackfill { UserDefaults.standard.set(true, forKey: deepKey) }
             lastSync = Date()
             lastError = nil
         } catch {
