@@ -52,9 +52,12 @@ struct WodEditorView: View {
     @State private var rpe = 0.0
     @State private var notes = ""
 
-    // Glucose response around this WOD (only for an existing row; queried live from Apple Health).
+    // Glucose + carbs around this WOD (only for an existing row; queried live from Apple Health).
     @State private var glucosePoints: [TrendPoint] = []
     @State private var glucoseResp: WodGlucoseResponse?
+    @State private var carbsPre = 0.0
+    @State private var carbsPost = 0.0
+    @State private var trendPerHour: Double?
     @State private var glucoseLoading = false
     @State private var glucoseLoaded = false
 
@@ -165,7 +168,7 @@ struct WodEditorView: View {
     /// Health live for CGM readings from ~45 min before to ~3 h after, and draws the curve + the
     /// numbers a Type-1 athlete watches (before / after / lowest, and a hypo flag).
     @ViewBuilder private var glucoseSection: some View {
-        Section("Glucose around this WOD") {
+        Section {
             if glucoseLoading {
                 HStack(spacing: 8) {
                     ProgressView()
@@ -188,15 +191,30 @@ struct WodEditorView: View {
                                dateFormat: { Self.clock.string(from: $0) },
                                accessibilityLabel: "Glucose around this WOD")
                 }
+                HStack {
+                    choStat("Carbs −2h", carbsPre)
+                    Spacer()
+                    choStat("Carbs +4h", carbsPost)
+                }
                 Text(glucoseDeltaText(r)).font(.caption).foregroundStyle(.secondary)
+                if let t = trendPerHour {
+                    Text(trendText(t)).font(.caption).foregroundStyle(.secondary)
+                }
                 if r.anyLow {
                     Label("Went below 70 mg/dL in this window", systemImage: "exclamationmark.triangle.fill")
                         .font(.caption).foregroundStyle(.orange)
                 }
+                if let note = tendencyNote() {
+                    Text(note).font(.caption).foregroundStyle(.secondary)
+                }
+                Text("Informational only, not medical advice. Carb and insulin choices stay with you and your care team / Loop.")
+                    .font(.caption2).foregroundStyle(.tertiary)
             } else if glucoseLoaded {
                 Text("No glucose readings in Apple Health for this window.")
                     .foregroundStyle(.secondary).font(.subheadline)
             }
+        } header: {
+            Text("Glucose & carbs · 2h before → 4h after")
         }
     }
 
@@ -204,6 +222,31 @@ struct WodEditorView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label).font(.caption2).foregroundStyle(.secondary)
             Text("\(Int(v.rounded()))").font(.title3.monospacedDigit())
+        }
+    }
+
+    private func choStat(_ label: LocalizedStringKey, _ grams: Double) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(.caption2).foregroundStyle(.secondary)
+            Text("\(Int(grams.rounded())) g").font(.title3.monospacedDigit())
+        }
+    }
+
+    /// Recent glucose trend as a labelled arrow + rate. Descriptive, not a clinical forecast.
+    private func trendText(_ perHour: Double) -> String {
+        let v = Int(perHour.rounded())
+        let arrow = v == 0 ? "→" : (v > 0 ? "↑" : "↓")
+        return String(localized: "Recent trend") + ": \(arrow) \(abs(v)) mg/dL/h"
+    }
+
+    /// A GENERAL educational one-liner on how this WOD's kind usually moves glucose. Never a dose.
+    private func tendencyNote() -> String? {
+        guard let e = existing else { return nil }
+        switch DiabetesMetrics.glycemicTendency(type: e.type, format: e.format) {
+        case .lowers: return String(localized: "Aerobic / metcon work tends to lower glucose — often for hours afterwards.")
+        case .raises: return String(localized: "Heavy strength / anaerobic work can push glucose up for a while.")
+        case .mixed:  return String(localized: "Mixed metcons can both raise (short, intense) and lower (longer) glucose.")
+        case .unknown: return nil
         }
     }
 
@@ -221,16 +264,20 @@ struct WodEditorView: View {
     private func loadGlucoseIfNeeded() async {
         guard let e = existing, !glucoseLoaded, !glucoseLoading else { return }
         glucoseLoading = true
-        let start = Date(timeIntervalSince1970: TimeInterval(e.ts) - 45 * 60)
-        let workoutEnd = TimeInterval(e.ts) + TimeInterval(e.timeCapS ?? 20 * 60)
-        let end = Date(timeIntervalSince1970: workoutEnd + 3 * 3600)
+        let workoutStart = TimeInterval(e.ts)
+        let workoutEnd = workoutStart + TimeInterval(e.timeCapS ?? 20 * 60)
+        let preStart = workoutStart - 2 * 3600          // 2 h before
+        let postEnd = workoutEnd + 4 * 3600             // 4 h after
+        let start = Date(timeIntervalSince1970: preStart)
+        let end = Date(timeIntervalSince1970: postEnd)
         let readings = await health.glucoseWindow(start: start, end: end)
-        let resp = DiabetesMetrics.wodGlucoseResponse(readings: readings,
-                                                      workoutStart: TimeInterval(e.ts),
-                                                      workoutEnd: workoutEnd)
-        let pts = readings.map { TrendPoint(date: Date(timeIntervalSince1970: $0.ts), value: $0.mgdl) }
-        glucosePoints = pts
-        glucoseResp = resp
+        let carbs = await health.carbsWindow(start: start, end: end)
+        glucosePoints = readings.map { TrendPoint(date: Date(timeIntervalSince1970: $0.ts), value: $0.mgdl) }
+        glucoseResp = DiabetesMetrics.wodGlucoseResponse(readings: readings,
+                                                         workoutStart: workoutStart, workoutEnd: workoutEnd)
+        carbsPre = DiabetesMetrics.carbsIn(carbs, from: preStart, to: workoutStart)
+        carbsPost = DiabetesMetrics.carbsIn(carbs, from: workoutEnd, to: postEnd)
+        trendPerHour = DiabetesMetrics.glucoseSlopePerHour(readings)
         glucoseLoading = false
         glucoseLoaded = true
     }

@@ -151,6 +151,23 @@ public struct WodGlucoseResponse: Sendable, Equatable {
     public var deltaMgdl: Double { endMgdl - startMgdl }
 }
 
+/// One carbohydrate-intake entry from Apple Health, epoch-seconds timestamped, for placing carbs on a
+/// workout timeline and splitting them into pre-/post-workout totals.
+public struct CarbEntry: Sendable, Equatable {
+    public let ts: Double
+    public let grams: Double
+    public init(ts: Double, grams: Double) { self.ts = ts; self.grams = grams }
+}
+
+/// A GENERAL, non-personalised tendency of how a kind of training usually moves blood glucose. This is
+/// education (physiology), never a prescription: the UI pairs it with a "not medical advice" note and
+/// never turns it into a carb or insulin dose. Steady aerobic work tends to lower glucose (and can keep
+/// lowering it for hours — the post-exercise hypo window); heavy strength/anaerobic efforts can push it
+/// up transiently; mixed metcons do a bit of both.
+public enum ExerciseGlycemicTendency: Sendable, Equatable {
+    case lowers, raises, mixed, unknown
+}
+
 public enum DiabetesMetrics {
 
     /// Minute-of-day (exclusive) that ends the overnight window. 06:00 → 360.
@@ -297,5 +314,45 @@ public enum DiabetesMetrics {
             maxMgdl: vals.max() ?? baseline.mgdl,
             nadirAfterMgdl: after.min(),
             anyLow: vals.contains { $0 < thresholds.low })
+    }
+
+    /// Total carbohydrate grams whose timestamp falls in `[from, to)`. Used to split intake into the
+    /// pre-workout (fuelling) and post-workout (recovery/correction) windows.
+    public static func carbsIn(_ carbs: [CarbEntry], from: Double, to: Double) -> Double {
+        carbs.filter { $0.ts >= from && $0.ts < to }.reduce(0) { $0 + $1.grams }
+    }
+
+    /// Recent glucose trend as mg/dL PER HOUR (a plain secant over the last `lastMinutes` of readings):
+    /// negative = falling, positive = rising. This is a descriptive trend, NOT a clinical forecast — it
+    /// has no insulin-on-board / carb-on-board model. nil when there aren't two readings far enough apart.
+    public static func glucoseSlopePerHour(_ readings: [GlucoseReading], lastMinutes: Double = 30) -> Double? {
+        let sorted = readings.sorted { $0.ts < $1.ts }
+        guard let last = sorted.last else { return nil }
+        let cutoff = last.ts - lastMinutes * 60
+        let window = sorted.filter { $0.ts >= cutoff }
+        guard let first = window.first, window.count >= 2 else { return nil }
+        let dtHours = (last.ts - first.ts) / 3600
+        guard dtHours > 0 else { return nil }
+        return (last.mgdl - first.mgdl) / dtHours
+    }
+
+    /// GENERAL glycemic tendency of a WOD's kind, from its type/format keywords (EN + IT). Education
+    /// only — the caller must present it as such and never derive a dose from it.
+    public static func glycemicTendency(type: String, format: String?) -> ExerciseGlycemicTendency {
+        let t = type.lowercased()
+        let s = t + " " + (format ?? "").lowercased()
+        if s.contains("strength") || s.contains("weightlift") || s.contains("forza") || s.contains("lifting") {
+            return .raises
+        }
+        if t.contains("run") || t.contains("row") || t.contains("hyrox") || t.contains("cardio")
+            || t.contains("bike") || t.contains("cycl") || t.contains("swim") || t.contains("cors")
+            || t.contains("vog") || t.contains("nuot") {
+            return .lowers
+        }
+        if s.contains("amrap") || s.contains("emom") || s.contains("for time") || s.contains("interval")
+            || s.contains("metcon") || t.contains("crossfit") {
+            return .mixed
+        }
+        return .unknown
     }
 }

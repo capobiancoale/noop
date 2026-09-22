@@ -668,6 +668,28 @@ final class HealthKitBridge: ObservableObject {
         return await collectGlucoseReadings(start: start, end: end)
     }
 
+    /// On-demand carbohydrate-intake samples over `[start, end)` (grams, epoch-seconds), for the
+    /// carbs-around-a-WOD view. [] unless authorized. ON-DEVICE ONLY.
+    func carbsWindow(start: Date, end: Date) async -> [CarbEntry] {
+        guard auth == .authorized else { return [] }
+        guard let type = HKQuantityType.quantityType(forIdentifier: .dietaryCarbohydrates) else { return [] }
+        let grams = HKUnit.gram()
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+        return await withCheckedContinuation { (cont: CheckedContinuation<[CarbEntry], Never>) in
+            let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+            let q = HKSampleQuery(sampleType: type, predicate: predicate,
+                                  limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
+                var out: [CarbEntry] = []
+                for case let s as HKQuantitySample in samples ?? [] {
+                    out.append(CarbEntry(ts: s.startDate.timeIntervalSince1970,
+                                         grams: s.quantity.doubleValue(for: grams)))
+                }
+                cont.resume(returning: out)
+            }
+            store.execute(q)
+        }
+    }
+
     /// Fetch raw CGM readings over `[start, end)` as `GlucoseReading`s (ascending by time), each
     /// bucketed into its local civil day with a local minute-of-day (for the overnight window). Read
     /// in mg/dL — HealthKit converts on read, so the value is unit-unambiguous. ON-DEVICE ONLY: a plain

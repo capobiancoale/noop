@@ -130249,6 +130249,86 @@
           }
         }
       }
+    },
+    "Glucose & carbs · 2h before → 4h after": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia e carboidrati · 2h prima → 4h dopo"
+          }
+        }
+      }
+    },
+    "Carbs −2h": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carbo −2h"
+          }
+        }
+      }
+    },
+    "Carbs +4h": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carbo +4h"
+          }
+        }
+      }
+    },
+    "Recent trend": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trend recente"
+          }
+        }
+      }
+    },
+    "Aerobic / metcon work tends to lower glucose — often for hours afterwards.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il lavoro aerobico / metcon tende ad abbassare la glicemia — spesso anche nelle ore successive."
+          }
+        }
+      }
+    },
+    "Heavy strength / anaerobic work can push glucose up for a while.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il lavoro di forza / anaerobico può alzare la glicemia per un po’."
+          }
+        }
+      }
+    },
+    "Mixed metcons can both raise (short, intense) and lower (longer) glucose.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I metcon misti possono sia alzarla (brevi e intensi) sia abbassarla (più lunghi)."
+          }
+        }
+      }
+    },
+    "Informational only, not medical advice. Carb and insulin choices stay with you and your care team / Loop.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo a scopo informativo, non è un consiglio medico. Le scelte su carboidrati e insulina restano a te e al tuo team di cura / Loop."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

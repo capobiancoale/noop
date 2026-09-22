@@ -156,6 +156,34 @@ final class DiabetesMetricsTests: XCTestCase {
         XCTAssertNil(DiabetesMetrics.wodGlucoseResponse(readings: [], workoutStart: 0, workoutEnd: 1))
     }
 
+    // MARK: - Carbs window / trend / tendency
+
+    func testCarbsInWindow() {
+        let carbs = [CarbEntry(ts: 100, grams: 20), CarbEntry(ts: 500, grams: 30),
+                     CarbEntry(ts: 2500, grams: 15)]
+        XCTAssertEqual(DiabetesMetrics.carbsIn(carbs, from: 0, to: 1000), 50, accuracy: 1e-9)
+        XCTAssertEqual(DiabetesMetrics.carbsIn(carbs, from: 1000, to: 3000), 15, accuracy: 1e-9)
+        XCTAssertEqual(DiabetesMetrics.carbsIn([], from: 0, to: 1), 0, accuracy: 1e-9)
+    }
+
+    func testGlucoseSlopePerHourFalling() throws {
+        let r = [GlucoseReading(ts: 0, day: "d", minutesLocal: 0, mgdl: 120),
+                 GlucoseReading(ts: 1800, day: "d", minutesLocal: 30, mgdl: 90)]  // -30 over 0.5h
+        let slope = try XCTUnwrap(DiabetesMetrics.glucoseSlopePerHour(r, lastMinutes: 60))
+        XCTAssertEqual(slope, -60, accuracy: 1e-6)
+    }
+
+    func testGlucoseSlopeNilWhenSingle() {
+        XCTAssertNil(DiabetesMetrics.glucoseSlopePerHour([GlucoseReading(ts: 0, day: "d", minutesLocal: 0, mgdl: 100)]))
+    }
+
+    func testGlycemicTendency() {
+        XCTAssertEqual(DiabetesMetrics.glycemicTendency(type: "Weightlifting", format: "Strength"), .raises)
+        XCTAssertEqual(DiabetesMetrics.glycemicTendency(type: "Running", format: nil), .lowers)
+        XCTAssertEqual(DiabetesMetrics.glycemicTendency(type: "CrossFit", format: "AMRAP"), .mixed)
+        XCTAssertEqual(DiabetesMetrics.glycemicTendency(type: "Yoga", format: nil), .unknown)
+    }
+
     func testWodGlucoseResponseBaselineFallsBackToFirst() throws {
         // No reading at/before start -> baseline is the earliest reading; no post-end reading -> nil nadir.
         let readings = [GlucoseReading(ts: 1500, day: "d", minutesLocal: 1, mgdl: 100),
