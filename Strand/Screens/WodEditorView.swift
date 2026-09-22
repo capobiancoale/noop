@@ -216,7 +216,7 @@ struct WodEditorView: View {
             rpe: rpe > 0 ? rpe : nil,
             notes: notes.trimmingCharacters(in: .whitespaces).isEmpty ? nil : notes,
             movements: movs,
-            createdTs: existing?.createdTs ?? Int(Date().timeIntervalSince1970))
+            createdTs: existing?.createdTs ?? Int(Date().timeIntervalSince1970)
         )
         Task { await repo.saveWod(row); onSaved() }
         dismiss()
