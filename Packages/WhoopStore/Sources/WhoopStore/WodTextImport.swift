@@ -100,6 +100,9 @@ public enum WodTextImport {
         var date: Date? = nil
         var movements: [WodMovement] = []
         var collectingNotes = false
+        // True after a "Movements:" header, so an AI that lists movements WITHOUT bullets still has
+        // them read as movements (not swept into notes). Reset by the next recognised label.
+        var inMovements = false
 
         for raw in lines {
             let line = raw.trimmingCharacters(in: .whitespaces)
@@ -115,6 +118,7 @@ public enum WodTextImport {
             // Label: value
             if let (label, value) = splitLabel(line) {
                 collectingNotes = false
+                inMovements = false
                 switch label {
                 case "name", "nome", "wod", "title", "titolo", "workout", "allenamento":
                     title = value
@@ -136,6 +140,7 @@ public enum WodTextImport {
                     if !value.isEmpty { notesParts.append(value) }
                     collectingNotes = true
                 case "movements", "movimenti", "esercizi":
+                    inMovements = true
                     // Inline movements after the colon (comma-separated) — else the bullets that follow.
                     if !value.isEmpty {
                         for part in value.components(separatedBy: ",") {
@@ -149,8 +154,11 @@ public enum WodTextImport {
                 continue
             }
 
-            // A non-label, non-bullet line: continuation of notes, else a bare title if we have none.
-            if collectingNotes {
+            // A non-label, non-bullet line. Inside a Movements section, read it as a movement (so an
+            // AI that drops the bullets still works); otherwise it's a note, or the bare title.
+            if inMovements, let m = parseMovement(line) {
+                movements.append(m)
+            } else if collectingNotes {
                 notesParts.append(line)
             } else if title.isEmpty && movements.isEmpty {
                 title = line

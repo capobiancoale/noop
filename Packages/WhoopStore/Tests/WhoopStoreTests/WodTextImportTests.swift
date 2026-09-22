@@ -143,6 +143,26 @@ final class WodTextImportTests: XCTestCase {
         XCTAssertEqual(w.movements[0].rxWeightKg, 102)
     }
 
+    func testMovementsWithoutBullets() throws {
+        // Some AIs drop the leading "-"; under a Movements: header we still read them as movements,
+        // and a following Note: label ends the section.
+        let text = """
+        Nome: Helen
+        Movimenti:
+        Kettlebell Swing; reps 21; rx 24; me 20
+        Run; 400 m
+        Pull-up; reps 12
+        Note: dura
+        """
+        let w = try XCTUnwrap(WodTextImport.parse(text, now: now, calendar: cal).first)
+        XCTAssertEqual(w.movements.count, 3)
+        XCTAssertEqual(w.movements[0].name, "Kettlebell Swing")
+        XCTAssertEqual(w.movements[0].rxWeightKg, 24)
+        XCTAssertEqual(w.movements[0].weightKg, 20)
+        XCTAssertEqual(w.movements[2].reps, 12)
+        XCTAssertEqual(w.notes, "dura")
+    }
+
     func testTimeValueNotMistakenForLabel() throws {
         // "6:32" as a bare result value line under a Result label must stay a time, and a stray
         // "21-15-9:" style leading-digit token must not be read as a label.
