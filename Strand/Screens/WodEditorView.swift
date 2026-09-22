@@ -88,7 +88,7 @@ struct WodEditorView: View {
 
                 Section("Result") {
                     Picker("Score", selection: $resultKind) {
-                        Text("Time").tag(WodResultKind.time)
+                        Text("Duration").tag(WodResultKind.time)
                         Text("Rounds + reps").tag(WodResultKind.roundsReps)
                         Text("Reps").tag(WodResultKind.reps)
                         Text("Weight").tag(WodResultKind.weight)
@@ -138,7 +138,7 @@ struct WodEditorView: View {
         switch resultKind {
         case .time:
             HStack {
-                Text("Time")
+                Text("Duration")
                 Spacer()
                 TextField("min", text: $resMin).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 54)
                 Text(":")

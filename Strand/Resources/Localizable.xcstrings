@@ -42946,6 +42946,12 @@
             "state": "translated",
             "value": "Jede Metrik ist eine nicht validierte Näherung. Nutze NOOP nicht, um zu diagnostizieren, zu behandeln oder Gesundheitsentscheidungen zu treffen. Ziehe immer qualifiziertes Fachpersonal hinzu."
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni metrica è un'approssimazione non validata. Non usare NOOP per diagnosticare, curare o prendere qualsiasi decisione sulla salute. Consulta sempre un professionista qualificato."
+          }
         }
       }
     },
@@ -44069,6 +44075,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Experimentell: auf eigenes Risiko"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sperimentale: a tuo rischio"
           }
         }
       }
@@ -49023,6 +49035,12 @@
     "HRV (RMSSD)": {
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HRV (RMSSD)"
+          }
+        },
+        "it": {
           "stringUnit": {
             "state": "translated",
             "value": "HRV (RMSSD)"
@@ -55459,6 +55477,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unabhängig: nicht mit WHOOP verbunden"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indipendente: non affiliato a WHOOP"
           }
         }
       }
@@ -66828,6 +66852,12 @@
             "state": "translated",
             "value": "NOOP ist ein inoffizielles Projekt: nicht mit WHOOP, Inc. verbunden, nicht von ihr unterstützt oder gesponsert. „WHOOP“ ist deren Marke und wird nur verwendet, um die Hardware zu benennen, mit der NOOP arbeitet."
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP è un progetto non ufficiale: non affiliato, approvato o sponsorizzato da WHOOP, Inc. «WHOOP» è un loro marchio, usato solo per indicare l'hardware con cui NOOP funziona."
+          }
         }
       }
     },
@@ -66896,6 +66926,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "NOOP ist kostenlos und wird „wie besehen“ bereitgestellt, ohne Gewährleistung. Die Haftung ist im maximal zulässigen Umfang des für dich geltenden Rechts begrenzt, und nichts hier nimmt dir Schutz, den dein lokales Recht uns nicht zu nehmen erlaubt."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP è gratuito e fornito «così com'è», senza alcuna garanzia. La responsabilità è limitata nella misura massima consentita dalla legge a te applicabile, e nulla qui rimuove le tutele che la tua legge locale non ci permette di rimuovere."
           }
         }
       }
@@ -67849,6 +67885,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "NOOP spricht mit der Firmware deines Straps über ein inoffizielles, unabhängig rekonstruiertes Protokoll. Es bleibt ein Restrisiko für das Gerät, seine Daten und seine Verbindung zu offiziellen Diensten. Dieses Risiko übernimmst du."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP comunica con il firmware della tua fascia tramite un protocollo non ufficiale, mappato in modo indipendente. Esiste un rischio residuo per il dispositivo, i suoi dati e la sua connessione ai servizi ufficiali. Ti assumi tu quel rischio."
           }
         }
       }
@@ -71901,6 +71943,12 @@
             "state": "translated",
             "value": "Keine Gewährleistung; Haftung begrenzt"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna garanzia; responsabilità limitata"
+          }
         }
       }
     },
@@ -72304,6 +72352,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kein Medizinprodukt, kein medizinischer Rat"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è un dispositivo medico, non è un consiglio medico"
           }
         }
       }
@@ -82324,6 +82378,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "RHR"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FC riposo"
           }
         }
       }
@@ -110348,6 +110408,12 @@
             "state": "translated",
             "value": "Nutze es nur mit einem Gerät, das dir gehört, um deine eigenen Daten zu lesen. Ob du es nutzt (und jede Auswirkung auf dein WHOOP-Konto, Abo, Gerät oder deine Garantie), ist deine Entscheidung und allein dein Risiko."
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usalo solo con un dispositivo di tua proprietà, per leggere i tuoi dati. Se usarlo (e qualsiasi effetto sul tuo account WHOOP, abbonamento, dispositivo o garanzia) è una tua decisione, e un rischio solo tuo."
+          }
         }
       }
     },
@@ -110478,6 +110544,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Nutzung von NOOP kann gegen WHOOPs Nutzungsbedingungen verstoßen"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'uso di NOOP potrebbe violare i Termini di Servizio di WHOOP"
           }
         }
       }
@@ -129194,6 +129266,666 @@
           "stringUnit": {
             "state": "translated",
             "value": "✓"
+          }
+        }
+      }
+    },
+    "Glucose": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia"
+          }
+        }
+      }
+    },
+    "Glucose (avg)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia (media)"
+          }
+        }
+      }
+    },
+    "Glucose (low)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia (min)"
+          }
+        }
+      }
+    },
+    "Glucose (high)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia (max)"
+          }
+        }
+      }
+    },
+    "Time in Range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo nel range"
+          }
+        }
+      }
+    },
+    "Time in range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo nel range"
+          }
+        }
+      }
+    },
+    "Time Below Range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo sotto il range"
+          }
+        }
+      }
+    },
+    "Time Below": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo sotto"
+          }
+        }
+      }
+    },
+    "Time Below (severe)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo sotto (grave)"
+          }
+        }
+      }
+    },
+    "Time Above Range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo sopra il range"
+          }
+        }
+      }
+    },
+    "Time Above (high)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo sopra (alto)"
+          }
+        }
+      }
+    },
+    "Glucose Variability": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variabilità glicemica"
+          }
+        }
+      }
+    },
+    "Variability": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variabilità"
+          }
+        }
+      }
+    },
+    "Hypo Events": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Episodi ipo"
+          }
+        }
+      }
+    },
+    "Overnight Glucose": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia notturna"
+          }
+        }
+      }
+    },
+    "Overnight Low": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimo notturno"
+          }
+        }
+      }
+    },
+    "Insulin (total)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insulina (totale)"
+          }
+        }
+      }
+    },
+    "Insulin (basal)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insulina (basale)"
+          }
+        }
+      }
+    },
+    "Insulin (bolus)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insulina (bolo)"
+          }
+        }
+      }
+    },
+    "Insulin": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insulina"
+          }
+        }
+      }
+    },
+    "Insulin / day": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insulina / giorno"
+          }
+        }
+      }
+    },
+    "Post-exercise Low": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimo post-allenamento"
+          }
+        }
+      }
+    },
+    "Post-exercise Hypos": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ipo post-allenamento"
+          }
+        }
+      }
+    },
+    "Avg Glucose": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia media"
+          }
+        }
+      }
+    },
+    "GMI / est. A1c": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GMI / A1c stim."
+          }
+        }
+      }
+    },
+    "Basal : Bolus": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basale : Bolo"
+          }
+        }
+      }
+    },
+    "est. from avg glucose": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "stim. dalla glicemia media"
+          }
+        }
+      }
+    },
+    "% basal / bolus": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "% basale / bolo"
+          }
+        }
+      }
+    },
+    "Share of readings in target (70–180 mg/dL). Higher is better.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quota di letture nel target (70–180 mg/dL). Più alta è meglio."
+          }
+        }
+      }
+    },
+    "Coefficient of variation. Below 36% is considered stable.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coefficiente di variazione. Sotto il 36% è considerato stabile."
+          }
+        }
+      }
+    },
+    "Lowest glucose during and shortly after workouts.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia più bassa durante e subito dopo gli allenamenti."
+          }
+        }
+      }
+    },
+    "Glucose (daily average)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia (media giornaliera)"
+          }
+        }
+      }
+    },
+    "Insulin (total per day)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insulina (totale al giorno)"
+          }
+        }
+      }
+    },
+    "Carbs (per day)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carboidrati (al giorno)"
+          }
+        }
+      }
+    },
+    "Blood pressure (systolic)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pressione (sistolica)"
+          }
+        }
+      }
+    },
+    "Blood pressure (diastolic)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pressione (diastolica)"
+          }
+        }
+      }
+    },
+    "Blood Pressure (sys)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pressione (sist.)"
+          }
+        }
+      }
+    },
+    "Blood Pressure (dia)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pressione (diast.)"
+          }
+        }
+      }
+    },
+    "Waist": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Girovita"
+          }
+        }
+      }
+    },
+    "GLUCOSE & INSULIN": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GLICEMIA E INSULINA"
+          }
+        }
+      }
+    },
+    "Log a WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra un WOD"
+          }
+        }
+      }
+    },
+    "No WODs logged yet. Tap “Log a WOD” to record your first CrossFit session or lift — add the movements, reps and weight, and your progress builds from here.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora nessun WOD registrato. Tocca “Registra un WOD” per salvare la tua prima sessione CrossFit o alzata — aggiungi movimenti, ripetizioni e peso, e i tuoi progressi partono da qui."
+          }
+        }
+      }
+    },
+    "Bests": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record"
+          }
+        }
+      }
+    },
+    "WOD Log": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diario WOD"
+          }
+        }
+      }
+    },
+    "Type": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tipo"
+          }
+        }
+      }
+    },
+    "Name (e.g. Fran, Back Squat 5×5)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome (es. Fran, Back Squat 5×5)"
+          }
+        }
+      }
+    },
+    "Format": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Formato"
+          }
+        }
+      }
+    },
+    "Time cap (min)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo limite (min)"
+          }
+        }
+      }
+    },
+    "Movements": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Movimenti"
+          }
+        }
+      }
+    },
+    "Movement (e.g. Thruster, Pull-up)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Movimento (es. Thruster, Pull-up)"
+          }
+        }
+      }
+    },
+    "Reps": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripetizioni"
+          }
+        }
+      }
+    },
+    "Weight (kg)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Peso (kg)"
+          }
+        }
+      }
+    },
+    "Add movement": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi movimento"
+          }
+        }
+      }
+    },
+    "Result": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Risultato"
+          }
+        }
+      }
+    },
+    "Score": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Punteggio"
+          }
+        }
+      }
+    },
+    "Rounds + reps": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Round + ripetizioni"
+          }
+        }
+      }
+    },
+    "None": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuno"
+          }
+        }
+      }
+    },
+    "Delete WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina WOD"
+          }
+        }
+      }
+    },
+    "Log WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra WOD"
+          }
+        }
+      }
+    },
+    "Edit WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifica WOD"
+          }
+        }
+      }
+    },
+    "+ reps": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+ ripetizioni"
+          }
+        }
+      }
+    },
+    "Total reps": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripetizioni totali"
+          }
+        }
+      }
+    },
+    "Strain": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sforzo"
+          }
+        }
+      }
+    },
+    "Rest HR": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FC riposo"
+          }
+        }
+      }
+    },
+    "Glucose & Insulin": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia e insulina"
+          }
+        }
+      }
+    },
+    "From Apple Health": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da Apple Health"
           }
         }
       }

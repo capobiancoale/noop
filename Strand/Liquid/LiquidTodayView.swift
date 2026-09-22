@@ -676,7 +676,7 @@ struct LiquidTodayView: View {
         }
     }
 
-    private func vitalRow(_ label: String, _ value: String, _ tint: Color, _ frac: Double?) -> some View {
+    private func vitalRow(_ label: LocalizedStringKey, _ value: String, _ tint: Color, _ frac: Double?) -> some View {
         HStack(spacing: 12) {
             LiquidVessel(value: frac, tint: tint, animated: false).frame(width: 26, height: 26)
             Text(label).font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
@@ -748,9 +748,10 @@ struct LiquidTodayView: View {
         }
     }
 
-    private func ktile(_ label: String, _ value: String, _ unit: String, _ tint: Color, _ frac: Double?) -> some View {
+    private func ktile(_ label: LocalizedStringKey, _ value: String, _ unit: String, _ tint: Color, _ frac: Double?) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label.uppercased()).font(StrandFont.overlineScaled(9)).tracking(1.2)
+            Text(label).font(StrandFont.overlineScaled(9)).tracking(1.2)
+                .textCase(.uppercase)
                 .foregroundStyle(StrandPalette.textTertiary)
             (Text(value).font(StrandFont.number(17))
                 + Text(unit.isEmpty ? "" : " \(unit)").font(StrandFont.caption))
