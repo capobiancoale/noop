@@ -130069,6 +130069,86 @@
           }
         }
       }
+    },
+    "Glucose around this WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia intorno al WOD"
+          }
+        }
+      }
+    },
+    "Reading from Apple Health…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lettura da Apple Health…"
+          }
+        }
+      }
+    },
+    "Before": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prima"
+          }
+        }
+      }
+    },
+    "After": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo"
+          }
+        }
+      }
+    },
+    "Lowest": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimo"
+          }
+        }
+      }
+    },
+    "Went below 70 mg/dL in this window": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sceso sotto 70 mg/dL in questa finestra"
+          }
+        }
+      }
+    },
+    "No glucose readings in Apple Health for this window.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna lettura glicemica in Apple Health per questa finestra."
+          }
+        }
+      }
+    },
+    "lowest after": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minimo dopo"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -128,4 +128,41 @@ final class DiabetesMetricsTests: XCTestCase {
         let readings = [GlucoseReading(ts: 1, day: "d", minutesLocal: 1, mgdl: 100)]
         XCTAssertTrue(DiabetesMetrics.postWorkoutGlucose(readings: readings, workouts: []).isEmpty)
     }
+
+    // MARK: - wodGlucoseResponse (per-WOD window)
+
+    func testWodGlucoseResponseBaselineMinNadirAndLow() throws {
+        // WOD from ts 1000 to 2000.
+        let day = "2024-05-01"
+        let readings: [GlucoseReading] = [
+            .init(ts: 100,  day: day, minutesLocal: 1, mgdl: 140), // before start
+            .init(ts: 900,  day: day, minutesLocal: 2, mgdl: 130), // last <= start -> baseline
+            .init(ts: 1500, day: day, minutesLocal: 3, mgdl: 95),  // during
+            .init(ts: 2500, day: day, minutesLocal: 4, mgdl: 66),  // after end -> nadir, <70 low
+            .init(ts: 3600, day: day, minutesLocal: 5, mgdl: 88),  // after end -> end value
+        ]
+        let r = try XCTUnwrap(DiabetesMetrics.wodGlucoseResponse(readings: readings, workoutStart: 1000, workoutEnd: 2000))
+        XCTAssertEqual(r.count, 5)
+        XCTAssertEqual(r.startMgdl, 130, accuracy: 1e-9)
+        XCTAssertEqual(r.endMgdl, 88, accuracy: 1e-9)
+        XCTAssertEqual(r.minMgdl, 66, accuracy: 1e-9)
+        XCTAssertEqual(r.maxMgdl, 140, accuracy: 1e-9)
+        XCTAssertEqual(try XCTUnwrap(r.nadirAfterMgdl), 66, accuracy: 1e-9)
+        XCTAssertTrue(r.anyLow)
+        XCTAssertEqual(r.deltaMgdl, -42, accuracy: 1e-9)
+    }
+
+    func testWodGlucoseResponseNilWhenEmpty() {
+        XCTAssertNil(DiabetesMetrics.wodGlucoseResponse(readings: [], workoutStart: 0, workoutEnd: 1))
+    }
+
+    func testWodGlucoseResponseBaselineFallsBackToFirst() throws {
+        // No reading at/before start -> baseline is the earliest reading; no post-end reading -> nil nadir.
+        let readings = [GlucoseReading(ts: 1500, day: "d", minutesLocal: 1, mgdl: 100),
+                        GlucoseReading(ts: 1800, day: "d", minutesLocal: 2, mgdl: 90)]
+        let r = try XCTUnwrap(DiabetesMetrics.wodGlucoseResponse(readings: readings, workoutStart: 1000, workoutEnd: 2000))
+        XCTAssertEqual(r.startMgdl, 100, accuracy: 1e-9)
+        XCTAssertNil(r.nadirAfterMgdl)
+        XCTAssertFalse(r.anyLow)
+    }
 }

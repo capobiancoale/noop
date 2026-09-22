@@ -661,6 +661,13 @@ final class HealthKitBridge: ObservableObject {
 
     // MARK: - Diabetes (rich KPIs from raw samples)
 
+    /// On-demand raw CGM readings over `[start, end)`, for one logged WOD's glucose response. Returns
+    /// [] unless Health is authorized. ON-DEVICE ONLY — a plain read of samples NOOP did not author.
+    func glucoseWindow(start: Date, end: Date) async -> [GlucoseReading] {
+        guard auth == .authorized else { return [] }
+        return await collectGlucoseReadings(start: start, end: end)
+    }
+
     /// Fetch raw CGM readings over `[start, end)` as `GlucoseReading`s (ascending by time), each
     /// bucketed into its local civil day with a local minute-of-day (for the overnight window). Read
     /// in mg/dL — HealthKit converts on read, so the value is unit-unambiguous. ON-DEVICE ONLY: a plain

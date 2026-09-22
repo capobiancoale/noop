@@ -129,6 +129,28 @@ public struct GlucoseThresholds: Sendable, Equatable {
     public static let standard = GlucoseThresholds()
 }
 
+/// The glucose response around one logged WOD (a workout NOOP itself stored, distinct from an Apple
+/// Health workout). Computed from raw CGM readings in a window spanning a little before the workout to
+/// a few hours after — the shape a Type-1 athlete cares about: where glucose started, how low it dipped
+/// (exercise often drops it), where it ended, and whether it crossed into hypo.
+public struct WodGlucoseResponse: Sendable, Equatable {
+    public let count: Int
+    public let startMgdl: Double        // reading at/just before the workout start (baseline)
+    public let endMgdl: Double          // last reading in the window
+    public let minMgdl: Double
+    public let maxMgdl: Double
+    public let nadirAfterMgdl: Double?  // lowest reading AFTER the workout ended (post-exercise low)
+    public let anyLow: Bool             // any reading below the low threshold anywhere in the window
+    public init(count: Int, startMgdl: Double, endMgdl: Double, minMgdl: Double, maxMgdl: Double,
+                nadirAfterMgdl: Double?, anyLow: Bool) {
+        self.count = count; self.startMgdl = startMgdl; self.endMgdl = endMgdl
+        self.minMgdl = minMgdl; self.maxMgdl = maxMgdl
+        self.nadirAfterMgdl = nadirAfterMgdl; self.anyLow = anyLow
+    }
+    /// End − start: net glucose change across the window (negative = a drop, common with training).
+    public var deltaMgdl: Double { endMgdl - startMgdl }
+}
+
 public enum DiabetesMetrics {
 
     /// Minute-of-day (exclusive) that ends the overnight window. 06:00 → 360.
@@ -252,5 +274,28 @@ public enum DiabetesMetrics {
         return byDay.reduce(into: [String: PostWorkoutGlucose]()) { dict, kv in
             dict[kv.key] = PostWorkoutGlucose(day: kv.key, minMgdl: kv.value.min, lows: kv.value.lows)
         }
+    }
+
+    /// Summarise the glucose response around ONE logged WOD. `readings` should be ascending by ts and
+    /// already limited to the window (a little before `workoutStart` to a few hours after
+    /// `workoutEnd`); it is re-sorted defensively. Returns nil when there are no readings.
+    public static func wodGlucoseResponse(readings: [GlucoseReading],
+                                          workoutStart: Double,
+                                          workoutEnd: Double,
+                                          thresholds: GlucoseThresholds = .standard) -> WodGlucoseResponse? {
+        let sorted = readings.sorted { $0.ts < $1.ts }
+        guard let first = sorted.first, let last = sorted.last else { return nil }
+        // Baseline = the last reading at/just before the workout began, else the earliest we have.
+        let baseline = sorted.last(where: { $0.ts <= workoutStart }) ?? first
+        let vals = sorted.map(\.mgdl)
+        let after = sorted.filter { $0.ts >= workoutEnd }.map(\.mgdl)
+        return WodGlucoseResponse(
+            count: sorted.count,
+            startMgdl: baseline.mgdl,
+            endMgdl: last.mgdl,
+            minMgdl: vals.min() ?? baseline.mgdl,
+            maxMgdl: vals.max() ?? baseline.mgdl,
+            nadirAfterMgdl: after.min(),
+            anyLow: vals.contains { $0 < thresholds.low })
     }
 }

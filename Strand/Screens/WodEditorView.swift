@@ -1,6 +1,8 @@
 #if os(iOS)
 import SwiftUI
 import WhoopStore
+import StrandImport
+import StrandDesign
 
 // MARK: - WOD editor (create / edit)
 //
@@ -11,6 +13,7 @@ import WhoopStore
 
 struct WodEditorView: View {
     @EnvironmentObject private var repo: Repository
+    @EnvironmentObject private var health: HealthKitBridge
     @Environment(\.dismiss) private var dismiss
 
     /// The row being edited, or nil to create a new one.
@@ -48,6 +51,12 @@ struct WodEditorView: View {
     @State private var resWeight = ""
     @State private var rpe = 0.0
     @State private var notes = ""
+
+    // Glucose response around this WOD (only for an existing row; queried live from Apple Health).
+    @State private var glucosePoints: [TrendPoint] = []
+    @State private var glucoseResp: WodGlucoseResponse?
+    @State private var glucoseLoading = false
+    @State private var glucoseLoaded = false
 
     private let types = ["CrossFit", "Weightlifting", "Hyrox", "Running", "Rowing", "Other"]
     private let formats = ["For Time", "AMRAP", "EMOM", "Strength", "Intervals", "Other"]
@@ -123,6 +132,8 @@ struct WodEditorView: View {
                     TextField("Notes", text: $notes, axis: .vertical).lineLimit(1...4)
                 }
 
+                if existing != nil { glucoseSection }
+
                 if existing != nil {
                     Section {
                         Button("Delete WOD", role: .destructive) {
@@ -144,8 +155,90 @@ struct WodEditorView: View {
                 }
             }
             .onAppear { if let e = existing { prefill(e) } }
+            .task { await loadGlucoseIfNeeded() }
         }
     }
+
+    // MARK: - Glucose response (Apple Health, existing WOD only)
+
+    /// The glucose-around-this-WOD panel. Shown only when editing an existing row; queries Apple
+    /// Health live for CGM readings from ~45 min before to ~3 h after, and draws the curve + the
+    /// numbers a Type-1 athlete watches (before / after / lowest, and a hypo flag).
+    @ViewBuilder private var glucoseSection: some View {
+        Section("Glucose around this WOD") {
+            if glucoseLoading {
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text("Reading from Apple Health…").foregroundStyle(.secondary).font(.subheadline)
+                }
+            } else if let r = glucoseResp {
+                HStack {
+                    glucoseStat("Before", r.startMgdl)
+                    Spacer()
+                    glucoseStat("After", r.endMgdl)
+                    Spacer()
+                    glucoseStat("Lowest", r.minMgdl)
+                }
+                if !glucosePoints.isEmpty {
+                    TrendChart(points: glucosePoints,
+                               gradient: Gradient(colors: [StrandPalette.metricCyan, StrandPalette.metricRose]),
+                               valueRange: 40...300,
+                               height: 130,
+                               valueFormat: { "\(Int($0.rounded())) mg/dL" },
+                               dateFormat: { Self.clock.string(from: $0) },
+                               accessibilityLabel: "Glucose around this WOD")
+                }
+                Text(glucoseDeltaText(r)).font(.caption).foregroundStyle(.secondary)
+                if r.anyLow {
+                    Label("Went below 70 mg/dL in this window", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption).foregroundStyle(.orange)
+                }
+            } else if glucoseLoaded {
+                Text("No glucose readings in Apple Health for this window.")
+                    .foregroundStyle(.secondary).font(.subheadline)
+            }
+        }
+    }
+
+    private func glucoseStat(_ label: LocalizedStringKey, _ v: Double) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(.caption2).foregroundStyle(.secondary)
+            Text("\(Int(v.rounded()))").font(.title3.monospacedDigit())
+        }
+    }
+
+    /// "↓ 38 mg/dL · lowest after 62" style caption (arrow + magnitude keeps it locale-agnostic).
+    private func glucoseDeltaText(_ r: WodGlucoseResponse) -> String {
+        let d = Int(r.deltaMgdl.rounded())
+        let arrow = d == 0 ? "→" : (d > 0 ? "↑" : "↓")
+        var s = "\(arrow) \(abs(d)) mg/dL"
+        if let nadir = r.nadirAfterMgdl {
+            s += " · " + String(localized: "lowest after") + " \(Int(nadir.rounded()))"
+        }
+        return s
+    }
+
+    private func loadGlucoseIfNeeded() async {
+        guard let e = existing, !glucoseLoaded, !glucoseLoading else { return }
+        glucoseLoading = true
+        let start = Date(timeIntervalSince1970: TimeInterval(e.ts) - 45 * 60)
+        let workoutEnd = TimeInterval(e.ts) + TimeInterval(e.timeCapS ?? 20 * 60)
+        let end = Date(timeIntervalSince1970: workoutEnd + 3 * 3600)
+        let readings = await health.glucoseWindow(start: start, end: end)
+        let resp = DiabetesMetrics.wodGlucoseResponse(readings: readings,
+                                                      workoutStart: TimeInterval(e.ts),
+                                                      workoutEnd: workoutEnd)
+        let pts = readings.map { TrendPoint(date: Date(timeIntervalSince1970: $0.ts), value: $0.mgdl) }
+        glucosePoints = pts
+        glucoseResp = resp
+        glucoseLoading = false
+        glucoseLoaded = true
+    }
+
+    /// Time-of-day formatter for the glucose chart's tooltip.
+    private static let clock: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "HH:mm"; return f
+    }()
 
     /// The result inputs for the selected scoring kind.
     @ViewBuilder private var resultFields: some View {
