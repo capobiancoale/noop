@@ -23,12 +23,14 @@ struct WodEditorView: View {
         self.onSaved = onSaved
     }
 
-    // Editable movement row (strings for the numeric fields; parsed on save).
+    // Editable movement row (strings for the numeric fields; parsed on save). `reps` accepts a plain
+    // count or a scheme like "21-15-9"; `weight` is my load, `rxWeight` the prescribed (RX) load.
     private struct EditMovement: Identifiable {
         let id = UUID()
         var name = ""
         var reps = ""
         var weight = ""
+        var rxWeight = ""
     }
 
     @State private var type = "CrossFit"
@@ -36,6 +38,7 @@ struct WodEditorView: View {
     @State private var date = Date()
     @State private var format = "For Time"
     @State private var timeCapMin = ""
+    @State private var rxMode = 0   // 0 = unset, 1 = RX, 2 = Scaled
     @State private var movements: [EditMovement] = [EditMovement()]
     @State private var resultKind: WodResultKind = .time
     @State private var resMin = ""
@@ -65,16 +68,27 @@ struct WodEditorView: View {
                             .multilineTextAlignment(.trailing)
                             .frame(width: 80)
                     }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("As prescribed?").font(.caption).foregroundStyle(.secondary)
+                        Picker("RX / Scaled", selection: $rxMode) {
+                            Text("—").tag(0)
+                            Text("RX").tag(1)
+                            Text("Scaled").tag(2)
+                        }
+                        .pickerStyle(.segmented)
+                    }
                 }
 
                 Section("Movements") {
                     ForEach($movements) { $m in
                         VStack(spacing: 6) {
                             TextField("Movement (e.g. Thruster, Pull-up)", text: $m.name)
-                            HStack(spacing: 10) {
-                                TextField("Reps", text: $m.reps).keyboardType(.numberPad)
+                            HStack(spacing: 8) {
+                                TextField("Reps / scheme", text: $m.reps)
                                 Divider()
-                                TextField("Weight (kg)", text: $m.weight).keyboardType(.decimalPad)
+                                TextField("My kg", text: $m.weight).keyboardType(.decimalPad)
+                                Divider()
+                                TextField("RX kg", text: $m.rxWeight).keyboardType(.decimalPad)
                             }
                             .font(.subheadline)
                         }
@@ -176,10 +190,12 @@ struct WodEditorView: View {
         date = Date(timeIntervalSince1970: TimeInterval(e.ts))
         format = e.format ?? "For Time"
         timeCapMin = e.timeCapS.map { String($0 / 60) } ?? ""
+        rxMode = e.rx == nil ? 0 : (e.rx! ? 1 : 2)
         movements = e.movements.isEmpty ? [EditMovement()] : e.movements.map {
             var m = EditMovement(); m.name = $0.name
-            m.reps = $0.reps.map(String.init) ?? ""
+            m.reps = $0.scheme ?? $0.reps.map(String.init) ?? ""
             m.weight = $0.weightKg.map(WodFormat.trimmed) ?? ""
+            m.rxWeight = $0.rxWeightKg.map(WodFormat.trimmed) ?? ""
             return m
         }
         resultKind = e.resultKind
@@ -196,9 +212,14 @@ struct WodEditorView: View {
         let movs: [WodMovement] = movements.compactMap { m in
             let n = m.name.trimmingCharacters(in: .whitespaces)
             guard !n.isEmpty else { return nil }
+            let repsText = m.reps.trimmingCharacters(in: .whitespaces)
+            let repsInt = Int(repsText)
+            let scheme = (repsInt == nil && !repsText.isEmpty) ? repsText : nil
             return WodMovement(name: n,
-                               reps: Int(m.reps.trimmingCharacters(in: .whitespaces)),
-                               weightKg: parseDouble(m.weight))
+                               reps: repsInt,
+                               scheme: scheme,
+                               weightKg: parseDouble(m.weight),
+                               rxWeightKg: parseDouble(m.rxWeight))
         }
         let row = WodLogRow(
             id: existing?.id ?? UUID().uuidString,
@@ -214,6 +235,7 @@ struct WodEditorView: View {
             resultReps: (resultKind == .roundsReps || resultKind == .reps) ? Int(resReps) : nil,
             resultWeightKg: resultKind == .weight ? parseDouble(resWeight) : nil,
             rpe: rpe > 0 ? rpe : nil,
+            rx: rxMode == 0 ? nil : (rxMode == 1),
             notes: notes.trimmingCharacters(in: .whitespaces).isEmpty ? nil : notes,
             movements: movs,
             createdTs: existing?.createdTs ?? Int(Date().timeIntervalSince1970)

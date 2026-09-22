@@ -15,6 +15,7 @@ struct WodLogView: View {
     @State private var wods: [WodLogRow] = []
     @State private var loaded = false
     @State private var showNew = false
+    @State private var showImport = false
     @State private var editing: WodLogRow?
 
     var body: some View {
@@ -24,6 +25,11 @@ struct WodLogView: View {
                     Label("Log a WOD", systemImage: "plus.circle.fill")
                         .font(.headline)
                 }
+                Button { showImport = true } label: {
+                    Label("Import from text", systemImage: "doc.text.viewfinder")
+                }
+            } footer: {
+                Text("Get the WOD as a photo? Have any AI turn it into text, then paste it here — movements, RX and your loads fill in automatically.")
             }
 
             if loaded && wods.isEmpty {
@@ -67,6 +73,9 @@ struct WodLogView: View {
         .sheet(isPresented: $showNew) {
             WodEditorView(existing: nil) { Task { await reload() } }
         }
+        .sheet(isPresented: $showImport) {
+            WodImportView { Task { await reload() } }
+        }
         .sheet(item: $editing) { w in
             WodEditorView(existing: w) { Task { await reload() } }
         }
@@ -101,8 +110,14 @@ private struct WodRowView: View {
     let wod: WodLogRow
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            HStack {
+            HStack(spacing: 6) {
                 Text(wod.title.isEmpty ? wod.type : wod.title).font(.body).foregroundStyle(.primary)
+                if let rx = wod.rx {
+                    Text(rx ? "RX" : "Scaled")
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background((rx ? Color.green : Color.orange).opacity(0.22), in: Capsule())
+                }
                 Spacer()
                 if let r = WodFormat.result(wod) {
                     Text(r).font(.body.monospacedDigit()).foregroundStyle(.primary)
@@ -115,8 +130,8 @@ private struct WodRowView: View {
             }
             .font(.caption).foregroundStyle(.secondary)
             if !wod.movements.isEmpty {
-                Text(wod.movements.map(\.name).joined(separator: ", "))
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(wod.movements.map(WodFormat.movement).joined(separator: ", "))
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(2)
             }
         }
         .padding(.vertical, 2)
@@ -159,6 +174,22 @@ enum WodFormat {
         case .none:
             return nil
         }
+    }
+
+    /// A movement summarised for a one-line list: "Thruster · 21-15-9 · 30 kg (RX 43)". Only the parts
+    /// that are present are shown, so a bare "Pull-up" stays "Pull-up".
+    static func movement(_ m: WodMovement) -> String {
+        var parts: [String] = [m.name]
+        if let s = m.scheme, !s.isEmpty { parts.append(s) }
+        else if let r = m.reps { parts.append("\(r)") }
+        if let me = m.weightKg, let rx = m.rxWeightKg {
+            parts.append("\(trimmed(me)) kg (RX \(trimmed(rx)))")
+        } else if let rx = m.rxWeightKg {
+            parts.append("RX \(trimmed(rx)) kg")
+        } else if let me = m.weightKg {
+            parts.append("\(trimmed(me)) kg")
+        }
+        return parts.joined(separator: " · ")
     }
 
     /// mm:ss from seconds.

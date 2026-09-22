@@ -129929,6 +129929,146 @@
           }
         }
       }
+    },
+    "Import from text": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa da testo"
+          }
+        }
+      }
+    },
+    "Get the WOD as a photo? Have any AI turn it into text, then paste it here — movements, RX and your loads fill in automatically.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricevi il WOD come foto? Fai convertire la foto in testo da una qualsiasi AI, poi incollalo qui: movimenti, RX e i tuoi carichi si compilano da soli."
+          }
+        }
+      }
+    },
+    "Paste WOD text": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incolla il testo del WOD"
+          }
+        }
+      }
+    },
+    "One block per WOD; separate several with a line of “---”. Labels like Name, Movements, RX and Result are understood in English and Italian.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un blocco per WOD; separa più WOD con una riga “---”. Le etichette come Nome, Movimenti, RX e Risultato sono riconosciute in italiano e in inglese."
+          }
+        }
+      }
+    },
+    "Paste from clipboard": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incolla dagli appunti"
+          }
+        }
+      }
+    },
+    "Copy AI prompt (for your photo)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia il prompt per l'AI (per la tua foto)"
+          }
+        }
+      }
+    },
+    "Analyze": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analizza"
+          }
+        }
+      }
+    },
+    "Couldn't find a WOD in that text. Check the format, or tap “Copy AI prompt” and let an AI convert your photo.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun WOD riconosciuto nel testo. Controlla il formato, oppure tocca “Copia il prompt per l’AI” e fai convertire la foto a un’AI."
+          }
+        }
+      }
+    },
+    "Import WODs": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa WOD"
+          }
+        }
+      }
+    },
+    "Save all": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva tutto"
+          }
+        }
+      }
+    },
+    "As prescribed?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Come da prescrizione (RX)?"
+          }
+        }
+      }
+    },
+    "Reps / scheme": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripetizioni / schema"
+          }
+        }
+      }
+    },
+    "My kg": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kg miei"
+          }
+        }
+      }
+    },
+    "RX kg": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kg RX"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

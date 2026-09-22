@@ -12,15 +12,24 @@ import GRDB
 // Movements are stored as a JSON array on the row (no child table): a WOD carries an arbitrary list of
 // movements, each with optional reps / weight / notes, and the whole set is read and written together.
 
-/// One movement inside a WOD (e.g. "Thruster", 21 reps, 43 kg). All detail fields optional so a quick
-/// log ("just the movement name") is valid and a detailed one carries reps + load.
+/// One movement inside a WOD (e.g. "Thruster", 21 reps, RX 43 kg, lifted 30 kg). All detail fields
+/// optional so a quick log ("just the movement name") is valid and a detailed one carries the rep
+/// scheme + both loads. `weightKg` is what the athlete actually lifted; `rxWeightKg` is the prescribed
+/// (RX) load — kept apart so the log shows "30 kg (RX 43)" and scaling is visible per movement.
+/// `scheme` holds a rep scheme as written ("21-15-9", "5x5") that a single `reps` count can't; when a
+/// movement is a plain count, `reps` is used instead. Adding these optional fields is backward
+/// compatible: rows written before v24 decode with the new fields nil.
 public struct WodMovement: Equatable, Codable, Sendable {
     public var name: String
     public var reps: Int?
+    public var scheme: String?
     public var weightKg: Double?
+    public var rxWeightKg: Double?
     public var notes: String?
-    public init(name: String, reps: Int? = nil, weightKg: Double? = nil, notes: String? = nil) {
-        self.name = name; self.reps = reps; self.weightKg = weightKg; self.notes = notes
+    public init(name: String, reps: Int? = nil, scheme: String? = nil, weightKg: Double? = nil,
+                rxWeightKg: Double? = nil, notes: String? = nil) {
+        self.name = name; self.reps = reps; self.scheme = scheme
+        self.weightKg = weightKg; self.rxWeightKg = rxWeightKg; self.notes = notes
     }
 }
 
@@ -50,6 +59,9 @@ public struct WodLogRow: Equatable, Codable, Sendable, Identifiable {
     public var resultReps: Int?
     public var resultWeightKg: Double?
     public var rpe: Double?
+    /// Whether the WOD was done as prescribed (RX) or scaled. nil = unset (bodyweight WODs, or not
+    /// recorded). Per-movement loads carry the finer detail; this is the headline flag.
+    public var rx: Bool?
     public var notes: String?
     public var movements: [WodMovement]
     public var createdTs: Int
@@ -57,12 +69,12 @@ public struct WodLogRow: Equatable, Codable, Sendable, Identifiable {
     public init(id: String, ts: Int, day: String, type: String, title: String,
                 format: String? = nil, timeCapS: Int? = nil, resultKind: WodResultKind = .none,
                 resultSeconds: Int? = nil, resultRounds: Int? = nil, resultReps: Int? = nil,
-                resultWeightKg: Double? = nil, rpe: Double? = nil, notes: String? = nil,
+                resultWeightKg: Double? = nil, rpe: Double? = nil, rx: Bool? = nil, notes: String? = nil,
                 movements: [WodMovement] = [], createdTs: Int) {
         self.id = id; self.ts = ts; self.day = day; self.type = type; self.title = title
         self.format = format; self.timeCapS = timeCapS; self.resultKind = resultKind
         self.resultSeconds = resultSeconds; self.resultRounds = resultRounds; self.resultReps = resultReps
-        self.resultWeightKg = resultWeightKg; self.rpe = rpe; self.notes = notes
+        self.resultWeightKg = resultWeightKg; self.rpe = rpe; self.rx = rx; self.notes = notes
         self.movements = movements; self.createdTs = createdTs
     }
 }
@@ -95,17 +107,18 @@ extension WhoopStore {
             try db.execute(sql: """
                 INSERT INTO wodLog
                     (id, ts, day, type, title, format, timeCapS, resultKind, resultSeconds, resultRounds,
-                     resultReps, resultWeightKg, rpe, notes, movementsJSON, createdTs)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     resultReps, resultWeightKg, rpe, rx, notes, movementsJSON, createdTs)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     ts = excluded.ts, day = excluded.day, type = excluded.type, title = excluded.title,
                     format = excluded.format, timeCapS = excluded.timeCapS, resultKind = excluded.resultKind,
                     resultSeconds = excluded.resultSeconds, resultRounds = excluded.resultRounds,
                     resultReps = excluded.resultReps, resultWeightKg = excluded.resultWeightKg,
-                    rpe = excluded.rpe, notes = excluded.notes, movementsJSON = excluded.movementsJSON
+                    rpe = excluded.rpe, rx = excluded.rx, notes = excluded.notes,
+                    movementsJSON = excluded.movementsJSON
                 """, arguments: [r.id, r.ts, r.day, r.type, r.title, r.format, r.timeCapS,
                                  r.resultKind.rawValue, r.resultSeconds, r.resultRounds, r.resultReps,
-                                 r.resultWeightKg, r.rpe, r.notes, movementsJSON, r.createdTs])
+                                 r.resultWeightKg, r.rpe, r.rx, r.notes, movementsJSON, r.createdTs])
             return db.changesCount
         }
     }
@@ -145,7 +158,7 @@ extension WhoopStore {
             resultKind: WodResultKind(rawValue: row["resultKind"] ?? "none") ?? .none,
             resultSeconds: row["resultSeconds"], resultRounds: row["resultRounds"],
             resultReps: row["resultReps"], resultWeightKg: row["resultWeightKg"],
-            rpe: row["rpe"], notes: row["notes"],
+            rpe: row["rpe"], rx: row["rx"], notes: row["notes"],
             movements: WodMovementCodec.decode(row["movementsJSON"]),
             createdTs: row["createdTs"])
     }

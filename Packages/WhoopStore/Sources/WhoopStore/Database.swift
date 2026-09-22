@@ -472,6 +472,15 @@ extension WhoopStore {
             try db.create(index: "wodLog_day", on: "wodLog", columns: ["day"])
             try db.create(index: "wodLog_title", on: "wodLog", columns: ["title"])
         }
+
+        migrator.registerMigration("v24-wod-rx") { db in
+            // RX vs Scaled headline flag for a WOD (nil = unset). The finer per-movement prescribed vs
+            // actual loads live inside movementsJSON (rxWeightKg / weightKg), so no schema change is
+            // needed for those — only this one nullable column is added.
+            try db.alter(table: "wodLog") { t in
+                t.add(column: "rx", .boolean)
+            }
+        }
         return migrator
     }
 }
