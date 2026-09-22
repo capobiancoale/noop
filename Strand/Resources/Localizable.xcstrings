@@ -130329,6 +130329,16 @@
           }
         }
       }
+    },
+    "Reps done": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fatte"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

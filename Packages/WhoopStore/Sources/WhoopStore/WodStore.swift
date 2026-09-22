@@ -23,12 +23,15 @@ public struct WodMovement: Equatable, Codable, Sendable {
     public var name: String
     public var reps: Int?
     public var scheme: String?
+    /// Reps ACTUALLY completed (distinct from the prescribed `reps`/`scheme`) — e.g. prescribed 5×5 but
+    /// 4 done on the last set, or the total in an AMRAP. Optional; nil when not recorded.
+    public var repsDone: Int?
     public var weightKg: Double?
     public var rxWeightKg: Double?
     public var notes: String?
-    public init(name: String, reps: Int? = nil, scheme: String? = nil, weightKg: Double? = nil,
-                rxWeightKg: Double? = nil, notes: String? = nil) {
-        self.name = name; self.reps = reps; self.scheme = scheme
+    public init(name: String, reps: Int? = nil, scheme: String? = nil, repsDone: Int? = nil,
+                weightKg: Double? = nil, rxWeightKg: Double? = nil, notes: String? = nil) {
+        self.name = name; self.reps = reps; self.scheme = scheme; self.repsDone = repsDone
         self.weightKg = weightKg; self.rxWeightKg = rxWeightKg; self.notes = notes
     }
 }

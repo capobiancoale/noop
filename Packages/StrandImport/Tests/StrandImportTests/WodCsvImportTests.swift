@@ -16,29 +16,51 @@ final class WodCsvImportTests: XCTestCase {
     func testTemplateParsesTwoWodsWithCarriedRows() throws {
         let r = WodCsvImport.parse(text: WodCsvImport.template, now: now, calendar: cal)
         XCTAssertFalse(r.fileTooLarge)
+        // Exercise-oriented log (no name column): one entry per exercise.
+        XCTAssertEqual(r.importedWods, 3)
+
+        let bs = try XCTUnwrap(r.wods.first { $0.title == "Back Squat" })
+        XCTAssertEqual(bs.day, "2026-09-18")
+        XCTAssertEqual(bs.resultKind, .weight)         // inferred from the logged load
+        XCTAssertEqual(bs.resultWeightKg, 140)
+        XCTAssertEqual(bs.movements.count, 1)
+        XCTAssertEqual(bs.movements[0].reps, 5)        // prescribed
+        XCTAssertEqual(bs.movements[0].repsDone, 5)    // done
+        XCTAssertEqual(bs.movements[0].rxWeightKg, 140)
+        XCTAssertEqual(bs.movements[0].weightKg, 140)
+
+        let thr = try XCTUnwrap(r.wods.first { $0.title == "Thruster" })
+        XCTAssertEqual(thr.resultKind, .time)          // actual_time 6:32
+        XCTAssertEqual(thr.resultSeconds, 392)
+        XCTAssertEqual(thr.timeCapS, 600)
+        XCTAssertEqual(thr.movements[0].scheme, "21-15-9")
+    }
+
+    func testMetconNameCarriesAcrossRows() throws {
+        let text = """
+        date,name,movement,reps
+        2026-09-22,Cindy,Pull-up,5
+        ,,Push-up,10
+        ,,Air Squat,15
+        """
+        let r = WodCsvImport.parse(text: text, now: now, calendar: cal)
+        XCTAssertEqual(r.importedWods, 1)
+        let w = try XCTUnwrap(r.wods.first)
+        XCTAssertEqual(w.title, "Cindy")
+        XCTAssertEqual(w.movements.count, 3)   // name carried down within the same day
+    }
+
+    func testBlankNameOnNewDayDoesNotInheritName() throws {
+        let text = """
+        date,name,exercise,my_kg
+        2026-09-20,Fran,Thruster,30
+        2026-09-18,,Back Squat,140
+        """
+        let r = WodCsvImport.parse(text: text, now: now, calendar: cal)
         XCTAssertEqual(r.importedWods, 2)
-
-        let fran = try XCTUnwrap(r.wods.first { $0.title == "Fran" })
-        XCTAssertEqual(fran.type, "CrossFit")
-        XCTAssertEqual(fran.format, "For Time")
-        XCTAssertEqual(fran.timeCapS, 600)
-        XCTAssertEqual(fran.rx, false)                 // "scaled"
-        XCTAssertEqual(fran.resultKind, .time)
-        XCTAssertEqual(fran.resultSeconds, 392)        // 6:32
-        XCTAssertEqual(fran.day, "2026-09-20")
-        XCTAssertEqual(fran.movements.count, 2)        // second row carried date+name
-        XCTAssertEqual(fran.movements[0].name, "Thruster")
-        XCTAssertEqual(fran.movements[0].scheme, "21-15-9")
-        XCTAssertEqual(fran.movements[0].rxWeightKg, 43)
-        XCTAssertEqual(fran.movements[0].weightKg, 30)
-        XCTAssertEqual(fran.movements[1].name, "Pull-up")
-
-        let bs = try XCTUnwrap(r.wods.first { $0.title == "Back Squat 5x5" })
-        XCTAssertEqual(bs.type, "Weightlifting")
-        XCTAssertEqual(bs.resultKind, .weight)
-        XCTAssertEqual(bs.resultWeightKg, 100)         // "100 kg"
-        XCTAssertEqual(bs.rx, true)
-        XCTAssertEqual(bs.movements.first?.rxWeightKg, 100)
+        let bs = try XCTUnwrap(r.wods.first { $0.day == "2026-09-18" })
+        XCTAssertEqual(bs.title, "Back Squat")   // NOT "Fran": new day resets the carried name
+        XCTAssertEqual(bs.resultWeightKg, 140)   // weight-result inferred
     }
 
     func testSemicolonDelimiterAndItalianHeaders() throws {

@@ -32,6 +32,7 @@ struct WodEditorView: View {
         let id = UUID()
         var name = ""
         var reps = ""
+        var done = ""
         var weight = ""
         var rxWeight = ""
     }
@@ -98,6 +99,10 @@ struct WodEditorView: View {
                             HStack(spacing: 8) {
                                 TextField("Reps / scheme", text: $m.reps)
                                 Divider()
+                                TextField("Reps done", text: $m.done).keyboardType(.numberPad)
+                            }
+                            .font(.subheadline)
+                            HStack(spacing: 8) {
                                 TextField("My kg", text: $m.weight).keyboardType(.decimalPad)
                                 Divider()
                                 TextField("RX kg", text: $m.rxWeight).keyboardType(.decimalPad)
@@ -334,6 +339,7 @@ struct WodEditorView: View {
         movements = e.movements.isEmpty ? [EditMovement()] : e.movements.map {
             var m = EditMovement(); m.name = $0.name
             m.reps = $0.scheme ?? $0.reps.map(String.init) ?? ""
+            m.done = $0.repsDone.map(String.init) ?? ""
             m.weight = $0.weightKg.map(WodFormat.trimmed) ?? ""
             m.rxWeight = $0.rxWeightKg.map(WodFormat.trimmed) ?? ""
             return m
@@ -358,6 +364,7 @@ struct WodEditorView: View {
             return WodMovement(name: n,
                                reps: repsInt,
                                scheme: scheme,
+                               repsDone: Int(m.done.trimmingCharacters(in: .whitespaces)),
                                weightKg: parseDouble(m.weight),
                                rxWeightKg: parseDouble(m.rxWeight))
         }
