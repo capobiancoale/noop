@@ -130339,6 +130339,46 @@
           }
         }
       }
+    },
+    "THIS WEEK": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QUESTA SETTIMANA"
+          }
+        }
+      }
+    },
+    "Avg glucose": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia media"
+          }
+        }
+      }
+    },
+    "WODs": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WOD"
+          }
+        }
+      }
+    },
+    "Avg strain": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sforzo medio"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

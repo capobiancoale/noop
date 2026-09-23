@@ -41,6 +41,12 @@ struct LiquidTodayView: View {
     @State private var carbsToday: Double?         // carbs_g (apple-health)
     @State private var insulinToday: Double?       // insulin_total (U)
 
+    // Week-in-review (last 7 days), computed once in load().
+    @State private var weekTir: Double?
+    @State private var weekGlucoseAvg: Double?
+    @State private var weekStrain: Double?
+    @State private var weekWods = 0
+
     // sheets / expanders
     @State private var guideSection: ScoreSection?
     @State private var showCustomise = false
@@ -201,6 +207,7 @@ struct LiquidTodayView: View {
                     synthesisSection
                     recoveryVitalsSection
                     keyMetricsSection
+                    if hasWeekData { weekSummarySection }
                     lastWorkoutsSection
                     if hasGlucoseToday { glucoseTodaySection }
                     dataSourcesSection
@@ -726,6 +733,45 @@ struct LiquidTodayView: View {
 
     // MARK: - Key metrics grid
 
+    private var hasWeekData: Bool { weekTir != nil || weekGlucoseAvg != nil || weekStrain != nil || weekWods > 0 }
+
+    /// Week-in-review card: last-7-day Time-in-Range, average glucose, logged WODs and mean strain — a
+    /// quick dashboard read. Each stat shows "—" when its data is absent (never a fabricated zero).
+    private var weekSummarySection: some View {
+        card {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("THIS WEEK").font(StrandFont.overline).tracking(1.6)
+                        .foregroundStyle(StrandPalette.textSecondary)
+                    Spacer()
+                    Text("7 days").font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                }
+                LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading),
+                                    GridItem(.flexible(), alignment: .leading)], spacing: 14) {
+                    weekStat("Time in range", weekTir.map { "\(Int($0.rounded()))%" }, StrandPalette.metricCyan)
+                    weekStat("Avg glucose", weekGlucoseAvg.map { "\(Int($0.rounded())) mg/dL" }, StrandPalette.metricRose)
+                    weekStat("WODs", weekWods > 0 ? "\(weekWods)" : nil, StrandPalette.effortColor)
+                    weekStat("Avg strain", weekStrain.map { "\(Int($0.rounded()))" }, StrandPalette.chargeColor)
+                }
+            }
+        }
+    }
+
+    private func weekStat(_ label: LocalizedStringKey, _ value: String?, _ tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label).font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+            Text(value ?? "—").font(StrandFont.number(18))
+                .foregroundStyle(value == nil ? StrandPalette.textTertiary : tint)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Mean of the last ≤7 values of a daily series; nil when empty.
+    private static func mean7(_ series: [(day: String, value: Double)]) -> Double? {
+        let vals = series.suffix(7).map(\.value)
+        return vals.isEmpty ? nil : vals.reduce(0, +) / Double(vals.count)
+    }
+
     private var keyMetricsSection: some View {
         // HRV / Rest HR tiles share the recovery vitals' per-field today-first carry so they don't blank at
         // the rollover while Recovery/Strain/Sleep stay strictly today's own (they are scored surfaces).
@@ -924,6 +970,7 @@ struct LiquidTodayView: View {
         async let gTirA = repo.series(key: "glucose_tir", source: "apple-health")
         async let carbA = repo.series(key: "carbs_g", source: "apple-health")
         async let insA  = repo.series(key: "insulin_total", source: "apple-health")
+        async let wodsA = repo.allWods()
 
         let restSeries = await restA
         let restByDay = Dictionary(restSeries.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
@@ -964,10 +1011,21 @@ struct LiquidTodayView: View {
             guard selectedDayOffset == 0, let last = s.last, last.day >= freshCutoff else { return nil }
             return last.value
         }
-        glucoseAvg = dayKeyed(await gAvgA)
-        glucoseTir = dayKeyed(await gTirA)
+        let gAvgSeries = await gAvgA
+        let gTirSeries = await gTirA
+        glucoseAvg = dayKeyed(gAvgSeries)
+        glucoseTir = dayKeyed(gTirSeries)
         carbsToday = dayKeyed(await carbA)
         insulinToday = dayKeyed(await insA)
+
+        // Week-in-review (last 7 days): TIR/avg glucose from the same series, mean strain from
+        // repo.days, and the count of logged WODs in the window.
+        weekGlucoseAvg = Self.mean7(gAvgSeries)
+        weekTir = Self.mean7(gTirSeries)
+        let strain7 = repo.days.compactMap { $0.strain }.suffix(7)
+        weekStrain = strain7.isEmpty ? nil : strain7.reduce(0, +) / Double(strain7.count)
+        let sevenAgo = Int(Date().timeIntervalSince1970) - 7 * 86_400
+        weekWods = (await wodsA).filter { $0.ts >= sevenAgo }.count
 
         // First load done — bring the hero gauges + sky to life now the launch churn has settled.
         if !dataLoaded { withAnimation(.easeIn(duration: 0.4)) { dataLoaded = true } }
