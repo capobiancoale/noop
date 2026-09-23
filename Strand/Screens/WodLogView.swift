@@ -16,7 +16,6 @@ struct WodLogView: View {
     @State private var loaded = false
     @State private var showNew = false
     @State private var showImport = false
-    @State private var editing: WodLogRow?
 
     var body: some View {
         List {
@@ -58,8 +57,7 @@ struct WodLogView: View {
             if !wods.isEmpty {
                 Section("History") {
                     ForEach(wods) { w in
-                        Button { editing = w } label: { WodRowView(wod: w) }
-                            .buttonStyle(.plain)
+                        NavigationLink { WodDetailView(wod: w) { Task { await reload() } } } label: { WodRowView(wod: w) }
                     }
                     .onDelete { offsets in
                         let ids = offsets.map { wods[$0].id }
@@ -75,9 +73,6 @@ struct WodLogView: View {
         }
         .sheet(isPresented: $showImport) {
             WodImportView { Task { await reload() } }
-        }
-        .sheet(item: $editing) { w in
-            WodEditorView(existing: w) { Task { await reload() } }
         }
         .task { await reload() }
     }
@@ -190,6 +185,28 @@ enum WodFormat {
             parts.append("\(trimmed(me)) kg")
         }
         return parts.joined(separator: " · ")
+    }
+
+    /// A comparable numeric value for a WOD's result, for plotting progression over time. nil for `.none`.
+    static func progressionValue(_ w: WodLogRow) -> Double? {
+        switch w.resultKind {
+        case .time:       return w.resultSeconds.map(Double.init)
+        case .roundsReps: return w.resultRounds.map { Double($0 * 100 + (w.resultReps ?? 0)) }
+        case .reps:       return w.resultReps.map(Double.init)
+        case .weight:     return w.resultWeightKg
+        case .none:       return nil
+        }
+    }
+
+    /// Label a progression value for the given result kind (chart tooltip).
+    static func progressionLabel(_ v: Double, kind: WodResultKind) -> String {
+        switch kind {
+        case .time:       return clock(Int(v))
+        case .roundsReps: return "\(Int(v) / 100)+\(Int(v) % 100)"
+        case .reps:       return "\(Int(v))"
+        case .weight:     return "\(trimmed(v)) kg"
+        case .none:       return ""
+        }
     }
 
     /// mm:ss from seconds.

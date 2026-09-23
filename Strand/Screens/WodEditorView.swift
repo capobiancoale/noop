@@ -1,8 +1,6 @@
 #if os(iOS)
 import SwiftUI
 import WhoopStore
-import StrandImport
-import StrandDesign
 
 // MARK: - WOD editor (create / edit)
 //
@@ -13,7 +11,6 @@ import StrandDesign
 
 struct WodEditorView: View {
     @EnvironmentObject private var repo: Repository
-    @EnvironmentObject private var health: HealthKitBridge
     @Environment(\.dismiss) private var dismiss
 
     /// The row being edited, or nil to create a new one.
@@ -52,15 +49,6 @@ struct WodEditorView: View {
     @State private var resWeight = ""
     @State private var rpe = 0.0
     @State private var notes = ""
-
-    // Glucose + carbs around this WOD (only for an existing row; queried live from Apple Health).
-    @State private var glucosePoints: [TrendPoint] = []
-    @State private var glucoseResp: WodGlucoseResponse?
-    @State private var carbsPre = 0.0
-    @State private var carbsPost = 0.0
-    @State private var trendPerHour: Double?
-    @State private var glucoseLoading = false
-    @State private var glucoseLoaded = false
 
     private let types = ["CrossFit", "Weightlifting", "Hyrox", "Running", "Rowing", "Other"]
     private let formats = ["For Time", "AMRAP", "EMOM", "Strength", "Intervals", "Other"]
@@ -140,8 +128,6 @@ struct WodEditorView: View {
                     TextField("Notes", text: $notes, axis: .vertical).lineLimit(1...4)
                 }
 
-                if existing != nil { glucoseSection }
-
                 if existing != nil {
                     Section {
                         Button("Delete WOD", role: .destructive) {
@@ -163,135 +149,8 @@ struct WodEditorView: View {
                 }
             }
             .onAppear { if let e = existing { prefill(e) } }
-            .task { await loadGlucoseIfNeeded() }
         }
     }
-
-    // MARK: - Glucose response (Apple Health, existing WOD only)
-
-    /// The glucose-around-this-WOD panel. Shown only when editing an existing row; queries Apple
-    /// Health live for CGM readings from ~45 min before to ~3 h after, and draws the curve + the
-    /// numbers a Type-1 athlete watches (before / after / lowest, and a hypo flag).
-    @ViewBuilder private var glucoseSection: some View {
-        Section {
-            if glucoseLoading {
-                HStack(spacing: 8) {
-                    ProgressView()
-                    Text("Reading from Apple Health…").foregroundStyle(.secondary).font(.subheadline)
-                }
-            } else if let r = glucoseResp {
-                HStack {
-                    glucoseStat("Before", r.startMgdl)
-                    Spacer()
-                    glucoseStat("After", r.endMgdl)
-                    Spacer()
-                    glucoseStat("Lowest", r.minMgdl)
-                }
-                if !glucosePoints.isEmpty {
-                    TrendChart(points: glucosePoints,
-                               gradient: Gradient(colors: [StrandPalette.metricCyan, StrandPalette.metricRose]),
-                               valueRange: 40...300,
-                               height: 130,
-                               valueFormat: { "\(Int($0.rounded())) mg/dL" },
-                               dateFormat: { Self.clock.string(from: $0) },
-                               accessibilityLabel: "Glucose around this WOD")
-                }
-                HStack {
-                    choStat("Carbs −2h", carbsPre)
-                    Spacer()
-                    choStat("Carbs +4h", carbsPost)
-                }
-                Text(glucoseDeltaText(r)).font(.caption).foregroundStyle(.secondary)
-                if let t = trendPerHour {
-                    Text(trendText(t)).font(.caption).foregroundStyle(.secondary)
-                }
-                if r.anyLow {
-                    Label("Went below 70 mg/dL in this window", systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption).foregroundStyle(.orange)
-                }
-                if let note = tendencyNote() {
-                    Text(note).font(.caption).foregroundStyle(.secondary)
-                }
-                Text("Informational only, not medical advice. Carb and insulin choices stay with you and your care team / Loop.")
-                    .font(.caption2).foregroundStyle(.tertiary)
-            } else if glucoseLoaded {
-                Text("No glucose readings in Apple Health for this window.")
-                    .foregroundStyle(.secondary).font(.subheadline)
-            }
-        } header: {
-            Text("Glucose & carbs · 2h before → 4h after")
-        }
-    }
-
-    private func glucoseStat(_ label: LocalizedStringKey, _ v: Double) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.caption2).foregroundStyle(.secondary)
-            Text("\(Int(v.rounded()))").font(.title3.monospacedDigit())
-        }
-    }
-
-    private func choStat(_ label: LocalizedStringKey, _ grams: Double) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.caption2).foregroundStyle(.secondary)
-            Text("\(Int(grams.rounded())) g").font(.title3.monospacedDigit())
-        }
-    }
-
-    /// Recent glucose trend as a labelled arrow + rate. Descriptive, not a clinical forecast.
-    private func trendText(_ perHour: Double) -> String {
-        let v = Int(perHour.rounded())
-        let arrow = v == 0 ? "→" : (v > 0 ? "↑" : "↓")
-        return String(localized: "Recent trend") + ": \(arrow) \(abs(v)) mg/dL/h"
-    }
-
-    /// A GENERAL educational one-liner on how this WOD's kind usually moves glucose. Never a dose.
-    private func tendencyNote() -> String? {
-        guard let e = existing else { return nil }
-        switch DiabetesMetrics.glycemicTendency(type: e.type, format: e.format) {
-        case .lowers: return String(localized: "Aerobic / metcon work tends to lower glucose — often for hours afterwards.")
-        case .raises: return String(localized: "Heavy strength / anaerobic work can push glucose up for a while.")
-        case .mixed:  return String(localized: "Mixed metcons can both raise (short, intense) and lower (longer) glucose.")
-        case .unknown: return nil
-        }
-    }
-
-    /// "↓ 38 mg/dL · lowest after 62" style caption (arrow + magnitude keeps it locale-agnostic).
-    private func glucoseDeltaText(_ r: WodGlucoseResponse) -> String {
-        let d = Int(r.deltaMgdl.rounded())
-        let arrow = d == 0 ? "→" : (d > 0 ? "↑" : "↓")
-        var s = "\(arrow) \(abs(d)) mg/dL"
-        if let nadir = r.nadirAfterMgdl {
-            s += " · " + String(localized: "lowest after") + " \(Int(nadir.rounded()))"
-        }
-        return s
-    }
-
-    private func loadGlucoseIfNeeded() async {
-        guard let e = existing, !glucoseLoaded, !glucoseLoading else { return }
-        glucoseLoading = true
-        let workoutStart = TimeInterval(e.ts)
-        let workoutEnd = workoutStart + TimeInterval(e.timeCapS ?? 20 * 60)
-        let preStart = workoutStart - 2 * 3600          // 2 h before
-        let postEnd = workoutEnd + 4 * 3600             // 4 h after
-        let start = Date(timeIntervalSince1970: preStart)
-        let end = Date(timeIntervalSince1970: postEnd)
-        let readings = await health.glucoseWindow(start: start, end: end)
-        let carbs = await health.carbsWindow(start: start, end: end)
-        glucosePoints = readings.map { TrendPoint(date: Date(timeIntervalSince1970: $0.ts), value: $0.mgdl) }
-        glucoseResp = DiabetesMetrics.wodGlucoseResponse(readings: readings,
-                                                         workoutStart: workoutStart, workoutEnd: workoutEnd)
-        carbsPre = DiabetesMetrics.carbsIn(carbs, from: preStart, to: workoutStart)
-        carbsPost = DiabetesMetrics.carbsIn(carbs, from: workoutEnd, to: postEnd)
-        trendPerHour = DiabetesMetrics.glucoseSlopePerHour(readings)
-        glucoseLoading = false
-        glucoseLoaded = true
-    }
-
-    /// Time-of-day formatter for the glucose chart's tooltip.
-    private static let clock: DateFormatter = {
-        let f = DateFormatter(); f.dateFormat = "HH:mm"; return f
-    }()
-
     /// The result inputs for the selected scoring kind.
     @ViewBuilder private var resultFields: some View {
         switch resultKind {

@@ -159,6 +159,16 @@ public struct CarbEntry: Sendable, Equatable {
     public init(ts: Double, grams: Double) { self.ts = ts; self.grams = grams }
 }
 
+/// One insulin-delivery entry from Apple Health, epoch-seconds timestamped, for placing insulin on a
+/// workout timeline and totalling it pre/post. `bolus` is true for a bolus/correction dose, false for
+/// basal.
+public struct InsulinEntry: Sendable, Equatable {
+    public let ts: Double
+    public let units: Double
+    public let bolus: Bool
+    public init(ts: Double, units: Double, bolus: Bool) { self.ts = ts; self.units = units; self.bolus = bolus }
+}
+
 /// A GENERAL, non-personalised tendency of how a kind of training usually moves blood glucose. This is
 /// education (physiology), never a prescription: the UI pairs it with a "not medical advice" note and
 /// never turns it into a carb or insulin dose. Steady aerobic work tends to lower glucose (and can keep
@@ -320,6 +330,11 @@ public enum DiabetesMetrics {
     /// pre-workout (fuelling) and post-workout (recovery/correction) windows.
     public static func carbsIn(_ carbs: [CarbEntry], from: Double, to: Double) -> Double {
         carbs.filter { $0.ts >= from && $0.ts < to }.reduce(0) { $0 + $1.grams }
+    }
+
+    /// Total insulin units in `[from, to)`. `bolusOnly` restricts the sum to bolus/correction doses.
+    public static func insulinIn(_ doses: [InsulinEntry], from: Double, to: Double, bolusOnly: Bool = false) -> Double {
+        doses.filter { $0.ts >= from && $0.ts < to && (!bolusOnly || $0.bolus) }.reduce(0) { $0 + $1.units }
     }
 
     /// Recent glucose trend as mg/dL PER HOUR (a plain secant over the last `lastMinutes` of readings):

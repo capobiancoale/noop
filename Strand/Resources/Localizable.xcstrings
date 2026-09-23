@@ -130379,6 +130379,56 @@
           }
         }
       }
+    },
+    "Progression": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Progressione"
+          }
+        }
+      }
+    },
+    "%lld attempts": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld tentativi"
+          }
+        }
+      }
+    },
+    "Time cap %lld min": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo limite %lld min"
+          }
+        }
+      }
+    },
+    "Bolus −2h": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bolo −2h"
+          }
+        }
+      }
+    },
+    "Bolus +4h": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bolo +4h"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

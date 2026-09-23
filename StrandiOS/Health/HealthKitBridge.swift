@@ -668,6 +668,35 @@ final class HealthKitBridge: ObservableObject {
         return await collectGlucoseReadings(start: start, end: end)
     }
 
+    /// On-demand insulin-delivery samples over `[start, end)` (units, epoch-seconds, bolus vs basal),
+    /// for the insulin-around-a-WOD view. [] unless authorized. ON-DEVICE ONLY.
+    func insulinWindow(start: Date, end: Date) async -> [InsulinEntry] {
+        guard auth == .authorized else { return [] }
+        guard let type = HKQuantityType.quantityType(forIdentifier: .insulinDelivery) else { return [] }
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+        return await withCheckedContinuation { (cont: CheckedContinuation<[InsulinEntry], Never>) in
+            let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+            let q = HKSampleQuery(sampleType: type, predicate: predicate,
+                                  limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
+                var out: [InsulinEntry] = []
+                for case let s as HKQuantitySample in samples ?? [] {
+                    let bolus: Bool
+                    if let num = s.metadata?[HKMetadataKeyInsulinDeliveryReason] as? NSNumber,
+                       let reason = HKInsulinDeliveryReason(rawValue: num.intValue) {
+                        bolus = (reason == .bolus)
+                    } else {
+                        bolus = true   // untagged → treat as bolus (most hand-logged doses)
+                    }
+                    out.append(InsulinEntry(ts: s.startDate.timeIntervalSince1970,
+                                            units: s.quantity.doubleValue(for: .internationalUnit()),
+                                            bolus: bolus))
+                }
+                cont.resume(returning: out)
+            }
+            store.execute(q)
+        }
+    }
+
     /// On-demand carbohydrate-intake samples over `[start, end)` (grams, epoch-seconds), for the
     /// carbs-around-a-WOD view. [] unless authorized. ON-DEVICE ONLY.
     func carbsWindow(start: Date, end: Date) async -> [CarbEntry] {
