@@ -33,6 +33,7 @@ struct LiquidTodayView: View {
     @State private var stepsEst: Double?           // steps_est, day-keyed to the selected day (fallback)
     @State private var hrValues: [Double] = []     // hrBuckets since midnight → 5-min means
     @State private var workouts: [WorkoutRow] = [] // newest-first
+    @State private var sparks: [String: [Double]] = [:]  // KEY METRICS 14-day trend series, computed once in load()
     // Diabetes recap (apple-health, day-keyed to the selected day). Nil ⇒ the row/section is hidden,
     // never a fabricated zero. Populated from the apple-health metric series in load().
     @State private var glucoseAvg: Double?         // glucose_avg
@@ -733,12 +734,12 @@ struct LiquidTodayView: View {
         return VStack(spacing: 8) {
             sectionHead("KEY METRICS", trailing: "14-day trend")
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                ktile("Recovery", intText(displayDay?.recovery), "%", StrandPalette.chargeColor, frac(displayDay?.recovery))
-                ktile("Strain", intText(displayDay?.strain), "%", StrandPalette.effortColor, frac(displayDay?.strain))
-                ktile("Sleep", sleepText, "", StrandPalette.restColor, fracOver(displayDay?.totalSleepMin, 480))
-                ktile("HRV", intText(hrv), "ms", StrandPalette.metricCyan, fracOver(hrv, 120))
-                ktile("Rest HR", intText(rhr), "bpm", StrandPalette.metricRose, fracOver(rhr, 100))
-                ktile("Steps", stepsText, "", StrandPalette.chargeColor, fracOver(stepCount, 10000))
+                ktile("Recovery", intText(displayDay?.recovery), "%", StrandPalette.chargeColor, frac(displayDay?.recovery), spark: sparks["recovery"] ?? [])
+                ktile("Strain", intText(displayDay?.strain), "%", StrandPalette.effortColor, frac(displayDay?.strain), spark: sparks["strain"] ?? [])
+                ktile("Sleep", sleepText, "", StrandPalette.restColor, fracOver(displayDay?.totalSleepMin, 480), spark: sparks["sleep"] ?? [])
+                ktile("HRV", intText(hrv), "ms", StrandPalette.metricCyan, fracOver(hrv, 120), spark: sparks["hrv"] ?? [])
+                ktile("Rest HR", intText(rhr), "bpm", StrandPalette.metricRose, fracOver(rhr, 100), spark: sparks["rhr"] ?? [])
+                ktile("Steps", stepsText, "", StrandPalette.chargeColor, fracOver(stepCount, 10000), spark: sparks["steps"] ?? [])
             }
             NavigationLink { MetricExplorerView() } label: {
                 Text("Show all metrics").font(StrandFont.subhead).foregroundStyle(StrandPalette.accent)
@@ -748,7 +749,13 @@ struct LiquidTodayView: View {
         }
     }
 
-    private func ktile(_ label: LocalizedStringKey, _ value: String, _ unit: String, _ tint: Color, _ frac: Double?) -> some View {
+    /// Last ≤14 present values of a daily field, oldest→newest, for a KEY METRIC sparkline.
+    private static func spark14(_ days: [DailyMetric], _ pick: (DailyMetric) -> Double?) -> [Double] {
+        Array(days.compactMap(pick).suffix(14))
+    }
+
+    private func ktile(_ label: LocalizedStringKey, _ value: String, _ unit: String, _ tint: Color,
+                       _ frac: Double?, spark: [Double] = []) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label).font(StrandFont.overlineScaled(9)).tracking(1.2)
                 .textCase(.uppercase)
@@ -758,7 +765,16 @@ struct LiquidTodayView: View {
                 .foregroundStyle(StrandPalette.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            LiquidTube(frac: frac ?? 0, tint: tint, height: 8, animated: false)
+            // A 14-day sparkline when there's enough history (the "14-day trend" the header promises),
+            // else the single-value tube for metrics without a series yet.
+            if spark.count >= 2 {
+                Sparkline(values: spark,
+                          gradient: Gradient(colors: [tint.opacity(0.55), tint]),
+                          showsHead: false, showsHover: false)
+                    .frame(height: 22)
+            } else {
+                LiquidTube(frac: frac ?? 0, tint: tint, height: 8, animated: false)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 11)
@@ -877,6 +893,16 @@ struct LiquidTodayView: View {
         let freshCutoff = Repository.localDayKey(Calendar.current.date(byAdding: .day, value: -2, to: Date()) ?? Date())
         cachedVitalsDay = (selectedDayOffset == 0) ? Repository.lastVitalsDay(days: repo.days, todayKey: tkey) : nil
         if let v = cachedVitalsDay, v.day < freshCutoff { cachedVitalsDay = nil }
+
+        // KEY METRICS 14-day trend series — computed ONCE here (repo.days is large; never in body).
+        sparks = [
+            "recovery": Self.spark14(repo.days) { $0.recovery },
+            "strain":   Self.spark14(repo.days) { $0.strain },
+            "sleep":    Self.spark14(repo.days) { $0.totalSleepMin },
+            "hrv":      Self.spark14(repo.days) { $0.avgHrv },
+            "rhr":      Self.spark14(repo.days) { $0.restingHr.map(Double.init) },
+            "steps":    Self.spark14(repo.days) { $0.steps.map(Double.init) },
+        ]
 
         let cal = Calendar.current
         let dayStart = cal.startOfDay(for: selectedLogicalDay)
