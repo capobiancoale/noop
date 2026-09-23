@@ -34,7 +34,7 @@ public enum WodTextImport {
 
     Data: AAAA-MM-GG
     Tipo: CrossFit
-    Nome: <nome del WOD, es. Fran>
+    Nome: <nome del WOD; se non ce l'ha, creane uno breve e descrittivo, es. "Intervals 5×6'">
     Formato: For Time | AMRAP | EMOM | Strength | Intervals
     Time cap: <minuti>
     RX: rx | scaled
@@ -46,7 +46,7 @@ public enum WodTextImport {
     Note: <opzionale>
 
     Regole: usa i kg. In "rx" metti il peso prescritto dal WOD; in "me" il peso che ho davvero usato \
-    (se non lo sai, lascialo vuoto). Ometti le righe che non conosci.
+    (se non lo sai, lascialo vuoto). Il Nome mettilo SEMPRE. Ometti le altre righe che non conosci.
     """
 
     /// Parse pasted text into zero or more WODs, ready to save. `now` and `calendar` are injected so
@@ -167,9 +167,16 @@ public enum WodTextImport {
             }
         }
 
-        // A block is a WOD only if it carries a title or at least one movement.
+        // A block is a WOD only if it carries a title or at least one movement. With no explicit name,
+        // a single-movement entry takes that movement's name (a lift log), while a multi-movement WOD
+        // gets a descriptive title from its first movements ("Run / Wall Ball / Double Under") instead
+        // of just the first one.
         if title.isEmpty {
-            title = movements.first?.name ?? ""
+            switch movements.count {
+            case 0:  break
+            case 1:  title = movements[0].name
+            default: title = movements.prefix(3).map(\.name).joined(separator: " / ")
+            }
         }
         guard !title.isEmpty || !movements.isEmpty else { return nil }
         if title.isEmpty { title = "WOD" }

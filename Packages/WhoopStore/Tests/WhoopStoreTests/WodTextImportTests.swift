@@ -163,6 +163,28 @@ final class WodTextImportTests: XCTestCase {
         XCTAssertEqual(w.notes, "dura")
     }
 
+    func testNoNameMultiMovementBuildsCompositeTitle() throws {
+        // No "Nome:" line, several movements, markdown "*" bullets — title from the movements,
+        // not just the first.
+        let text = """
+        Tipo: CrossFit
+        Formato: Intervals
+        Movimenti:
+        * Run; reps 400 m
+        * Wall Ball; reps 30; me 9 kg
+        * Double Under; reps 100
+        Note: 5 rounds, every 6'
+        """
+        let w = try XCTUnwrap(WodTextImport.parse(text, now: now, calendar: cal).first)
+        XCTAssertEqual(w.title, "Run / Wall Ball / Double Under")
+        XCTAssertEqual(w.type, "CrossFit")
+        XCTAssertEqual(w.format, "Intervals")
+        XCTAssertEqual(w.movements.count, 3)
+        XCTAssertEqual(w.movements[0].scheme, "400 m")
+        XCTAssertEqual(w.movements[1].weightKg, 9)
+        XCTAssertEqual(w.notes, "5 rounds, every 6'")
+    }
+
     func testTimeValueNotMistakenForLabel() throws {
         // "6:32" as a bare result value line under a Result label must stay a time, and a stray
         // "21-15-9:" style leading-digit token must not be read as a label.
