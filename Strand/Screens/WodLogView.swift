@@ -42,13 +42,17 @@ struct WodLogView: View {
             if !benchmarks.isEmpty {
                 Section("Bests") {
                     ForEach(benchmarks, id: \.title) { b in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(b.title).font(.body)
-                                Text("\(b.count) attempts").font(.caption).foregroundStyle(.secondary)
+                        NavigationLink {
+                            WodProgressionView(title: b.title) { Task { await reload() } }
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(b.title).font(.body)
+                                    Text("\(b.count) attempts").font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Text(b.best).font(.body.monospacedDigit()).foregroundStyle(.secondary)
                             }
-                            Spacer()
-                            Text(b.best).font(.body.monospacedDigit()).foregroundStyle(.secondary)
                         }
                     }
                 }

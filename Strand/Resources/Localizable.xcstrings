@@ -130429,6 +130429,26 @@
           }
         }
       }
+    },
+    "Attempts": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tentativi"
+          }
+        }
+      }
+    },
+    "Log at least two sessions to see progression.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra almeno due sessioni per vedere la progressione."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

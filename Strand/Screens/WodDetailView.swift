@@ -113,20 +113,9 @@ struct WodDetailView: View {
     }
 
     private var progressionSection: some View {
-        let pts = progressionPoints
-        let kind = history.first?.resultKind ?? .none
-        let vals = pts.map(\.value)
-        let lo = vals.min() ?? 0
-        let hi = vals.max() ?? 1
-        return Section {
-            TrendChart(points: pts,
-                       gradient: Gradient(colors: [StrandPalette.effortColor.opacity(0.5), StrandPalette.effortColor]),
-                       valueRange: lo...max(hi, lo + 1),
-                       height: 150,
-                       valueFormat: { WodFormat.progressionLabel($0, kind: kind) },
-                       dateFormat: { WodFormat.day(Int($0.timeIntervalSince1970)) },
-                       accessibilityLabel: "Progression")
-            Text("\(pts.count) attempts").font(.caption).foregroundStyle(.secondary)
+        Section {
+            WodProgressionChart(history: history)
+            Text("\(progressionPoints.count) attempts").font(.caption).foregroundStyle(.secondary)
         } header: {
             Text("Progression")
         }
@@ -268,6 +257,81 @@ struct WodDetailView: View {
     private static let clock: DateFormatter = {
         let f = DateFormatter(); f.dateFormat = "HH:mm"; return f
     }()
+}
+
+// MARK: - Progression chart (shared)
+
+/// The progression of a WOD title over time: one point per attempt, on the title's own result scale
+/// (max weight / best time / rounds). Shows a prompt when there's fewer than two attempts.
+struct WodProgressionChart: View {
+    let history: [WodLogRow]
+    var body: some View {
+        let pts = history.compactMap { w in
+            WodFormat.progressionValue(w).map {
+                TrendPoint(date: Date(timeIntervalSince1970: TimeInterval(w.ts)), value: $0)
+            }
+        }
+        let kind = history.first?.resultKind ?? .none
+        let vals = pts.map(\.value)
+        let lo = vals.min() ?? 0
+        let hi = vals.max() ?? 1
+        if pts.count >= 2 {
+            TrendChart(points: pts,
+                       gradient: Gradient(colors: [StrandPalette.effortColor.opacity(0.5), StrandPalette.effortColor]),
+                       valueRange: lo...max(hi, lo + 1),
+                       height: 160,
+                       valueFormat: { WodFormat.progressionLabel($0, kind: kind) },
+                       dateFormat: { WodFormat.day(Int($0.timeIntervalSince1970)) },
+                       accessibilityLabel: "Progression")
+        } else {
+            Text("Log at least two sessions to see progression.")
+                .font(.subheadline).foregroundStyle(.secondary)
+        }
+    }
+}
+
+// MARK: - Progression screen (from a "Bests" row)
+
+/// Reached by tapping a "Bests" row: the progression chart for that WOD title plus every attempt,
+/// each opening its own detail. `onChanged` refreshes the caller's list after an edit/delete.
+struct WodProgressionView: View {
+    @EnvironmentObject private var repo: Repository
+    let title: String
+    let onChanged: () -> Void
+    @State private var history: [WodLogRow] = []
+
+    var body: some View {
+        List {
+            Section { WodProgressionChart(history: history) } header: { Text("Progression") }
+            if !history.isEmpty {
+                Section("Attempts") {
+                    ForEach(history) { w in
+                        NavigationLink { WodDetailView(wod: w, onChanged: reload) } label: {
+                            HStack {
+                                Text(WodFormat.day(w.ts)).font(.subheadline)
+                                if let rx = w.rx {
+                                    Text(rx ? "RX" : "Scaled")
+                                        .font(.caption2.weight(.semibold))
+                                        .padding(.horizontal, 6).padding(.vertical, 2)
+                                        .background((rx ? Color.green : Color.orange).opacity(0.22), in: Capsule())
+                                }
+                                Spacer()
+                                if let r = WodFormat.result(w) {
+                                    Text(r).font(.body.monospacedDigit()).foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await reloadAsync() }
+    }
+
+    private func reload() { onChanged(); Task { await reloadAsync() } }
+    private func reloadAsync() async { history = await repo.wodHistory(title: title) }
 }
 
 #endif
