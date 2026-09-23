@@ -55,6 +55,19 @@ final class WodTextImportTests: XCTestCase {
         XCTAssertEqual(w.movements[1].scheme, "21-15-9")
     }
 
+    func testMovementRepsDone() throws {
+        let text = """
+        Nome: Grace
+        Movimenti:
+        - Clean & Jerk; reps 30; done 22; rx 60; me 45
+        """
+        let w = try XCTUnwrap(WodTextImport.parse(text, now: now, calendar: cal).first)
+        XCTAssertEqual(w.movements[0].reps, 30)       // prescribed
+        XCTAssertEqual(w.movements[0].repsDone, 22)   // done
+        XCTAssertEqual(w.movements[0].rxWeightKg, 60)
+        XCTAssertEqual(w.movements[0].weightKg, 45)
+    }
+
     func testMultipleWodsSeparated() {
         let text = """
         Nome: A

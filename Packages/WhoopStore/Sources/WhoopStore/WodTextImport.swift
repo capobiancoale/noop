@@ -29,24 +29,28 @@ public enum WodTextImport {
     /// The copy-paste instruction to hand another AI together with the WOD photo. Kept here so the UI
     /// and any docs share one source of truth.
     public static let aiPrompt = """
-    Leggi la foto di questo allenamento (WOD) e restituisci SOLO testo in questo formato, senza \
-    commenti. Un blocco per allenamento, separa più allenamenti con una riga "---".
+    Sei un assistente che trascrive allenamenti (WOD) da una foto per l'app NOOP. Leggi la foto e \
+    restituisci SOLO testo nel formato qui sotto, senza commenti. Un blocco per allenamento; se ce ne \
+    sono più di uno, separali con una riga "---".
 
     Data: AAAA-MM-GG
-    Tipo: CrossFit
+    Tipo: CrossFit | Weightlifting | Hyrox | Running | Rowing | Other
     Nome: <nome del WOD; se non ce l'ha, creane uno breve e descrittivo, es. "Intervals 5×6'">
-    Formato: For Time | AMRAP | EMOM | Strength | Intervals
+    Formato: For Time | AMRAP | EMOM | Strength | Intervals | Other
     Time cap: <minuti>
     RX: rx | scaled
-    Risultato: <es. 6:32  oppure  5+12  oppure  80 kg  oppure  120 reps>
+    Risultato: <6:32 (tempo) | 5+12 (round+reps) | 80 kg (carico) | 120 reps>
     RPE: <1-10>
     Movimenti:
-    - <nome>; reps <schema es. 21-15-9>; rx <peso prescritto in kg>; me <peso che ho usato in kg>
-    - <nome>; reps <...>; rx <...>; me <...>
-    Note: <opzionale>
+    - <nome>; reps <prescritte, es. 21-15-9 o 5x5>; done <ripetizioni fatte>; rx <peso prescritto kg>; me <peso usato kg>
+    - <nome>; reps <...>; done <...>; rx <...>; me <...>
+    Note: <testo libero: warm-up, scaling, timing EMOM, ecc.>
 
-    Regole: usa i kg. In "rx" metti il peso prescritto dal WOD; in "me" il peso che ho davvero usato \
-    (se non lo sai, lascialo vuoto). Il Nome mettilo SEMPRE. Ometti le altre righe che non conosci.
+    Regole:
+    - Usa sempre i kg. "rx" = peso PRESCRITTO dal WOD; "me" = peso che HO usato io (se non lo sai, vuoto).
+    - "reps" = ripetizioni prescritte o schema; "done" = quelle davvero completate (utile per AMRAP o serie non finite).
+    - Metti SEMPRE il Nome (inventane uno breve se manca). Ometti gli altri campi che non conosci.
+    - Non scrivere nulla fuori dal formato.
     """
 
     /// Parse pasted text into zero or more WODs, ready to save. `now` and `calendar` are injected so
@@ -226,6 +230,7 @@ public enum WodTextImport {
         var name = first
         var reps: Int? = nil
         var scheme: String? = nil
+        var repsDone: Int? = nil
         var myLoad: Double? = nil
         var rxLoad: Double? = nil
 
@@ -240,6 +245,8 @@ public enum WodTextImport {
             let lower = seg.lowercased()
             if lower.hasPrefix("rx") || lower.hasPrefix("prescr") {
                 rxLoad = firstDouble(seg) ?? rxLoad
+            } else if lower.hasPrefix("done") || lower.hasPrefix("fatte") || lower.hasPrefix("completat") {
+                repsDone = firstDouble(seg).map { Int($0) } ?? repsDone
             } else if lower.hasPrefix("me") || lower.hasPrefix("io") || lower.hasPrefix("mio") || lower.hasPrefix("mine") {
                 myLoad = firstDouble(seg) ?? myLoad
             } else if lower.hasPrefix("reps") || lower.hasPrefix("rep") || lower.hasPrefix("ripet") || lower.hasPrefix("schema") || lower.hasPrefix("scheme") {
@@ -256,7 +263,8 @@ public enum WodTextImport {
 
         name = name.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return nil }
-        return WodMovement(name: name, reps: reps, scheme: scheme, weightKg: myLoad, rxWeightKg: rxLoad)
+        return WodMovement(name: name, reps: reps, scheme: scheme, repsDone: repsDone,
+                           weightKg: myLoad, rxWeightKg: rxLoad)
     }
 
     /// Split a "name … trailing-load-with-unit" string into (name, load), e.g. "Back Squat 100 kg" →
