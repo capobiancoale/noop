@@ -3,6 +3,7 @@ import SwiftUI
 import WhoopStore
 import StrandImport
 import StrandDesign
+import StrandAnalytics
 
 // MARK: - WOD detail (read-only)
 //
@@ -17,6 +18,7 @@ import StrandDesign
 struct WodDetailView: View {
     @EnvironmentObject private var repo: Repository
     @EnvironmentObject private var health: HealthKitBridge
+    @EnvironmentObject private var profile: ProfileStore
     @Environment(\.dismiss) private var dismiss
 
     let onChanged: () -> Void
@@ -35,6 +37,10 @@ struct WodDetailView: View {
     @State private var glucoseLoading = false
     @State private var glucoseLoaded = false
 
+    // What this WOD's session-RPE load adds to its day's Effort (nil until computed / no heart rate that day).
+    @State private var effortAdded: Double?
+    @State private var effortLoaded = false
+
     init(wod: WodLogRow, onChanged: @escaping () -> Void) {
         self.onChanged = onChanged
         _current = State(initialValue: wod)
@@ -47,6 +53,7 @@ struct WodDetailView: View {
             if let n = current.notes, !n.isEmpty {
                 Section("Notes") { Text(n).font(.subheadline).foregroundStyle(.secondary) }
             }
+            loadSection
             if progressionPoints.count >= 2 { progressionSection }
             glucoseSection
         }
@@ -60,6 +67,7 @@ struct WodDetailView: View {
         }
         .task {
             history = await repo.wodHistory(title: current.title)
+            await loadEffortContribution()
             await loadGlucose()
         }
     }
@@ -100,6 +108,64 @@ struct WodDetailView: View {
                 Text(WodFormat.movement(m)).font(.subheadline)
             }
         }
+    }
+
+    // MARK: Training load (session-RPE → Effort)
+
+    private var session: StrainScorer.LoggedSession? {
+        StrainScorer.LoggedSession(wod: current, tzOffsetSeconds: TimeZone.current.secondsFromGMT())
+    }
+
+    private var loadSection: some View {
+        Section {
+            if let s = session {
+                LabeledContent("Session load (sRPE)",
+                               value: "\(Int(s.rpe)) × \(Int(s.durationMin.rounded())) min = \(Int(s.load.rounded()))")
+                if !effortLoaded {
+                    ProgressView()
+                } else if let added = effortAdded {
+                    if added >= 0.5 {
+                        LabeledContent("Added to the day's Effort", value: "+\(Int(added.rounded()))")
+                    } else {
+                        Text("Your heart rate already reflects this session, so it adds nothing extra to Effort.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                } else {
+                    Text("No heart rate that day, so Effort could not be scored.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+                Text("Heart rate misses much of the muscular load of lifting and WODs. The session-RPE load (RPE × minutes, Foster 2001) adds to Effort only where the heart rate recorded less than a session this hard carries (Tibana 2018).")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else {
+                Text("Add an RPE and a time (result or time cap) to count this WOD's muscular load in Effort.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Training load")
+        }
+    }
+
+    /// This WOD's contribution to its day's Effort: the day scored with and without it, the same way the
+    /// engine scores it (the engine folds in every WOD of the day together).
+    private func loadEffortContribution() async {
+        effortLoaded = false
+        guard let s = session else { effortAdded = nil; effortLoaded = true; return }
+        let dayStart = Int(Calendar.current.startOfDay(for: Date(timeIntervalSince1970: TimeInterval(current.ts)))
+                            .timeIntervalSince1970)
+        let dayEnd = dayStart + 86_400
+        let hr = await repo.hrSamples(from: dayStart, to: dayEnd - 1, limit: 200_000)
+        let daysBack = max(2, (Int(Date().timeIntervalSince1970) - dayStart) / 86_400 + 2)
+        let bouts = await repo.workoutRows(days: daysBack, reconcileHr: false)
+            .filter { $0.endTs > dayStart && $0.startTs < dayEnd }
+            .map { (start: $0.startTs, end: $0.endTs) }
+        let maxHR: Double? = profile.hrMaxOverride > 0 ? Double(profile.hrMaxOverride)
+            : (profile.age > 0 ? StrainScorer.tanakaHRmax(age: Double(profile.age)) : nil)
+        let rest = repo.days.first { $0.day == current.day }?.restingHr.map(Double.init) ?? StrainScorer.defaultRestingHR
+        let without = StrainScorer.strain(hr, maxHR: maxHR, restingHR: rest, sex: profile.sex)
+        let withWod = StrainScorer.strain(hr, maxHR: maxHR, restingHR: rest, sex: profile.sex, sessions: [s],
+                                          bouts: bouts, dayStart: dayStart, dayEnd: dayEnd)
+        if let w = withWod, let wo = without { effortAdded = max(0, w - wo) } else { effortAdded = nil }
+        effortLoaded = true
     }
 
     // MARK: Progression (all attempts at this title)
@@ -247,6 +313,7 @@ struct WodDetailView: View {
             if let updated = all.first(where: { $0.id == current.id }) {
                 current = updated
                 history = await repo.wodHistory(title: current.title)
+                await loadEffortContribution()
                 await loadGlucose(force: true)
             } else {
                 dismiss()   // deleted in the editor

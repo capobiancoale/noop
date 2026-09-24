@@ -67,19 +67,24 @@ final class WodStoreTests: XCTestCase {
         var edited = r
         edited.resultSeconds = 230
         try await store.upsertWod(edited)
-        XCTAssertEqual(try await store.allWods().count, 1)
+        // (Awaited outside the assertions: XCTest's autoclosures are synchronous before Swift 6.2.)
+        let afterEdit = try await store.allWods()
+        XCTAssertEqual(afterEdit.count, 1)
 
         // Title query is case-insensitive.
-        XCTAssertEqual(try await store.wods(title: "fran").first?.resultSeconds, 230)
+        let fran = try await store.wods(title: "fran")
+        XCTAssertEqual(fran.first?.resultSeconds, 230)
 
         try await store.deleteWod(id: "w1")
-        XCTAssertTrue(try await store.allWods().isEmpty)
+        let afterDelete = try await store.allWods()
+        XCTAssertTrue(afterDelete.isEmpty)
     }
 
     func testAllWodsNewestFirst() async throws {
         let store = try await WhoopStore.inMemory()
         try await store.upsertWod(WodLogRow(id: "a", ts: 100, day: "d", type: "CrossFit", title: "A", createdTs: 0))
         try await store.upsertWod(WodLogRow(id: "b", ts: 200, day: "d", type: "CrossFit", title: "B", createdTs: 0))
-        XCTAssertEqual(try await store.allWods().map(\.id), ["b", "a"])
+        let ids = try await store.allWods().map(\.id)
+        XCTAssertEqual(ids, ["b", "a"])
     }
 }

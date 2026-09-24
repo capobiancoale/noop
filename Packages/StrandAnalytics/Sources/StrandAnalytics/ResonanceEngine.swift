@@ -1,4 +1,5 @@
 import Foundation
+import WhoopProtocol
 
 // ResonanceEngine.swift — find a user's personal resonance-frequency breathing pace by sweeping candidate
 // paces and measuring which one maximises respiratory sinus arrhythmia (RSA) amplitude. PURE + DB-free;
@@ -123,18 +124,17 @@ public enum ResonanceEngine {
             .filter { $0.ts >= windowStart && $0.ts <= sample.endTs }
             .sorted { $0.ts < $1.ts }
 
-        // Clean R-R (range + Malik) for both the RMSSD and the swing, so ectopic beats can't fabricate
-        // an RSA swing. Cleaning operates on the rrMs values; we keep ts alongside for cycle bucketing.
-        let cleanMs = HRVAnalyzer.cleanRR(steady.map { Double($0.rrMs) })
-        guard cleanMs.count >= minBeatsPerPace else {
+        // Clean R-R with the shared artefact-correction pipeline for both the RMSSD and the swing, so
+        // ectopic beats can't fabricate an RSA swing. The timestamped clean keeps each corrected beat's ts
+        // (merged, split and interpolated beats included) for cycle bucketing, and RMSSD is taken only
+        // between adjacent beats of the same contiguous run.
+        let cleaned = HRVAnalyzer.cleanTimed(steady.map { RRInterval(ts: $0.ts, rrMs: $0.rrMs) })
+        let cleanBeats = cleaned.beats.map { CleanBeat(ts: $0.ts, rrMs: $0.rrMs) }
+        guard cleanBeats.count >= minBeatsPerPace else {
             return PaceScore(bpm: sample.bpm, rsaAmplitude: nil, rmssd: nil,
-                             cleanBeats: cleanMs.count, scoredCycles: 0)
+                             cleanBeats: cleanBeats.count, scoredCycles: 0)
         }
-
-        // Re-pair the cleaned values back to timestamps by matching them in order against `steady`
-        // (cleaning preserves order and only drops beats), so each surviving beat keeps its ts.
-        let cleanBeats = repairTimestamps(steady: steady, cleanMs: cleanMs)
-        let rmssd = HRVAnalyzer.rmssdRaw(cleanMs)
+        let rmssd = HRVAnalyzer.rmssd(segments: cleaned.valueSegments)
 
         // Bucket clean beats into paced breath cycles relative to windowStart; per cycle, take the
         // peak-to-trough swing of instantaneous HR (60000/RR).
@@ -160,11 +160,11 @@ public enum ResonanceEngine {
 
         guard swings.count >= minCyclesPerPace else {
             return PaceScore(bpm: sample.bpm, rsaAmplitude: nil, rmssd: rmssd,
-                             cleanBeats: cleanMs.count, scoredCycles: swings.count)
+                             cleanBeats: cleanBeats.count, scoredCycles: swings.count)
         }
         let rsa = swings.reduce(0, +) / Double(swings.count)
         return PaceScore(bpm: sample.bpm, rsaAmplitude: rsa, rmssd: rmssd,
-                         cleanBeats: cleanMs.count, scoredCycles: swings.count)
+                         cleanBeats: cleanBeats.count, scoredCycles: swings.count)
     }
 
     // MARK: - The sweep → locked pace
@@ -194,20 +194,4 @@ public enum ResonanceEngine {
 
     /// One clean beat with its timestamp restored.
     struct CleanBeat: Equatable { let ts: Int; let rrMs: Double }
-
-    /// Re-attach timestamps to the cleaned rrMs series. Cleaning (`HRVAnalyzer.cleanRR`) preserves order
-    /// and only DROPS beats, so we walk `steady` in order consuming the next match for each cleaned value.
-    static func repairTimestamps(steady: [RrBeat], cleanMs: [Double]) -> [CleanBeat] {
-        var out: [CleanBeat] = []
-        out.reserveCapacity(cleanMs.count)
-        var si = 0
-        for v in cleanMs {
-            while si < steady.count && Double(steady[si].rrMs) != v { si += 1 }
-            if si < steady.count {
-                out.append(CleanBeat(ts: steady[si].ts, rrMs: v))
-                si += 1
-            }
-        }
-        return out
-    }
 }

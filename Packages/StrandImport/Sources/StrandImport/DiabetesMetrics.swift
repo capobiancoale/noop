@@ -73,7 +73,7 @@ public struct GlucoseDayStats: Sendable, Equatable {
     public let tarHighPct: Double
     /// Coefficient of variation = SD / mean × 100 (sample SD). `nil` with fewer than 2 readings.
     public let cvPct: Double?
-    /// Count of hypo excursions (a reading crossing below 70 from ≥ 70, or a day that opens < 70).
+    /// Count of hypoglycaemia events starting this day (consensus definition, see `HypoEvent`).
     public let hypoEvents: Int
     /// Mean glucose in the 00:00–06:00 local window; `nil` if no overnight readings.
     public let overnightMean: Double?
@@ -127,6 +127,36 @@ public struct GlucoseThresholds: Sendable, Equatable {
         self.low = low; self.severeLow = severeLow; self.high = high; self.veryHigh = veryHigh
     }
     public static let standard = GlucoseThresholds()
+}
+
+/// A CGM hypoglycaemia event as the international consensus defines it (Battelino et al., Lancet Diabetes
+/// Endocrinol 2023;11:42–57): at least 15 consecutive minutes below 70 mg/dL, ending only after at least 15
+/// consecutive minutes at or above 70. Level 2 when it contains at least 15 consecutive minutes below
+/// 54 mg/dL; extended when more than 120 consecutive minutes are below 70.
+public struct HypoEvent: Sendable, Equatable {
+    /// Epoch seconds of the first low minute.
+    public let start: Double
+    /// Epoch seconds the event ended (start of the 15-minute recovery), or the last reading before data
+    /// stopped (`censored`).
+    public let end: Double
+    /// Lowest glucose in the event (mg/dL).
+    public let nadir: Double
+    /// 1 (below 70) or 2 (contains ≥ 15 consecutive minutes below 54).
+    public let level: Int
+    /// More than 120 consecutive minutes below 70.
+    public let extended: Bool
+    /// Data stopped before a 15-minute recovery was seen, so the end is the last known low.
+    public let censored: Bool
+    /// Began between 00:00 and 05:59 local time (the consensus nocturnal window).
+    public let nocturnal: Bool
+
+    public var durationMin: Double { (end - start) / 60 }
+
+    public init(start: Double, end: Double, nadir: Double, level: Int, extended: Bool, censored: Bool,
+                nocturnal: Bool) {
+        self.start = start; self.end = end; self.nadir = nadir; self.level = level
+        self.extended = extended; self.censored = censored; self.nocturnal = nocturnal
+    }
 }
 
 /// The glucose response around one logged WOD (a workout NOOP itself stored, distinct from an Apple
@@ -185,17 +215,22 @@ public enum DiabetesMetrics {
 
     // MARK: Glucose
 
-    /// Reduce glucose readings into per-day KPIs. Input MUST be ascending by time within each day
-    /// (the hypo-excursion count relies on order); the caller sorts by sample date. Days with no
-    /// readings simply don't appear in the result — the UI treats an absent day as "not available".
+    /// Reduce glucose readings into per-day KPIs. Days with no readings simply don't appear in the
+    /// result — the UI treats an absent day as "not available". Hypoglycaemia events follow the consensus
+    /// definition (`hypoEvents(_:)`), attributed to the day each event starts.
     public static func glucoseDaily(_ readings: [GlucoseReading],
                                     thresholds: GlucoseThresholds = .standard) -> [String: GlucoseDayStats] {
         struct Acc {
             var vals: [Double] = []
             var inRange = 0, below = 0, belowSevere = 0, above = 0, aboveHigh = 0
-            var hypoEvents = 0
-            var prevBelow = false
             var overnight: [Double] = []
+        }
+        // Events are found on the whole series (they can straddle midnight), then counted on the day of
+        // the reading they start at.
+        let sorted = readings.sorted { $0.ts < $1.ts }
+        var eventsByDay: [String: Int] = [:]
+        for e in hypoEvents(sorted, low: thresholds.low, severeLow: thresholds.severeLow, tzOffsetSeconds: nil) {
+            if let r = sorted.first(where: { $0.ts >= e.start }) ?? sorted.last { eventsByDay[r.day, default: 0] += 1 }
         }
         var byDay: [String: Acc] = [:]
         // Preserve first-seen day order isn't needed (dictionary output), but per-day order IS the
@@ -206,17 +241,11 @@ public enum DiabetesMetrics {
             if r.mgdl < thresholds.low {
                 a.below += 1
                 if r.mgdl < thresholds.severeLow { a.belowSevere += 1 }
-                // New hypo excursion when we were not already below range.
-                if !a.prevBelow { a.hypoEvents += 1 }
-                a.prevBelow = true
+            } else if r.mgdl > thresholds.high {
+                a.above += 1
+                if r.mgdl > thresholds.veryHigh { a.aboveHigh += 1 }
             } else {
-                if r.mgdl > thresholds.high {
-                    a.above += 1
-                    if r.mgdl > thresholds.veryHigh { a.aboveHigh += 1 }
-                } else {
-                    a.inRange += 1
-                }
-                a.prevBelow = false
+                a.inRange += 1
             }
             if r.minutesLocal < overnightEndMinute { a.overnight.append(r.mgdl) }
             byDay[r.day] = a
@@ -239,12 +268,130 @@ public enum DiabetesMetrics {
                 day: day, readings: n, mean: mean, min: lo, max: hi,
                 tirPct: pct(a.inRange), tbrPct: pct(a.below), tbrSeverePct: pct(a.belowSevere),
                 tarPct: pct(a.above), tarHighPct: pct(a.aboveHigh), cvPct: cv,
-                hypoEvents: a.hypoEvents,
+                hypoEvents: eventsByDay[day] ?? 0,
                 overnightMean: a.overnight.isEmpty ? nil : a.overnight.reduce(0, +) / Double(a.overnight.count),
                 overnightMin: a.overnight.min()
             )
         }
         return out
+    }
+
+    // MARK: Hypoglycaemia events (Battelino 2023)
+
+    /// Grid step (minutes) the CGM trace is resampled to before counting consecutive minutes.
+    public static let eventGridMinutes = 5
+    /// Longest gap between readings that is bridged by linear interpolation (minutes); a longer gap is
+    /// missing data. Both follow iglu's consensus-episode implementation (Broll et al., PLoS One 2021).
+    public static let maxInterpolatedGapMinutes = 45
+    /// Consecutive minutes below a threshold that start an event, and at or above it that end one.
+    public static let eventMinutes = 15
+    /// Consecutive minutes below 70 mg/dL beyond which an event is "extended".
+    public static let extendedMinutes = 120
+
+    /// Consensus hypoglycaemia events in a CGM trace (any order; re-sorted). The trace is resampled to a
+    /// 5-minute grid, interpolating across gaps of up to 45 minutes; a longer gap is missing data, which
+    /// closes an open event at its last known low (`censored`). `tzOffsetSeconds` places the nocturnal
+    /// window (00:00–05:59 local); nil leaves every event `nocturnal == false`.
+    public static func hypoEvents(_ readings: [GlucoseReading], low: Double = 70, severeLow: Double = 54,
+                                  tzOffsetSeconds: Int?) -> [HypoEvent] {
+        let grid = resampled(readings)
+        guard !grid.isEmpty else { return [] }
+        let level1 = episodes(grid, below: low)
+        let level2 = episodes(grid, below: severeLow)
+        let step = Double(eventGridMinutes * 60)
+        return level1.map { e in
+            let startTs = grid[e.first].ts, endTs = e.censored ? grid[e.last].ts + step : grid[e.endIndex].ts
+            let nadir = grid[e.first...e.last].compactMap(\.mgdl).min() ?? low
+            let isLevel2 = level2.contains { l2 in grid[l2.first].ts < endTs && grid[l2.last].ts >= startTs }
+            let nocturnal = tzOffsetSeconds.map { off -> Bool in
+                let local = ((Int(startTs) + off) % 86_400 + 86_400) % 86_400
+                return local < 6 * 3_600
+            } ?? false
+            return HypoEvent(start: startTs, end: endTs, nadir: nadir, level: isLevel2 ? 2 : 1,
+                             extended: e.longestLowRun * eventGridMinutes > extendedMinutes,
+                             censored: e.censored, nocturnal: nocturnal)
+        }
+    }
+
+    struct GridPoint { let ts: Double; let mgdl: Double? }
+
+    /// The trace on a regular grid aligned to the epoch; nil where the surrounding readings are further
+    /// apart than `maxInterpolatedGapMinutes`.
+    static func resampled(_ readings: [GlucoseReading]) -> [GridPoint] {
+        let r = readings.sorted { $0.ts < $1.ts }
+        guard let first = r.first, let last = r.last else { return [] }
+        let step = Double(eventGridMinutes * 60), maxGap = Double(maxInterpolatedGapMinutes * 60)
+        var out: [GridPoint] = []
+        var t = (first.ts / step).rounded(.up) * step
+        var j = 0
+        while t <= last.ts {
+            while j + 1 < r.count && r[j + 1].ts <= t { j += 1 }
+            let a = r[j]
+            if a.ts == t {
+                out.append(GridPoint(ts: t, mgdl: a.mgdl))
+            } else if j + 1 < r.count, r[j + 1].ts - a.ts <= maxGap {
+                let b = r[j + 1]
+                out.append(GridPoint(ts: t, mgdl: a.mgdl + (b.mgdl - a.mgdl) * (t - a.ts) / (b.ts - a.ts)))
+            } else {
+                out.append(GridPoint(ts: t, mgdl: nil))
+            }
+            t += step
+        }
+        return out
+    }
+
+    struct Episode { let first: Int; let last: Int; let endIndex: Int; let censored: Bool; let longestLowRun: Int }
+
+    /// Episodes below `threshold` on the grid: start at a run of ≥ 15 min below it, end at the start of
+    /// the first run of ≥ 15 min at or above it (shorter recoveries stay inside the episode).
+    static func episodes(_ g: [GridPoint], below threshold: Double) -> [Episode] {
+        let need = eventMinutes / eventGridMinutes
+        var out: [Episode] = []
+        var i = 0
+        while i < g.count {
+            // Find the next qualifying low run.
+            guard let v = g[i].mgdl, v < threshold else { i += 1; continue }
+            var k = i
+            while k < g.count, let x = g[k].mgdl, x < threshold { k += 1 }
+            guard k - i >= need else { i = k; continue }
+            // Inside an episode from i: walk until a recovery run of `need` points, or missing data.
+            let start = i
+            var lastLow = k - 1, longest = k - i, run = 0, censored = false, endIndex = -1
+            var p = k
+            while p < g.count {
+                // Missing data closes the episode at its last known low; scanning resumes after the gap.
+                guard let x = g[p].mgdl else { censored = true; break }
+                if x < threshold {
+                    run = 0
+                    var q = p
+                    while q < g.count, let y = g[q].mgdl, y < threshold { q += 1 }
+                    longest = max(longest, q - p)
+                    lastLow = q - 1
+                    p = q
+                    continue
+                }
+                run += 1
+                if run == need { endIndex = p - need + 1; break }
+                p += 1
+            }
+            if endIndex < 0 { censored = true }
+            out.append(Episode(first: start, last: lastLow, endIndex: max(endIndex, lastLow),
+                               censored: censored, longestLowRun: longest))
+            // Resume after the recovery run, or at the gap that censored the episode (the trace may carry
+            // later events), or stop when the trace ran out inside it.
+            i = endIndex >= 0 ? endIndex + need : p
+        }
+        return out
+    }
+
+    /// Events that started during a sleep window ([sleepStart, sleepEnd), epoch seconds) or in the
+    /// consensus nocturnal window — the lows heart rate and HRV can miss (see `NocturnalHypoFlag`).
+    public static func overnightEvents(_ events: [HypoEvent], sleepStart: Double?, sleepEnd: Double?) -> [HypoEvent] {
+        events.filter { e in
+            if e.nocturnal { return true }
+            guard let s = sleepStart, let t = sleepEnd else { return false }
+            return e.start < t && e.end > s
+        }
     }
 
     /// GMI (Glucose Management Indicator) as a percentage from mean glucose in mg/dL.

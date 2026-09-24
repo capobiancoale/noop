@@ -529,8 +529,16 @@ final class Repository: ObservableObject {
 
     // MARK: - WOD / strength log (user-authored, on-device)
 
+    /// Called after a WOD is saved or deleted: a WOD's session-RPE load is part of its day's Effort, so
+    /// AppModel wires this to a rescore. nil (inert) in tests.
+    var onWodsChanged: (() -> Void)?
+
     /// Save (create or edit) one user-logged WOD.
-    func saveWod(_ r: WodLogRow) async { guard let s = await ensureStore() else { return }; try? await s.upsertWod(r) }
+    func saveWod(_ r: WodLogRow) async {
+        guard let s = await ensureStore() else { return }
+        _ = try? await s.upsertWod(r)
+        onWodsChanged?()
+    }
 
     /// All logged WODs, newest first.
     func allWods() async -> [WodLogRow] { guard let s = await ensureStore() else { return [] }; return (try? await s.allWods()) ?? [] }
@@ -539,7 +547,33 @@ final class Repository: ObservableObject {
     func wodHistory(title: String) async -> [WodLogRow] { guard let s = await ensureStore() else { return [] }; return (try? await s.wods(title: title)) ?? [] }
 
     /// Delete one logged WOD by id.
-    func deleteWod(id: String) async { guard let s = await ensureStore() else { return }; try? await s.deleteWod(id: id) }
+    func deleteWod(id: String) async {
+        guard let s = await ensureStore() else { return }
+        _ = try? await s.deleteWod(id: id)
+        onWodsChanged?()
+    }
+
+    /// NOOP-vs-WHOOP benchmark: for each metric, every day that carries BOTH a WHOOP-imported value and a
+    /// NOOP-computed value over the trailing `days` (nil = all history). Reads the imported and computed
+    /// rows separately — never the merged dashboard row, where the import wins — so each side is its own
+    /// method. Metrics with no paired day are omitted.
+    func benchmarkPairs(days: Int?) async -> [BenchmarkMetric: [AgreementStats.Pair]] {
+        guard let store = await ensureStore() else { return [:] }
+        let to = Self.dayString(Date())
+        let from = days.map { Self.dayString(Date().addingTimeInterval(-Double($0) * 86_400)) } ?? "0000-01-01"
+        let imported = await unionDailyMetrics(store: store, from: from, to: to)
+        let computedRows = await unionComputedDailyMetrics(store: store, from: from, to: to)
+        let computed = Dictionary(computedRows.map { ($0.day, $0) }, uniquingKeysWith: { first, _ in first })
+        var out: [BenchmarkMetric: [AgreementStats.Pair]] = [:]
+        for ref in imported {
+            guard let noop = computed[ref.day] else { continue }
+            for metric in BenchmarkMetric.allCases {
+                guard let r = metric.value(ref), let t = metric.value(noop), r.isFinite, t.isFinite else { continue }
+                out[metric, default: []].append(AgreementStats.Pair(day: ref.day, reference: r, test: t))
+            }
+        }
+        return out
+    }
 
     /// CAPTURE-D (#797): the on-device DATA VOLUME read FRESH from the STORE (never the `@Published`
     /// dashboard caches), for the Display & Performance test mode's `dataVolume` line. dbRows is the raw
@@ -1484,7 +1518,7 @@ final class Repository: ObservableObject {
         case .hrv:
             // #803: plot a TRAILING-WINDOW rMSSD that MOVES across the session, not raw R-R ms mislabelled
             // "HRV". Read the R-R rows (low frequency, safe to load for a window) and hand them to
-            // HRVAnalyzer.rollingRmssd (the SAME range + Malik ectopic filtering the nightly path uses), so
+            // HRVAnalyzer.rollingRmssd (the SAME Lipponen–Tarvainen cleaning the nightly path uses), so
             // each point is an honest windowed rMSSD (ms). A sparse/artifact-heavy window emits nothing
             // rather than a noisy spike. The `to - from` span chooses the window width: a 2-min rMSSD for a
             // zoomed-in look, widening with the visible span so a day-scale view stays readable. The thinning
@@ -1931,7 +1965,9 @@ final class Repository: ObservableObject {
     /// are filtered HERE so every consumer (Workouts screen, Today, Coach context) agrees: the engine
     /// re-derives the detected rows each run, so a plain delete would resurrect them; the dismissed
     /// span list is the durable "not a workout" record.
-    func workoutRows(days: Int = 4000) async -> [WorkoutRow] {
+    /// `reconcileHr: false` skips the display-only HR reconcile below (up to 300 trace reads), for callers that
+    /// read the heart rate themselves (the VO₂max estimate).
+    func workoutRows(days: Int = 4000, reconcileHr: Bool = true) async -> [WorkoutRow] {
         guard let store = await ensureStore() else { return [] }
         let now = Int(Date().timeIntervalSince1970)
         let lo = now - days * 86_400, hi = now + 86_400
@@ -1945,6 +1981,9 @@ final class Repository: ObservableObject {
         rows += (try? await store.workouts(deviceId: "apple-health", from: lo, to: hi, limit: 5000)) ?? []
         // Imported lifting sessions (Hevy / Liftosaur) live under their own "lifting" source.
         rows += (try? await store.workouts(deviceId: "lifting", from: lo, to: hi, limit: 5000)) ?? []
+        // Imported GPX / TCX / FIT activity files live under their own "activity-file" source
+        // (ActivityFileImporter.sourceId, written by DataSourcesView).
+        rows += (try? await store.workouts(deviceId: "activity-file", from: lo, to: hi, limit: 5000)) ?? []
         rows = Self.dedupWorkoutsByNaturalKey(rows)
         let spans = WorkoutSource.parseDismissedSpans(dismissedDetectedSpans)
         // #687: collapse the SAME activity tracked live under the strap AND imported from Health Connect /
@@ -1964,6 +2003,7 @@ final class Repository: ObservableObject {
             deduped = WorkoutSource.dedupCrossSource(filtered)
         }
         let visible = deduped.sorted { $0.startTs > $1.startTs }
+        guard reconcileHr else { return visible }
         return await reconcileWorkoutHrWithTrace(visible, store: store)
     }
 
