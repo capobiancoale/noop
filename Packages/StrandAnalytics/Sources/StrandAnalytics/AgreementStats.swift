@@ -165,9 +165,19 @@ public enum AgreementStats {
         let mae = d.reduce(0) { $0 + abs($1) } / nD
         let rmse = (d.reduce(0) { $0 + $1 * $1 } / nD).squareRoot()
         let hasZeroRef = x.contains(0)
-        let mape = hasZeroRef ? nil : zip(d, x).reduce(0) { $0 + abs($1.0) / abs($1.1) } / nD * 100
+        // Plain loops, not a ternary around reduce/filter closures: that form took the newest Swift type
+        // checker too long ("unable to type-check this expression in reasonable time").
+        var mape: Double?
+        if !hasZeroRef {
+            var relative = 0.0
+            for (diff, ref) in zip(d, x) { relative += abs(diff) / abs(ref) }
+            mape = relative / nD * 100
+        }
         func within(_ f: Double) -> Double? {
-            hasZeroRef ? nil : Double(zip(d, x).filter { abs($0.0) <= f * abs($0.1) }.count) / nD
+            if hasZeroRef { return nil }
+            var count = 0
+            for (diff, ref) in zip(d, x) where abs(diff) <= f * abs(ref) { count += 1 }
+            return Double(count) / nD
         }
 
         return Report(n: n, autocorrelation: rho, nEffective: nEff,
