@@ -31,7 +31,9 @@ final class DiabetesMetricsTests: XCTestCase {
         XCTAssertEqual(d.tbrSeverePct, 1.0 / 6.0 * 100, accuracy: 1e-9)
         XCTAssertEqual(d.tarPct, 2.0 / 6.0 * 100, accuracy: 1e-9)
         XCTAssertEqual(d.tarHighPct, 1.0 / 6.0 * 100, accuracy: 1e-9)
-        XCTAssertEqual(d.hypoEvents, 2)
+        // Lone readings hours apart cannot show 15 consecutive minutes below 70: not consensus events
+        // (Battelino 2023). Event detection on real CGM traces is covered in HypoEventTests.
+        XCTAssertEqual(d.hypoEvents, 0)
         // Only the 05:00 (minutesLocal 300) reading is overnight.
         XCTAssertEqual(try XCTUnwrap(d.overnightMean), 60, accuracy: 1e-9)
         XCTAssertEqual(try XCTUnwrap(d.overnightMin), 60, accuracy: 1e-9)
@@ -69,12 +71,13 @@ final class DiabetesMetricsTests: XCTestCase {
     }
 
     func testGlucoseDayOpeningBelowRangeCountsAsOneHypo() throws {
+        // A 5-min CGM trace that opens below range for 25 minutes, then recovers for good: one event.
         let day = "2024-05-04"
-        let r: [GlucoseReading] = [
-            .init(ts: 1, day: day, minutesLocal: 60, mgdl: 65),   // opens below -> event #1
-            .init(ts: 2, day: day, minutesLocal: 120, mgdl: 66),  // still below -> same event
-            .init(ts: 3, day: day, minutesLocal: 180, mgdl: 90),  // recovered
-        ]
+        let base = 1_714_521_600.0   // 2024-05-01 00:00 UTC, a multiple of 5 minutes
+        let values: [Double] = [65, 64, 63, 66, 68, 80, 95, 110, 120, 125]
+        let r = values.enumerated().map { i, v in
+            GlucoseReading(ts: base + Double(i) * 300, day: day, minutesLocal: 60 + i * 5, mgdl: v)
+        }
         XCTAssertEqual(try XCTUnwrap(DiabetesMetrics.glucoseDaily(r)[day]).hypoEvents, 1)
     }
 

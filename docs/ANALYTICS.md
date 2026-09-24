@@ -299,6 +299,30 @@ A long walk with little cardio still counts: when cardio TRIMP is low but step /
 
 Given `(TRIMP, reference_strain)` pairs, fits `D` via a through-origin least-squares line in log-space: `ln(D) = maxStrain · Σx² / Σ(x·strain)`, `x = ln(TRIMP+1)`, where `maxStrain` is the full-scale value (now `100`, formerly `21`). Throws on fewer than 2 usable pairs.
 
+### Logged WODs: session-RPE muscular load (`LoggedSession`)
+
+Heart rate under-reads resistance and mixed-modal training: heavy sets, short maximal efforts and the rest
+between them load the muscles far more than the pulse shows (and wrist PPG reads low during lifting). A logged
+WOD with an RPE and a time adds its **session-RPE load** — Borg CR-10 rating × minutes (Foster et al., J
+Strength Cond Res 2001; reliable in resistance training, Day et al. 2004; review Haddad et al., Front Neurosci
+2017) — where the heart rate did not already record it:
+
+```
+expected TRIMP = 0.52 × RPE × minutes                 (Tibana et al., Sports 2018: Edwards TRIMP / session-RPE
+                                                        in CrossFit WODs — Fran 0.56, Fight Gone Bad 0.48)
+added TRIMP    = max(0, expected − Edwards TRIMP the heart rate recorded for that session)
+Effort         = 100 · ln(heart-rate TRIMP + added TRIMP + 1) / ln(D)
+```
+
+- The comparison uses the classic Edwards zones (50–90 % of HRmax), the scale the 0.52 ratio was measured on.
+- "Recorded for that session" is the detected workout that best overlaps it (within an hour either side), else
+  the span the WOD could occupy whether its logged time marks the start or the end. A WOD imported with a date
+  only (anchored to local noon) is matched to the day's detected workout, or counts in full if none exists.
+- Never negative: a metcon the heart rate fully captured adds nothing, so nothing is counted twice. A day with
+  no heart rate still has no Effort; a WOD alone never makes one.
+- Duration is the result time, else the time cap; a WOD without RPE or duration adds nothing (the WOD screen
+  says so). Saving, editing or deleting a WOD rescores the recent days; the WOD screen shows what it added.
+
 ---
 
 ## `SleepStager` — sleep/wake detection + approximate 4-class staging (feeds **Rest**)
@@ -418,6 +442,48 @@ The simple, maximally auditable path: plain mean and sample SD (ddof = 1) over t
 `deviation(_:state:)` returns a robust z-score, a signed physical-units delta, a fractional ratio (`value/baseline − 1`), and an `inNormalRange` flag (`|z| ≤ 1`).
 
 ---
+
+## NOOP vs WHOOP — agreement report (`AgreementStats`)
+
+Source: `AgreementStats.swift`, screen `BenchmarkView`. For every day that has both a WHOOP-imported value and
+NOOP's own (HRV, resting HR, respiratory rate, sleep and its stages, efficiency, SpO₂, Charge vs Recovery,
+Effort vs Day Strain), NOOP reports agreement the way the INTERLIVE consensus asks consumer wearables to be
+validated (Mühlen et al., Br J Sports Med 2021) and the sleep-technology framework of Menghini et al. (Sleep
+2021) implements:
+
+- **Bias** (mean NOOP − WHOOP) and **95 % limits of agreement** (Bland & Altman 1986), each with its 95 %
+  confidence interval — the limits by MOVER (Zou, Stat Methods Med Res 2013).
+- **Correlated days.** Consecutive days are not independent. An AR(1) fit to the daily differences gives the
+  effective number of days, the unbiased SD and the SE of the bias (Zięba, Metrol Meas Syst 2010, eqs. 10–12,
+  24–25), using the real gaps between days.
+- **Proportional bias and heteroscedasticity.** Differences, and then their absolute residuals, are regressed on
+  the mean of the two methods (Bland & Altman 1999 — not on one method, which is misleading when it has error of
+  its own, Bland & Altman 1995). When significant, the limits become `b0 + b1·A ± 2.46·(c0 + c1·A)`.
+- **Error and concordance:** MAE, RMSE, MAPE, share of days within ±5 / ±10 %, Pearson, Spearman and Lin's
+  concordance with its z-transform CI (Lin 1989, variance as corrected in 2000), labelled with McBride's bands
+  (< 0.90 poor, 0.90–0.95 moderate, 0.95–0.99 substantial, > 0.99 almost perfect).
+
+No universal "good enough" threshold is imposed, and WHOOP is the reference, not the truth: agreement is not
+accuracy. Every statistic is tested against values computed independently with NumPy/SciPy.
+
+## Night-time hypoglycaemia (`DiabetesMetrics.hypoEvents`)
+
+Source: `DiabetesMetrics.swift` (StrandImport), shown under the scores on Today (iOS, CGM data from Apple
+Health). Events follow the international consensus (Battelino et al., Lancet Diabetes Endocrinol 2023):
+
+- **Level 1:** ≥ 15 consecutive minutes below 70 mg/dL; the event ends only after ≥ 15 consecutive minutes at or
+  above 70 (shorter recoveries stay inside it). **Level 2:** ≥ 15 consecutive minutes below 54 mg/dL.
+  **Extended:** more than 120 consecutive minutes below 70.
+- The CGM trace is resampled to a 5-minute grid, interpolating across gaps of up to 45 minutes; a longer gap is
+  missing data and closes an open event at its last known low (the iglu implementation, Broll et al. 2021).
+- **Nocturnal** is 00:00–05:59 local (the consensus window); events during the main sleep also count.
+- The daily `glucose_hypos` metric now counts these events instead of every dip below 70.
+
+Heart rate and HRV often stay flat through a spontaneous night-time low (Koivikko et al., Diabetes Care 2012),
+so an HRV-led recovery score — WHOOP's Recovery and NOOP's Charge alike — can read normal after one. Today
+therefore flags Charge with the night's events (level, minutes, lowest value, time) and, after exercise, notes
+that night-time lows are more likely then (EASD/ISPAD position statement, Moser et al., Diabetologia 2020).
+The flag is informational: Charge itself is unchanged and nothing suggests carbs or insulin.
 
 ## `WorkoutDetector` + `Calories` — retroactive workout detection
 

@@ -3951,10 +3951,25 @@ struct TodayView: View {
         // gauge falls back to the stored row (never a fabricated value); a navigated past day clears it.
         let liveStrainLocal: Double?
         if selectedDayOffset == 0 {
-            let todayHr = await repo.hrSamples(from: windowStart, to: windowEnd)
+            // The whole day, like the engine's day read: the default 8 000-row cap is ~2 h of a 1 Hz strap.
+            let todayHr = await repo.hrSamples(from: windowStart, to: windowEnd, limit: 200_000)
             let maxHR = profile.age > 0 ? StrainScorer.tanakaHRmax(age: Double(profile.age)) : nil
             let restHR = displayDay?.restingHr.map(Double.init) ?? StrainScorer.defaultRestingHR
-            liveStrainLocal = StrainScorer.strain(todayHr, maxHR: maxHR, restingHR: restHR, sex: profile.sex)
+            // Today's logged WODs fold in exactly as the engine folds them (session-RPE load the heart rate
+            // under-reads), matched against today's workouts, so the live gauge agrees with the stored day.
+            let tzOffset = TimeZone.current.secondsFromGMT()
+            let todayKey = Repository.dayString(dayStart)
+            let sessions = await repo.allWods().filter { $0.day == todayKey }
+                .compactMap { StrainScorer.LoggedSession(wod: $0, tzOffsetSeconds: tzOffset) }
+            var bouts: [(start: Int, end: Int)] = []
+            if !sessions.isEmpty {
+                bouts = await repo.workoutRows(days: 2)
+                    .filter { $0.endTs > windowStart && $0.startTs < windowEnd }
+                    .map { (start: $0.startTs, end: $0.endTs) }
+            }
+            liveStrainLocal = StrainScorer.strain(todayHr, maxHR: maxHR, restingHR: restHR, sex: profile.sex,
+                                                  sessions: sessions, bouts: bouts,
+                                                  dayStart: windowStart, dayEnd: windowStart + 86_400)
         } else {
             liveStrainLocal = nil
         }

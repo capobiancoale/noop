@@ -130451,78 +130451,612 @@
       }
     },
     "Heart": {
-      "de": {
-        "stringUnit": {
-          "state": "translated",
-          "value": "Herz"
-        }
-      },
-      "es": {
-        "stringUnit": {
-          "state": "translated",
-          "value": "Corazón"
-        }
-      },
-      "it": {
-        "stringUnit": {
-          "state": "translated",
-          "value": "Cuore"
-        }
-      },
-      "pt-PT": {
-        "stringUnit": {
-          "state": "translated",
-          "value": "Coração"
-        }
-      },
-      "zh-Hans": {
-        "stringUnit": {
-          "state": "translated",
-          "value": "心率"
-        }
-      },
-      "zh-Hant": {
-        "stringUnit": {
-          "state": "translated",
-          "value": "心率"
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herz"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corazón"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuore"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coração"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "心率"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "心率"
+          }
         }
       }
     },
     "Bolus": {
-      "de": {
-        "stringUnit": {
-          "state": "translated",
-          "value": "Bolus"
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bolus"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bolo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bolo"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bólus"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大剂量"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大劑量"
+          }
         }
-      },
-      "es": {
-        "stringUnit": {
-          "state": "translated",
-          "value": "Bolo"
+      }
+    },
+    "NOOP vs WHOOP": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP vs WHOOP"
+          }
         }
-      },
-      "it": {
-        "stringUnit": {
-          "state": "translated",
-          "value": "Bolo"
+      }
+    },
+    "How closely NOOP's own numbers agree with your imported WHOOP data, day by day": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quanto i numeri calcolati da NOOP concordano con i dati WHOOP importati, giorno per giorno"
+          }
         }
-      },
-      "pt-PT": {
-        "stringUnit": {
-          "state": "translated",
-          "value": "Bólus"
+      }
+    },
+    "No paired days yet": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora nessun giorno confrontabile"
+          }
         }
-      },
-      "zh-Hans": {
-        "stringUnit": {
-          "state": "translated",
-          "value": "大剂量"
+      }
+    },
+    "Import your WHOOP export in Data Sources. Every day that has both WHOOP's number and NOOP's own is compared here.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa l'export WHOOP in Sorgenti dati. Qui viene confrontato ogni giorno che ha sia il valore di WHOOP sia quello calcolato da NOOP."
+          }
         }
-      },
-      "zh-Hant": {
-        "stringUnit": {
-          "state": "translated",
-          "value": "大劑量"
+      }
+    },
+    "Mean difference is NOOP minus WHOOP. 95% of days fall between the two limits of agreement. The ranges in brackets are 95% confidence intervals: they widen when there are few days or when consecutive days move together, which is taken into account. Concordance (Lin) is 1 when the two agree exactly; below 0.90 is poor, 0.90–0.95 moderate, 0.95–0.99 substantial, above 0.99 almost perfect.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La differenza media è NOOP meno WHOOP. Il 95% dei giorni cade tra i due limiti di accordo. Gli intervalli tra parentesi sono intervalli di confidenza al 95%: si allargano quando i giorni sono pochi o quando giorni consecutivi si muovono insieme, cosa di cui si tiene conto. La concordanza (Lin) vale 1 quando i due coincidono esattamente; sotto 0,90 è scarsa, 0,90–0,95 moderata, 0,95–0,99 sostanziale, sopra 0,99 quasi perfetta."
+          }
+        }
+      }
+    },
+    "WHOOP is the benchmark here, not the truth: good agreement means NOOP behaves like WHOOP, not that either is exact.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qui WHOOP è il riferimento, non la verità: un buon accordo significa che NOOP si comporta come WHOOP, non che uno dei due sia esatto."
+          }
+        }
+      }
+    },
+    "Methods: INTERLIVE (Mühlen 2021), Bland & Altman 1986 and 1999, Zou 2013 (confidence of the limits), Zięba 2010 (correlated days), Lin 1989 and McBride 2005 (concordance).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metodi: INTERLIVE (Mühlen 2021), Bland & Altman 1986 e 1999, Zou 2013 (confidenza dei limiti), Zięba 2010 (giorni correlati), Lin 1989 e McBride 2005 (concordanza)."
+          }
+        }
+      }
+    },
+    "Needs at least %lld paired days to compare (has %lld).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servono almeno %lld giorni appaiati per il confronto (ce ne sono %lld)."
+          }
+        }
+      }
+    },
+    "Mean difference": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Differenza media"
+          }
+        }
+      }
+    },
+    "95% of days, low values": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "95% dei giorni, valori bassi"
+          }
+        }
+      }
+    },
+    "95% of days, high values": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "95% dei giorni, valori alti"
+          }
+        }
+      }
+    },
+    "95% of days within": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "95% dei giorni entro"
+          }
+        }
+      }
+    },
+    "Concordance (Lin)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concordanza (Lin)"
+          }
+        }
+      }
+    },
+    "Typical error": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Errore tipico"
+          }
+        }
+      }
+    },
+    "%lld%% of days within ±10%%": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%% dei giorni entro ±10%%"
+          }
+        }
+      }
+    },
+    "NOOP reads progressively lower than WHOOP as the value rises, so the limits are shown for low and high values.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP legge sempre più basso di WHOOP al crescere del valore, quindi i limiti sono mostrati per valori bassi e alti."
+          }
+        }
+      }
+    },
+    "NOOP reads progressively higher than WHOOP as the value rises, so the limits are shown for low and high values.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP legge sempre più alto di WHOOP al crescere del valore, quindi i limiti sono mostrati per valori bassi e alti."
+          }
+        }
+      }
+    },
+    "The gap widens as the value rises, so the limits are shown for low and high values.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lo scarto aumenta al crescere del valore, quindi i limiti sono mostrati per valori bassi e alti."
+          }
+        }
+      }
+    },
+    "Consecutive days move together, so these %lld days count as about %lld independent ones.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I giorni consecutivi si muovono insieme, quindi questi %lld giorni valgono circa %lld giorni indipendenti."
+          }
+        }
+      }
+    },
+    "poor": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "scarsa"
+          }
+        }
+      }
+    },
+    "substantial": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sostanziale"
+          }
+        }
+      }
+    },
+    "almost perfect": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "quasi perfetta"
+          }
+        }
+      }
+    },
+    "Mean of NOOP and WHOOP": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Media di NOOP e WHOOP"
+          }
+        }
+      }
+    },
+    "NOOP − WHOOP": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP − WHOOP"
+          }
+        }
+      }
+    },
+    "Bland–Altman plot": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grafico di Bland–Altman"
+          }
+        }
+      }
+    },
+    "Difference": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Differenza"
+          }
+        }
+      }
+    },
+    "Zero": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zero"
+          }
+        }
+      }
+    },
+    "Limit": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limite"
+          }
+        }
+      }
+    },
+    "Line": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linea"
+          }
+        }
+      }
+    },
+    "Total sleep": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonno totale"
+          }
+        }
+      }
+    },
+    "Light sleep": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonno leggero"
+          }
+        }
+      }
+    },
+    "Sleep efficiency": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Efficienza del sonno"
+          }
+        }
+      }
+    },
+    "Charge vs Recovery": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carica vs Recovery"
+          }
+        }
+      }
+    },
+    "Effort vs Day Strain": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sforzo vs Day Strain"
+          }
+        }
+      }
+    },
+    "Two different recovery models on the same 0–100 axis: look at whether they move together more than at the gap.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due modelli di recupero diversi sulla stessa scala 0–100: guarda se si muovono insieme più che la distanza tra i due."
+          }
+        }
+      }
+    },
+    "WHOOP's 0–21 Day Strain is converted to NOOP's 0–100 Effort axis on import; the two scales are built differently.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il Day Strain 0–21 di WHOOP viene convertito sulla scala Sforzo 0–100 di NOOP all'importazione; le due scale sono costruite in modo diverso."
+          }
+        }
+      }
+    },
+    "Wrist devices estimate sleep stages from heart rate and motion; a gap here does not tell you which one is right.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I dispositivi da polso stimano le fasi del sonno da frequenza cardiaca e movimento; una differenza qui non dice quale dei due abbia ragione."
+          }
+        }
+      }
+    },
+    "Session load (sRPE)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carico della sessione (sRPE)"
+          }
+        }
+      }
+    },
+    "Added to the day's Effort": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiunto allo Sforzo del giorno"
+          }
+        }
+      }
+    },
+    "Your heart rate already reflects this session, so it adds nothing extra to Effort.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La frequenza cardiaca rispecchia già questa sessione, quindi non aggiunge altro allo Sforzo."
+          }
+        }
+      }
+    },
+    "No heart rate that day, so Effort could not be scored.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun dato di frequenza cardiaca quel giorno, quindi lo Sforzo non è calcolabile."
+          }
+        }
+      }
+    },
+    "Heart rate misses much of the muscular load of lifting and WODs. The session-RPE load (RPE × minutes, Foster 2001) adds to Effort only where the heart rate recorded less than a session this hard carries (Tibana 2018).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La frequenza cardiaca non vede gran parte del carico muscolare di sollevamenti e WOD. Il carico session-RPE (RPE × minuti, Foster 2001) si aggiunge allo Sforzo solo dove la frequenza cardiaca ha registrato meno di quanto pesi una sessione così dura (Tibana 2018)."
+          }
+        }
+      }
+    },
+    "Add an RPE and a time (result or time cap) to count this WOD's muscular load in Effort.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi un RPE e un tempo (risultato o time cap) per contare il carico muscolare di questo WOD nello Sforzo."
+          }
+        }
+      }
+    },
+    "Training load": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carico di allenamento"
+          }
+        }
+      }
+    },
+    "NIGHT-TIME LOW": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IPOGLICEMIA NOTTURNA"
+          }
+        }
+      }
+    },
+    "Level 1": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livello 1"
+          }
+        }
+      }
+    },
+    "Level 2": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livello 2"
+          }
+        }
+      }
+    },
+    "Below 70 mg/dL for %lld min, lowest %lld mg/dL, %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sotto 70 mg/dL per %lld min, minimo %lld mg/dL, %@."
+          }
+        }
+      }
+    },
+    "%lld lows, %lld min below 70 mg/dL in total, lowest %lld mg/dL, %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ipoglicemie, %lld min sotto 70 mg/dL in totale, minimo %lld mg/dL, %@."
+          }
+        }
+      }
+    },
+    "It lasted more than 2 hours.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "È durata più di 2 ore."
+          }
+        }
+      }
+    },
+    "Heart rate and HRV often stay flat through a night-time low, so Charge can read normal after one. Weigh how you actually feel today.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frequenza cardiaca e HRV spesso non cambiano durante un'ipoglicemia notturna, quindi la Carica può sembrare normale anche dopo. Tieni conto di come ti senti davvero oggi."
+          }
+        }
+      }
+    },
+    "Night-time lows are more likely after exercise, especially in the afternoon or evening.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le ipoglicemie notturne sono più probabili dopo l'esercizio, soprattutto se fatto di pomeriggio o di sera."
+          }
+        }
+      }
+    },
+    "From your CGM in Apple Health. Informational only, not medical advice.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dal tuo CGM in Apple Health. Solo a scopo informativo, non è un consiglio medico."
+          }
         }
       }
     }

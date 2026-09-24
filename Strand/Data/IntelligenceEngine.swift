@@ -430,6 +430,9 @@ final class IntelligenceEngine: ObservableObject {
         // the 5/MG cumulative @57 series + wrap-aware deltas + dropped deltas, replayed below tagged `.steps`.
         // The trace recomputes the SAME wrap-aware sum analyzeDay already did, so the steps total is unchanged.
         let stepsTraceActive = TestCentre.active(.steps)
+        // Logged WODs by local day, read ONCE: their session-RPE load folds into each day's Effort where the
+        // heart rate under-reads it (StrainScorer.LoggedSession).
+        let wodsByDay = Dictionary(grouping: (try? await store.allWods(limit: 5_000)) ?? [], by: \.day)
         let scanned: [DayScan] = await Task.detached(priority: .utility) {
             var out: [DayScan] = []
             for offset in 0..<maxDays {
@@ -563,6 +566,9 @@ final class IntelligenceEngine: ObservableObject {
                                                      // #690: thread the V2 toggle into the NORMAL staging path so
                                                      // it affects detected nights, not just the self-heal restage.
                                                      useSleepStagerV2: useSleepStagerV2,
+                                                     loggedSessions: (wodsByDay[day] ?? []).compactMap {
+                                                         StrainScorer.LoggedSession(wod: $0, tzOffsetSeconds: tzOffset)
+                                                     },
                                                      traceSink: traceSink)
                 // ── Steps test mode: 5/MG raw-counter trace ──────────────────────────────────────────────
                 // Only built when the Steps mode is on (the gate was read once before the loop). Recomputes

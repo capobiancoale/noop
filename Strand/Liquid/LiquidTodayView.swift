@@ -48,6 +48,9 @@ struct LiquidTodayView: View {
     @State private var crossGlucose: [GlucoseReading] = []
     @State private var crossCarbs: [CarbEntry] = []
     @State private var crossBolus: [InsulinEntry] = []
+    // Consensus hypoglycaemia events overnight (00:00–05:59 or during the main sleep ending on the selected
+    // day), from Apple Health on iOS. Drives the night-time low note under the scores; empty ⇒ hidden.
+    @State private var nightLows: [HypoEvent] = []
     // Diabetes recap (apple-health, day-keyed to the selected day). Nil ⇒ the row/section is hidden,
     // never a fabricated zero. Populated from the apple-health metric series in load().
     @State private var glucoseAvg: Double?         // glucose_avg
@@ -216,6 +219,7 @@ struct LiquidTodayView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     scene
+                    if !nightLows.isEmpty { nightLowSection }
                     heartRateSection
                     yourCardsSection
                     synthesisSection
@@ -709,6 +713,52 @@ struct LiquidTodayView: View {
         }
     }
 
+    // MARK: - Night-time low (Charge can't see it)
+
+    /// A consensus night-time hypoglycaemia event (Battelino et al., Lancet Diabetes Endocrinol 2023) flags
+    /// Charge: heart rate and HRV often stay flat through a spontaneous nocturnal hypo (Koivikko et al.,
+    /// Diabetes Care 2012), so an HRV-led recovery score can read normal after one. Lows at night are also
+    /// more likely after exercise (EASD/ISPAD position statement, Moser et al., Diabetologia 2020).
+    /// Informational only — it never suggests carbs or insulin.
+    private var nightLowSection: some View {
+        let worstLevel = nightLows.map(\.level).max() ?? 1
+        let minutes = Int(nightLows.reduce(0) { $0 + $1.durationMin }.rounded())
+        let nadir = Int((nightLows.map(\.nadir).min() ?? 0).rounded())
+        let first = nightLows.map(\.start).min() ?? 0
+        let last = nightLows.map(\.end).max() ?? 0
+        let clock = Date(timeIntervalSince1970: first).formatted(date: .omitted, time: .shortened)
+            + "–" + Date(timeIntervalSince1970: last).formatted(date: .omitted, time: .shortened)
+        let exercisedBefore = workouts.contains { Double($0.endTs) <= first && Double($0.endTs) >= first - 18 * 3_600 }
+        return card {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "moon.zzz.fill").foregroundStyle(StrandPalette.statusWarning)
+                    Text("NIGHT-TIME LOW").font(StrandFont.overline).tracking(1.6)
+                        .foregroundStyle(StrandPalette.textSecondary)
+                    Spacer()
+                    Text(worstLevel >= 2 ? String(localized: "Level 2") : String(localized: "Level 1"))
+                        .font(StrandFont.caption.weight(.semibold))
+                        .foregroundStyle(worstLevel >= 2 ? StrandPalette.statusCritical : StrandPalette.statusWarning)
+                }
+                Text(nightLows.count == 1
+                     ? String(localized: "Below 70 mg/dL for \(minutes) min, lowest \(nadir) mg/dL, \(clock).")
+                     : String(localized: "\(nightLows.count) lows, \(minutes) min below 70 mg/dL in total, lowest \(nadir) mg/dL, \(clock)."))
+                    .font(StrandFont.body).foregroundStyle(StrandPalette.textPrimary)
+                if nightLows.contains(where: \.extended) {
+                    Text("It lasted more than 2 hours.").font(StrandFont.subhead).foregroundStyle(StrandPalette.statusWarning)
+                }
+                Text("Heart rate and HRV often stay flat through a night-time low, so Charge can read normal after one. Weigh how you actually feel today.")
+                    .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+                if exercisedBefore {
+                    Text("Night-time lows are more likely after exercise, especially in the afternoon or evening.")
+                        .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+                }
+                Text("From your CGM in Apple Health. Informational only, not medical advice.")
+                    .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+            }
+        }
+    }
+
     // MARK: - Glucose recap (apple-health)
 
     /// True when the selected day carries any diabetes data — gates the whole recap card so users
@@ -1103,6 +1153,18 @@ struct LiquidTodayView: View {
         crossGlucose = await health.glucoseWindow(start: winStart, end: winEnd)
         crossCarbs = await health.carbsWindow(start: winStart, end: winEnd)
         crossBolus = (await health.insulinWindow(start: winStart, end: winEnd)).filter { $0.bolus }
+        // Night-time lows for the note under the scores: consensus events (Battelino 2023) that began
+        // 00:00–05:59 or during the main sleep ending on this day. Read from 18:00 the evening before.
+        let nightFrom = from - 6 * 3_600
+        let nightTo = min(from + 12 * 3_600, Int(Date().timeIntervalSince1970))
+        let nightGlucose = await health.glucoseWindow(start: Date(timeIntervalSince1970: TimeInterval(nightFrom)),
+                                                      end: Date(timeIntervalSince1970: TimeInterval(nightTo)))
+        let mainSleep = repo.sleeps
+            .filter { $0.endTs > nightFrom && $0.endTs <= from + 14 * 3_600 }
+            .max { ($0.endTs - $0.startTs) < ($1.endTs - $1.startTs) }
+        nightLows = DiabetesMetrics.overnightEvents(
+            DiabetesMetrics.hypoEvents(nightGlucose, tzOffsetSeconds: TimeZone.current.secondsFromGMT()),
+            sleepStart: mainSleep.map { Double($0.startTs) }, sleepEnd: mainSleep.map { Double($0.endTs) })
         #endif
 
         // Day-key each diabetes series to the selected day (they're daily), with a latest fallback only

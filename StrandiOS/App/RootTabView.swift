@@ -297,6 +297,7 @@ struct RootTabView: View {
                     MoreRow("Insights", "lightbulb.fill") { InsightsView() }
                     MoreRow("Explore", "square.grid.2x2.fill") { MetricExplorerView() }
                     MoreRow("Compare", "rectangle.split.2x1.fill") { CompareView() }
+                    MoreRow("NOOP vs WHOOP", "scalemass.fill") { BenchmarkView() }
                 }
                 moreSection("Body") {
                     MoreRow("Live", "waveform.path.ecg") { LiveView() }

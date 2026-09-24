@@ -529,8 +529,16 @@ final class Repository: ObservableObject {
 
     // MARK: - WOD / strength log (user-authored, on-device)
 
+    /// Called after a WOD is saved or deleted: a WOD's session-RPE load is part of its day's Effort, so
+    /// AppModel wires this to a rescore. nil (inert) in tests.
+    var onWodsChanged: (() -> Void)?
+
     /// Save (create or edit) one user-logged WOD.
-    func saveWod(_ r: WodLogRow) async { guard let s = await ensureStore() else { return }; try? await s.upsertWod(r) }
+    func saveWod(_ r: WodLogRow) async {
+        guard let s = await ensureStore() else { return }
+        try? await s.upsertWod(r)
+        onWodsChanged?()
+    }
 
     /// All logged WODs, newest first.
     func allWods() async -> [WodLogRow] { guard let s = await ensureStore() else { return [] }; return (try? await s.allWods()) ?? [] }
@@ -539,7 +547,33 @@ final class Repository: ObservableObject {
     func wodHistory(title: String) async -> [WodLogRow] { guard let s = await ensureStore() else { return [] }; return (try? await s.wods(title: title)) ?? [] }
 
     /// Delete one logged WOD by id.
-    func deleteWod(id: String) async { guard let s = await ensureStore() else { return }; try? await s.deleteWod(id: id) }
+    func deleteWod(id: String) async {
+        guard let s = await ensureStore() else { return }
+        try? await s.deleteWod(id: id)
+        onWodsChanged?()
+    }
+
+    /// NOOP-vs-WHOOP benchmark: for each metric, every day that carries BOTH a WHOOP-imported value and a
+    /// NOOP-computed value over the trailing `days` (nil = all history). Reads the imported and computed
+    /// rows separately — never the merged dashboard row, where the import wins — so each side is its own
+    /// method. Metrics with no paired day are omitted.
+    func benchmarkPairs(days: Int?) async -> [BenchmarkMetric: [AgreementStats.Pair]] {
+        guard let store = await ensureStore() else { return [:] }
+        let to = Self.dayString(Date())
+        let from = days.map { Self.dayString(Date().addingTimeInterval(-Double($0) * 86_400)) } ?? "0000-01-01"
+        let imported = await unionDailyMetrics(store: store, from: from, to: to)
+        let computedRows = await unionComputedDailyMetrics(store: store, from: from, to: to)
+        let computed = Dictionary(computedRows.map { ($0.day, $0) }, uniquingKeysWith: { first, _ in first })
+        var out: [BenchmarkMetric: [AgreementStats.Pair]] = [:]
+        for ref in imported {
+            guard let noop = computed[ref.day] else { continue }
+            for metric in BenchmarkMetric.allCases {
+                guard let r = metric.value(ref), let t = metric.value(noop), r.isFinite, t.isFinite else { continue }
+                out[metric, default: []].append(AgreementStats.Pair(day: ref.day, reference: r, test: t))
+            }
+        }
+        return out
+    }
 
     /// CAPTURE-D (#797): the on-device DATA VOLUME read FRESH from the STORE (never the `@Published`
     /// dashboard caches), for the Display & Performance test mode's `dataVolume` line. dbRows is the raw
