@@ -1,0 +1,13 @@
+// NOOPSigning.xcconfig — per-Mac signing for Xcode builds of the iPhone app, its widgets and the watch app.
+//
+// Attached to the NOOPiOS, NOOPiOSWidgets, NOOPWatch and NOOPWatchComplications targets (project.yml,
+// configFiles). On its own it sets nothing, so the project.yml defaults apply and neither the CI compile
+// check nor the TestFlight build (fastlane build_noop, which writes your team into a temporary copy of
+// project.yml) is affected.
+//
+// To build and run on your iPhone from Xcode, run `Tools/setup-xcode.sh <TEAMID>` once. It writes
+// Config/Local.xcconfig (git-ignored, never committed) with your Team ID and the same identifiers the
+// TestFlight build uses (com.<TEAMID>.noopapp.noop…), so both ways install the same app. A target-level
+// xcconfig outranks the project-level NOOP_BUNDLE_PREFIX / DEVELOPMENT_TEAM defaults in project.yml.
+
+#include? "Local.xcconfig"

@@ -104,3 +104,6 @@ fastlane/report.xml
 fastlane/README.md
 fastlane/new_certificate_needed.txt
 fastlane/test_output/
+
+# ── Local Xcode signing (Tools/setup-xcode.sh) ──────────────────
+Config/Local.xcconfig

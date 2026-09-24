@@ -26,6 +26,7 @@ on:
       - 'NOOPWatchComplications/**'
       - 'Packages/**'
       - 'project.yml'
+      - 'Config/**'
       - 'fastlane/Fastfile'
       - 'fastlane/Matchfile'
       - 'Gemfile'

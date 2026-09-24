@@ -141,6 +141,41 @@ La domanda sulla crittografia ("Missing Compliance") non comparirà: è già dic
 
 ---
 
+## Anche da Xcode, sul tuo Mac
+
+Stessa branch, stessa app: puoi anche compilare NOOP con Xcode e installarla sull'iPhone collegato al Mac,
+per esempio per provare subito una modifica senza aspettare TestFlight.
+
+Serve: un Mac con l'**ultima versione di Xcode** (dal Mac App Store; deve supportare la versione di iOS del
+tuo iPhone), lo **stesso account Apple Developer** di TestFlight e [Homebrew](https://brew.sh).
+
+1. **Xcode → Settings → Accounts → +** → accedi con l'Apple ID dell'Apple Developer Program.
+2. Nel Terminale (con il tuo utente GitHub e il tuo Team ID, lo stesso del secret `TEAMID`):
+   ```bash
+   git clone -b claude-automatic-build https://github.com/<tuo-utente>/noop.git
+   cd noop
+   Tools/setup-xcode.sh <TEAMID>
+   ```
+   Lo script scrive `Config/Local.xcconfig` (resta solo sul tuo Mac, è in `.gitignore`) con il tuo Team ID
+   e gli **stessi Bundle ID di TestFlight**, installa XcodeGen se manca, genera `Strand.xcodeproj` e lo apre.
+3. **iPhone:** collegalo con il cavo, sbloccalo e tocca **Autorizza**; poi **Impostazioni → Privacy e
+   sicurezza → Modalità sviluppatore** → attiva (l'iPhone si riavvia).
+4. **Xcode:** in alto scegli lo schema **NOOPiOS** e il tuo iPhone → **▶︎** (⌘R). La firma è automatica:
+   Xcode crea da solo i profili di sviluppo e, se non esistono ancora, anche gli identificativi e l'App Group.
+
+Dopo ogni `git pull` rilancia `Tools/setup-xcode.sh <TEAMID>`: rigenera il progetto (i file nuovi entrano
+solo così).
+
+Da sapere:
+- Con gli stessi Bundle ID è **la stessa app**: installarla da Xcode sostituisce quella di TestFlight e
+  viceversa, come un aggiornamento, e i dati restano. Per sicurezza, prima fai un backup dall'app
+  (**Backup e sincronizzazione → Esegui il backup ora**).
+- Per tornare alla versione TestFlight basta reinstallarla dall'app TestFlight.
+- Senza `Config/Local.xcconfig` (per esempio sulle macchine di GitHub) non cambia niente: la build
+  TestFlight imposta il team da sola.
+
+---
+
 ## Se qualcosa va storto
 
 | Messaggio / sintomo | Soluzione |
@@ -155,6 +190,9 @@ La domanda sulla crittografia ("Missing Compliance") non comparirà: è già dic
 | `maximum number of certificates` | Il team ha già troppi certificati di distribuzione (es. quello di Loop). O usi quello di Loop (`MATCH_REPO = Match-Secrets` + `MATCH_PASSWORD` di Loop), oppure revochi un certificato inutilizzato in developer.apple.com → Certificates. |
 | Errore di compilazione Swift | Scarica l'artifact **build-log** dalla pagina della run e passalo a Claude. |
 | La build mensile non parte | Passo 1b: serve che questa sia la branch di default. |
+| Xcode: `Signing for "NOOPiOS" requires a development team` | Lancia `Tools/setup-xcode.sh <TEAMID>` e verifica che l'Apple ID sia in Xcode → Settings → Accounts. |
+| Xcode: `Failed to register bundle identifier` / `No profiles for …` | In **Signing & Capabilities** lascia attivo **Automatically manage signing** e premi **Try Again**. Il Team ID dello script deve essere quello del tuo account. |
+| Xcode non vede l'iPhone / `Developer Mode disabled` | Passo 3 della sezione Xcode: autorizza il Mac e attiva la Modalità sviluppatore. |
 | Dopo un rinnovo automatico, Loop non builda più | Normale se Loop usa lo stesso team: lancia una volta "3. Create Certificates" di Loop. |
 
 ---
@@ -170,6 +208,10 @@ La domanda sulla crittografia ("Missing Compliance") non comparirà: è già dic
 - `project.yml`: un'unica impostazione, `NOOP_BUNDLE_PREFIX` (default `com.noopapp`), deriva bundle ID
   di app, widget, watch e complicazione, l'ID companion del Watch e l'App Group. Con il default le build
   locali/CI esistenti restano identiche a prima.
+- Build da Xcode: i 4 target hanno `Config/NOOPSigning.xcconfig`, che contiene solo
+  `#include? "Local.xcconfig"`. `Tools/setup-xcode.sh` scrive `Config/Local.xcconfig` (git-ignored) con
+  `DEVELOPMENT_TEAM` e `NOOP_BUNDLE_PREFIX = com.<TEAMID>.noopapp`; un xcconfig a livello di target prevale
+  sui default di progetto. Senza quel file l'xcconfig è vuoto, quindi CI e fastlane non cambiano.
 - Workflow in `.github/workflows/`: `noop_validate_secrets.yml` (1), `noop_add_identifiers.yml` (2),
   `noop_create_certs.yml` (3), `noop_build.yml` (4). La build usa Xcode 26: App Store Connect accetta
   solo build fatte con l'SDK corrente.

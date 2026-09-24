@@ -250,6 +250,13 @@ Or open the generated project and run the `NOOPiOS` scheme from Xcode:
 open Strand.xcodeproj
 ```
 
+To sign it under your own Apple Developer team, run `Tools/setup-xcode.sh <TEAMID>` instead of
+`xcodegen generate`. It writes the git-ignored `Config/Local.xcconfig` (your `DEVELOPMENT_TEAM` and
+`NOOP_BUNDLE_PREFIX = com.<TEAMID>.noopapp`, read by the four iOS/watchOS targets through
+`Config/NOOPSigning.xcconfig`), generates the project and opens it. The identifiers are the ones the
+TestFlight browser build uses ([`fastlane/BROWSER_BUILD.md`](../fastlane/BROWSER_BUILD.md)), so an Xcode
+build and a TestFlight build are the same app.
+
 Notes:
 
 - The `NOOPiOS` and `NOOPiOSWidgets` targets deploy to **iOS 17.0**. (The shared packages still

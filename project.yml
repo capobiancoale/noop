@@ -160,6 +160,10 @@ targets:
   # are excluded, and the iOS app shell + HealthKit + widgets/intents live under
   # StrandiOS/. See docs/IOS.md.
   NOOPiOS:
+    # Per-Mac signing for Xcode builds (Tools/setup-xcode.sh); empty unless Config/Local.xcconfig exists.
+    configFiles:
+      Debug: Config/NOOPSigning.xcconfig
+      Release: Config/NOOPSigning.xcconfig
     type: application
     platform: iOS
     deploymentTarget: "17.0"
@@ -290,6 +294,9 @@ targets:
   # WidgetKit + Live Activity extension — the iOS analogue of the macOS menu-bar
   # extra. Reads a tiny snapshot the app publishes into the shared App Group.
   NOOPiOSWidgets:
+    configFiles:
+      Debug: Config/NOOPSigning.xcconfig
+      Release: Config/NOOPSigning.xcconfig
     type: app-extension
     platform: iOS
     deploymentTarget: "17.0"
@@ -338,6 +345,9 @@ targets:
   # a fabricated number. Live HR comes from the watch's OWN HealthKit sensor.
   # Modern single-target watchOS app (WKApplication, watchOS 9+ SwiftUI lifecycle).
   NOOPWatch:
+    configFiles:
+      Debug: Config/NOOPSigning.xcconfig
+      Release: Config/NOOPSigning.xcconfig
     type: application
     platform: watchOS
     deploymentTarget: "10.0"
@@ -395,6 +405,9 @@ targets:
   # Charge ring is the headline; accessoryRectangular shows all three scores. Honours
   # confidence (a calibrating score shows a dash + cal marker, not a fabricated number).
   NOOPWatchComplications:
+    configFiles:
+      Debug: Config/NOOPSigning.xcconfig
+      Release: Config/NOOPSigning.xcconfig
     type: app-extension
     platform: watchOS
     deploymentTarget: "10.0"
