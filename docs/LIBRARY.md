@@ -363,7 +363,7 @@ targets: [
 | `BehaviorInsights` | `effect(behaviorDays:...)` → `BehaviorEffect`; `rank(...)`, `sentence(_:)`. |
 | `RRArtefactCorrection` | `classify(_:)` → per-interval `Artefact?` (ectopic / missed / extra / long-short); `correct(_:)` → merged, split and spline-filled intervals with their source indices (Lipponen & Tarvainen 2019). |
 | `AgreementStats` | `analyze(_:)` → `Report`: Bland–Altman bias and limits with MOVER CIs, effective n for correlated days, proportional bias and heteroscedasticity, MAE/MAPE, Lin's CCC with CI. |
-| `VO2maxEngine` | `evaluate(_:restingHR:maxHR:)` → one walk/run as a VO₂-reserve test (ACSM oxygen cost, Swain 2004); `summarize(_:asOf:)`, `trend(_:)`; `maxHR(userSet:workoutPeaks:age:)`; `restingEstimate(...)` (HUNT, Nes 2011). |
+| `VO2maxEngine` | `evaluate(_:restingHR:maxHR:)` → one walk/run as a VO₂-reserve test (ACSM oxygen cost, Swain 2004); `summarize(_:asOf:)`, `trend(_:)`; `maxHR(userSet:workoutPeaks:age:)`; `restingEstimate(...)` (HUNT, Nes 2011); `hrRatioVO2max(maxHR:restingHR:sex:)` (Uth 2004/2005), `supineRestingHR(_:start:)` (guided 15-min supine capture). |
 | `FitnessAgeEngine` | `estimateVO2max(...)`, `fitnessAge(...)`, `physicalActivityIndexFromStrain(...)` (HUNT PA index 0–15). |
 
 `UserProfile` (`weightKg`, `heightCm`, `age`, `sex`) is the shared profile input.

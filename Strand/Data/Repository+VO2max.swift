@@ -143,6 +143,48 @@ extension Repository {
         return true
     }
 
+    // MARK: - Resting heart rate measured lying down (for the value from WODs)
+
+    /// A resting heart rate measured supine and awake after 15 minutes of rest (a guided capture from the
+    /// strap, or typed) — the resting value the heart-rate ratio method's factor belongs to.
+    struct SupineRestingHR: Identifiable, Equatable {
+        let day: String
+        let bpm: Double
+        var id: String { day }
+    }
+
+    static let supineRestingHRKey = "vo2max_rhr_supine"
+    /// Values outside this range are not a resting heart rate (bpm).
+    static let supineRestingHRPlausible: ClosedRange<Double> = 30...110
+
+    /// Every supine resting heart rate, newest first (one per day).
+    func supineRestingHRs() async -> [SupineRestingHR] {
+        guard let store = await storeHandle() else { return [] }
+        let points = (try? await store.metricSeries(deviceId: Self.vo2maxManualSource, key: Self.supineRestingHRKey,
+                                                    from: "0000-01-01", to: "9999-12-31")) ?? []
+        return points.map { SupineRestingHR(day: $0.day, bpm: $0.value) }.sorted { $0.day > $1.day }
+    }
+
+    @discardableResult
+    func saveSupineRestingHR(day: String, bpm: Double) async -> Bool {
+        guard Self.supineRestingHRPlausible.contains(bpm), let store = await storeHandle() else { return false }
+        do {
+            try await store.upsertMetricSeries([MetricPoint(day: day, key: Self.supineRestingHRKey, value: bpm)],
+                                               deviceId: Self.vo2maxManualSource)
+        } catch {
+            return false
+        }
+        await refresh()
+        return true
+    }
+
+    func deleteSupineRestingHR(day: String) async {
+        guard let store = await storeHandle() else { return }
+        _ = try? await store.deleteMetricSeries(deviceId: Self.vo2maxManualSource, key: Self.supineRestingHRKey,
+                                                from: day, to: day)
+        await refresh()
+    }
+
     func deleteVO2maxEntry(day: String) async {
         guard let store = await storeHandle() else { return }
         for key in [Self.vo2maxManualKey, Self.vo2maxManualMethodKey] {

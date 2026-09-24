@@ -1,14 +1,16 @@
 # VO₂max
 
-NOOP shows maximal oxygen uptake three ways, side by side on the **VO₂max** screen (Health → Fitness Age →
+NOOP shows maximal oxygen uptake four ways, side by side on the **VO₂max** screen (Health → Fitness Age →
 VO₂max; macOS sidebar *Body → VO₂max*; iPhone *More → VO₂max*):
 
 1. **From your runs and walks**: estimated during exercise, from the strap's heart rate and the pace of each
    steady walk or run. This is the more accurate kind of estimate.
 2. **At rest**: the HUNT non-exercise model, from age, sex, waist, resting heart rate and activity.
-3. **Your values**: VO₂max you measured or read elsewhere (a lab test, a field test, another device), entered
-   by hand. The estimates are never blended with them; the screen shows how far each estimate was from each
-   value you entered, at that date.
+3. **From your WODs**: the heart-rate ratio, the maximal heart rate WODs reach over a resting heart rate
+   measured lying down. A second opinion for mixed-modal training, which has no pace to measure.
+4. **Your values**: VO₂max you measured or read elsewhere (a lab test, a field test, another device), entered
+   by hand. The estimates are never blended with them or with each other; the screen shows how far each
+   estimate was from each value you entered, at that date.
 
 Apple Health VO₂max (e.g. Apple Watch "Cardio Fitness") is plotted too when present. None of this is a medical
 test: it is a fitness estimate.
@@ -118,12 +120,44 @@ and 2,193 women; 61% and 56% of the variance explained), waist variant — see
     women:  74.74 − 0.247·age + 0.198·PA − 0.259·waist − 0.114·RHR    (SEE 5.14)
 
 with RHR the median nightly resting heart rate of the last 7 nights (at least 4 needed) and PA the HUNT
-activity index (0–15) rebuilt from the last 7 days' Effort. It needs a waist measurement (Settings). The
-screen shows it ± its SEE. Resting estimates are the less accurate kind (INTERLIVE, above), and the model
+activity index (0–15) rebuilt from the last 7 days' Effort. It needs a waist measurement, typed straight into
+the card on the VO₂max screen (or in Settings; 60–160 cm, 24–63 in, saved to the profile). The screen shows it
+± its SEE. Resting estimates are the less accurate kind (INTERLIVE, above), and the model
 overestimated in an independent US cohort (BALL ST: Peterman et al., J Am Heart Assoc 2020). Stored weekly
 as `vo2max_est`.
 
-## 3. Your values
+## 3. From WODs
+
+A WOD has no measurable external work (no pace, no power), so the method of section 1 cannot use it. What it
+gives is a heart rate close to maximal. The heart-rate ratio method needs only that and a resting heart rate
+(Uth et al. 2004, from the Fick principle):
+
+    VO₂max ≈ PF · HRmax / HRrest        PF = 15.3 (men, Uth 2004), 14.5 (women, Uth 2005) mL/kg/min
+
+Non-binary profiles use the men's factor, as the other sex-specific models here do. HRmax is the same as in
+section 1 (your setting, else the second-highest believable workout peak of the year, WODs recorded with the
+strap included, else Tanaka), so the value moves in proportion with it; the screen warns when it is only
+age-predicted.
+
+**The resting heart rate must be the one the factor belongs to**: awake, supine, after 15 minutes of rest
+(Castagna et al. 2022). With HRmax 190, each bpm of HRrest moves the estimate by about 1 mL/kg/min
+(PF·HRmax/HRrest² ≈ 0.96 at 55 bpm). *Measure resting heart rate* on the screen runs that protocol with the
+strap: lie still for 15 minutes, the value is the mean of the final 2 minutes, counted only when the strap
+reported heart rate in at least 80% of those 120 seconds (`VO2maxEngine.supineRestingHR`). A value measured
+the same way elsewhere can be typed (30–110 bpm). A measurement is used for 60 days. Without one the card shows
+a *provisional* value from the nightly resting heart rate (the lowest 5 minutes of sleep), which is lower than
+an awake supine value, so that value reads high.
+
+Accuracy: in its derivation (well-trained men: factor from 10, cross-validated on 36) the SEE was 2.7 mL/kg/min
+with a measured HRmax and 4.7 with an age-predicted one; independent checks are less kind to individuals: no
+significant mean bias overall but SEE 6.9–7.9 mL/kg/min in 109 men (Esco et al. 2012); a population factor of
+14.6 ± 2.6 in recreational footballers, where PF 15 read about 2 mL/kg/min high (Castagna et al. 2022); about
+12 in 634 middle-aged men (Voutilainen et al. 2021). Read it as a second opinion, not as a test. Each supine
+measurement is stored as `vo2max_rhr_supine` (source `manual-vo2max`); the value from WODs is computed live
+from it and today's HRmax, charted per measurement, and compared with your entered values when a measurement
+falls within the 60 days before them.
+
+## 4. Your values
 
 Enter a value with the date and how it was measured (lab test with gas analysis, field test, another device
 or app). Values from 10 to 95 mL/kg/min are accepted; one per day (a second one that day replaces it). They
@@ -131,8 +165,9 @@ are stored locally as `vo2max_manual` (and `vo2max_manual_method`: 1 lab, 2 fiel
 `manual-vo2max`, and appear in the metric explorer as *VO₂ Max (your entries)*.
 
 For each value the screen shows the exercise estimate as it read at the end of that day (median of the
-sessions of the previous 90 days) and the resting estimate of that week (within 14 days before), each with
-the difference in mL/kg/min and in percent; within ±10% it is shown in green.
+sessions of the previous 90 days), the value from WODs (a supine measurement within the 60 days before) and
+the resting estimate of that week (within 14 days before), each with the difference in mL/kg/min and in
+percent; within ±10% it is shown in green.
 
 ## Metric keys
 
@@ -141,6 +176,7 @@ the difference in mL/kg/min and in percent; within ±10% it is shown in green.
 | `vo2max_exercise` | `<device>-noop` | estimate from runs and walks, per session day |
 | `vo2max_est` | `<device>-noop` | estimate at rest (HUNT), weekly on Saturday |
 | `vo2max_manual`, `vo2max_manual_method` | `manual-vo2max` | the values you enter |
+| `vo2max_rhr_supine` | `manual-vo2max` | resting heart rate measured lying down (for the value from WODs) |
 | `vo2max` | `apple-health` | Apple Health's VO₂max, when imported |
 
 ## References
@@ -168,5 +204,18 @@ the difference in mL/kg/min and in percent; within ±10% it is shown in green.
   coding)
 - Robergs RA, Dwyer D, Astorino T. Recommendations for improved data processing from expired gas analysis
   indirect calorimetry. *Sports Med* 2010;40(2):95–111. doi:10.2165/11319670-000000000-00000 (30-s averages)
+- Uth N, Sørensen H, Overgaard K, Pedersen PK. Estimation of VO₂max from the ratio between HRmax and HRrest —
+  the Heart Rate Ratio Method. *Eur J Appl Physiol* 2004;91(1):111–115. doi:10.1007/s00421-003-0988-y
+- Uth N. Gender difference in the proportionality factor between the mass specific VO₂max and the ratio
+  between HRmax and HRrest. *Int J Sports Med* 2005;26(9):763–767. doi:10.1055/s-2005-837443
+- Esco MR, Olson MS, Williford HN, Mugu EM, Bloomquist BE, McHugh AN. Crossvalidation of two heart rate-based
+  equations for predicting VO₂max in white and black men. *J Strength Cond Res* 2012;26(7):1920–1927.
+  doi:10.1519/JSC.0b013e318238e863
+- Castagna C, Krustrup P, Póvoas S. Estimation of maximal oxygen uptake using the heart rate ratio method in
+  male recreational football players. *Eur J Appl Physiol* 2022;122(6):1421–1428.
+  doi:10.1007/s00421-022-04928-0
+- Voutilainen A, Setti MO, Tuomainen TP. Estimating maximal oxygen uptake from the ratio of heart rate at
+  maximal exercise to heart rate at rest in middle-aged men. *World J Mens Health* 2021;39(4):666–672.
+  doi:10.5534/wjmh.200055
 - Mongin D, García Romero J, Alvero Cruz JR. Treadmill Maximal Exercise Tests from the Exercise Physiology and
   Human Performance Lab of the University of Malaga (v1.0.1). PhysioNet 2021. doi:10.13026/7ezk-j442

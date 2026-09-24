@@ -131729,6 +131729,346 @@
           }
         }
       }
+    },
+    "From WODs": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dai WOD"
+          }
+        }
+      }
+    },
+    "provisional": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "provvisorio"
+          }
+        }
+      }
+    },
+    "lying down": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "da sdraiato"
+          }
+        }
+      }
+    },
+    "From your WODs": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dai tuoi WOD"
+          }
+        }
+      }
+    },
+    "%lld bpm lying down, %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld bpm da sdraiato, %@"
+          }
+        }
+      }
+    },
+    "%lld bpm at night, asleep": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld bpm di notte, nel sonno"
+          }
+        }
+      }
+    },
+    "Provisional: your resting heart rate asleep is lower than the one measured awake and lying down that this method is built on, so this value reads high. Measure it lying down for the real one.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provvisorio: la frequenza a riposo nel sonno è più bassa di quella misurata sveglio e da sdraiato su cui è costruito questo metodo, quindi questo valore risulta alto. Misurala da sdraiato per avere quello vero."
+          }
+        }
+      }
+    },
+    "Your max heart rate is estimated from your age, and this value moves in proportion to it. Train hard with the strap on, or set your max heart rate in Settings if you know it from a test.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua frequenza massima è stimata dall'età, e questo valore si sposta in proporzione. Allenati forte con la fascia addosso, oppure imposta la frequenza massima in Impostazioni se la conosci da un test."
+          }
+        }
+      }
+    },
+    "Needs a max heart rate and a resting heart rate. Measure your resting heart rate lying down to see this value.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servono una frequenza massima e una frequenza a riposo. Misura la frequenza a riposo da sdraiato per vedere questo valore."
+          }
+        }
+      }
+    },
+    "Measure resting heart rate": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Misura la frequenza a riposo"
+          }
+        }
+      }
+    },
+    "A WOD has no pace or power to measure, but it takes your heart close to its maximum. The heart-rate ratio method (Uth 2004) needs only that and your resting heart rate: about 15 × max heart rate ÷ resting heart rate. Each beat of resting heart rate moves the value by about 1 mL/kg/min, so it needs the resting heart rate the method was built on: awake, lying down, after 15 minutes of rest. In independent tests it was off by about 7–8 mL/kg/min for one person (Esco 2012): no more precise than the estimate at rest, so read it as a second opinion, not a test.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un WOD non ha un passo o una potenza da misurare, ma porta il cuore vicino al suo massimo. Il metodo del rapporto tra frequenze (Uth 2004) ha bisogno solo di questo e della frequenza a riposo: circa 15 × frequenza massima ÷ frequenza a riposo. Ogni battito di frequenza a riposo sposta il valore di circa 1 mL/kg/min, quindi serve la frequenza a riposo su cui il metodo è costruito: sveglio, da sdraiato, dopo 15 minuti di riposo. Nei test indipendenti sbagliava di circa 7–8 mL/kg/min sulla singola persona (Esco 2012): non è più preciso della stima a riposo, quindi leggilo come un secondo parere, non come un test."
+          }
+        }
+      }
+    },
+    "Delete this measurement?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminare questa misurazione?"
+          }
+        }
+      }
+    },
+    "Delete this measurement": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina questa misurazione"
+          }
+        }
+      }
+    },
+    "Resting heart rate lying down": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frequenza a riposo da sdraiato"
+          }
+        }
+      }
+    },
+    "From WODs then": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dai WOD allora"
+          }
+        }
+      }
+    },
+    "Edit waist": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifica girovita"
+          }
+        }
+      }
+    },
+    "e.g. 32": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "es. 32"
+          }
+        }
+      }
+    },
+    "e.g. 82": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "es. 82"
+          }
+        }
+      }
+    },
+    "Enter a waist between 24 and 63 in.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci un girovita tra 24 e 63 in."
+          }
+        }
+      }
+    },
+    "Enter a waist between 60 and 160 cm.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci un girovita tra 60 e 160 cm."
+          }
+        }
+      }
+    },
+    "Standing relaxed, tape level at your navel. Saved to your profile (also in Settings).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In piedi e rilassato, metro orizzontale all'altezza dell'ombelico. Viene salvato nel tuo profilo (anche in Impostazioni)."
+          }
+        }
+      }
+    },
+    "Resting heart rate, lying down": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frequenza a riposo, da sdraiato"
+          }
+        }
+      }
+    },
+    "For the VO₂max from your WODs.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per il VO₂max dai tuoi WOD."
+          }
+        }
+      }
+    },
+    "Lie on your back in a quiet room, wearing the strap. Best in the morning, before coffee and training.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sdraiati sulla schiena in una stanza tranquilla, con la fascia addosso. Meglio al mattino, prima del caffè e dell'allenamento."
+          }
+        }
+      }
+    },
+    "Tap Start and stay still and relaxed for 15 minutes: no phone, no talking.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tocca Avvia e resta fermo e rilassato per 15 minuti: niente telefono, niente parlare."
+          }
+        }
+      }
+    },
+    "NOOP takes the average of the last 2 minutes.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP prende la media degli ultimi 2 minuti."
+          }
+        }
+      }
+    },
+    "Connect the strap first: the measurement reads your live heart rate.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prima collega la fascia: la misurazione legge la tua frequenza in tempo reale."
+          }
+        }
+      }
+    },
+    "%lld minutes left": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld minuti rimanenti"
+          }
+        }
+      }
+    },
+    "Stay still and relaxed. The screen stays on.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resta fermo e rilassato. Lo schermo resta acceso."
+          }
+        }
+      }
+    },
+    "The strap disconnected: the last 2 minutes need its heart rate.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La fascia si è disconnessa: negli ultimi 2 minuti serve la sua frequenza cardiaca."
+          }
+        }
+      }
+    },
+    "Your resting heart rate, lying down (average of the last 2 minutes).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua frequenza a riposo, da sdraiato (media degli ultimi 2 minuti)."
+          }
+        }
+      }
+    },
+    "The strap sent too little heart rate in the last 2 minutes, so there is no value. Try again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La fascia ha inviato troppo poca frequenza cardiaca negli ultimi 2 minuti, quindi non c'è un valore. Riprova."
+          }
+        }
+      }
+    },
+    "Or type one measured the same way": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oppure scrivine una misurata allo stesso modo"
+          }
+        }
+      }
+    },
+    "e.g. 52": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "es. 52"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

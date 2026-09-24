@@ -1,4 +1,5 @@
 import Foundation
+import WhoopProtocol
 import WhoopStore
 
 // VO2maxEngine.swift — maximal oxygen uptake from the wearer's own data, estimated two independent ways.
@@ -20,6 +21,10 @@ import WhoopStore
 //
 // AT REST. The HUNT non-exercise model (Nes et al., MSSE 2011) from age, sex, waist, resting heart rate and the
 // HUNT activity index (FitnessAgeEngine), reported with its standard error of estimate.
+//
+// FROM WODs. The heart-rate ratio method (Uth et al. 2004): the maximal heart rate the WODs reach over a resting
+// heart rate measured lying down (see `hrRatioVO2max`). Less accurate for an individual than the walk/run
+// estimate, and kept separate from it.
 //
 // Tools/vo2max-validation checks the exercise assumptions on 981 laboratory treadmill tests (PhysioNet,
 // University of Malaga): the submaximal HR–VO2 line reaches the measured VO2max at the measured HRmax with a
@@ -259,6 +264,52 @@ public enum VO2maxEngine {
                                                 paIndex: paIndex)
         let see = sex.lowercased() == "female" ? FitnessAgeEngine.seeWomen : FitnessAgeEngine.seeMen
         return RestingEstimate(vo2max: v, standardError: see, paIndex: paIndex)
+    }
+
+    // MARK: - From WODs: the heart-rate ratio
+
+    // Mixed-modal WODs have no measurable external work (no speed or power), so the walk/run method cannot use
+    // them. What a WOD does give is a true maximal heart rate. The heart-rate ratio method needs only that and a
+    // resting heart rate: VO2max ≈ PF · HRmax / HRrest, from the Fick principle (Uth et al., Eur J Appl Physiol
+    // 2004: PF 15.3 mL/kg/min in 46 well-trained men, cross-validated SEE 2.7 mL/kg/min with a measured HRmax
+    // and 4.7 with an age-predicted one; PF 14.5 in women, Uth, Int J Sports Med 2005). Independent checks are
+    // less kind to individuals: no mean bias but SEE 6.9–7.9 mL/kg/min in 109 men (Esco et al., J Strength Cond
+    // Res 2012); PF 14.6 ± 2.6 in recreational football players, about 2 mL/kg/min high with 15 (Castagna et
+    // al., Eur J Appl Physiol 2022); PF ≈ 12 in 634 middle-aged men (Voutilainen et al., World J Mens Health
+    // 2021). Castagna measured HRmax directly, as NOOP takes it from the hardest workouts, and HRrest supine,
+    // after 15 min of rest: that is the resting value the factor belongs to. The strap's nightly resting HR (the
+    // lowest 5 minutes of sleep) is lower, so a ratio built on it reads high.
+
+    /// Proportionality factors of the heart-rate ratio method (Uth 2004, 2005), mL/kg/min.
+    public static let hrRatioFactorMen = 15.3
+    public static let hrRatioFactorWomen = 14.5
+
+    /// VO2max from the heart-rate ratio (Uth 2004/2005), or nil when HRmax does not exceed HRrest. Non-binary
+    /// profiles use the men's factor, as the other sex-specific models here do.
+    public static func hrRatioVO2max(maxHR: Double, restingHR: Double, sex: String) -> Double? {
+        guard restingHR > 0, maxHR > restingHR else { return nil }
+        let factor = sex.lowercased() == "female" ? hrRatioFactorWomen : hrRatioFactorMen
+        return factor * maxHR / restingHR
+    }
+
+    /// Guided supine resting heart rate: lie still for `supineRestS` (15 min, as in Castagna 2022); the value
+    /// is the mean of the final `supineAverageS` seconds.
+    public static let supineRestS = 900
+    public static let supineAverageS = 120
+    /// Share of the final seconds that must carry a heart-rate reading for the measurement to count.
+    public static let supineMinCoverage = 0.8
+    /// A supine measurement older than this no longer describes the current resting heart rate.
+    public static let supineValidDays = 60
+
+    /// The resting heart rate of a guided capture that began at `start` (unix seconds): the mean of the samples
+    /// in its final `supineAverageS` seconds, or nil when the capture is shorter than `supineRestS` or the
+    /// strap reported in less than `supineMinCoverage` of those seconds.
+    public static func supineRestingHR(_ samples: [HRSample], start: Int) -> Double? {
+        let from = start + supineRestS - supineAverageS, to = start + supineRestS
+        let window = samples.filter { $0.ts >= from && $0.ts < to && $0.bpm > 0 }
+        let seconds = Set(window.map(\.ts)).count
+        guard Double(seconds) >= supineMinCoverage * Double(supineAverageS) else { return nil }
+        return Double(window.reduce(0) { $0 + $1.bpm }) / Double(window.count)
     }
 
     // MARK: - Helpers

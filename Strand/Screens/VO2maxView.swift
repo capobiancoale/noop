@@ -5,10 +5,11 @@ import StrandAnalytics
 
 // MARK: - VO₂max
 //
-// Aerobic fitness three ways, side by side: estimated from the wearer's walks and runs (the more accurate family
-// on wearables, INTERLIVE 2022), estimated at rest (HUNT model), and the values the user measured or read
-// elsewhere, entered by hand. The estimates are never blended with the entries: the point is to see how they
-// compare. Maths: StrandAnalytics.VO2maxEngine; data: Repository+VO2max.
+// Aerobic fitness side by side: estimated from the wearer's walks and runs (the more accurate family on wearables,
+// INTERLIVE 2022), estimated at rest (HUNT model), estimated from the WODs' maximal heart rate over a resting heart
+// rate measured lying down (heart-rate ratio, Uth 2004), and the values the user measured or read elsewhere,
+// entered by hand. The estimates are never blended with each other or with the entries: the point is to see how
+// they compare. Maths: StrandAnalytics.VO2maxEngine; data: Repository+VO2max.
 
 struct VO2maxView: View {
     @EnvironmentObject private var repo: Repository
@@ -18,11 +19,19 @@ struct VO2maxView: View {
     @State private var entries: [Repository.VO2maxEntry] = []
     @State private var restingWeekly: [(day: String, value: Double)] = []
     @State private var appleHealth: [(day: String, value: Double)] = []
+    @State private var supine: [Repository.SupineRestingHR] = []
     @State private var loaded = false
     @State private var showAddEntry = false
-    @State private var showSettings = false
+    @State private var showRestingCapture = false
     @State private var showAllSessions = false
     @State private var pendingDelete: Repository.VO2maxEntry?
+    @State private var pendingSupineDelete: Repository.SupineRestingHR?
+    @State private var editingWaist = false
+    @State private var waistText = ""
+    @FocusState private var focused: Field?
+    @AppStorage(UnitPrefs.systemKey) private var unitSystemRaw = UnitSystem.metric.rawValue
+
+    private enum Field: Hashable { case waist }
 
     private var now: Int { Int(Date().timeIntervalSince1970) }
     private var estimates: [VO2maxEngine.SessionEstimate] { inputs?.estimates ?? [] }
@@ -39,6 +48,7 @@ struct VO2maxView: View {
                     summaryTiles
                     if hasChartData { chartCard }
                     exerciseCard
+                    wodCard
                     restingCard
                     entriesCard
                 }
@@ -46,17 +56,13 @@ struct VO2maxView: View {
             }
         }
         .task(id: repo.refreshSeq) { await load() }
+        .keyboardDoneToolbar($focused)
         .sheet(isPresented: $showAddEntry) {
             VO2maxEntrySheet { day, value, method in
                 Task { await repo.saveVO2maxEntry(day: day, value: value, method: method) }
             }
         }
-        .sheet(isPresented: $showSettings) {
-            NavigationStack { SettingsView() }
-            #if os(macOS)
-            .frame(width: 900, height: 820)
-            #endif
-        }
+        .sheet(isPresented: $showRestingCapture) { RestingHRCaptureSheet() }
         .confirmationDialog("Delete this value?", isPresented: Binding(
             get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
                             titleVisibility: .visible, presenting: pendingDelete) { entry in
@@ -71,10 +77,12 @@ struct VO2maxView: View {
         let freshEntries = await repo.vo2maxEntries()
         let weekly = await repo.exploreSeries(key: "vo2max_est", source: "my-whoop")
         let apple = await repo.series(key: "vo2max", source: "apple-health")
+        let freshSupine = await repo.supineRestingHRs()
         inputs = fresh
         entries = freshEntries
         restingWeekly = weekly
         appleHealth = apple
+        supine = freshSupine
         loaded = true
     }
 
@@ -99,14 +107,55 @@ struct VO2maxView: View {
                                             restingHR: i.restingHR, paIndex: i.paIndex)
     }
 
+    // MARK: - From WODs (heart-rate ratio, live)
+
+    private struct WodEstimate {
+        let vo2max: Double
+        let maxHR: VO2maxEngine.MaxHR
+        let restingHR: Double
+        /// Day of the supine measurement used, nil when it falls back on the nightly resting heart rate.
+        let supineDay: String?
+    }
+
+    /// The newest resting heart rate measured lying down, while it still describes the wearer (60 days).
+    private var currentSupine: Repository.SupineRestingHR? {
+        let today = Repository.dayString(Date())
+        return supine.first { daysBetween($0.day, today).map { $0 <= VO2maxEngine.supineValidDays } == true }
+    }
+
+    /// HRmax as for the walk/run estimate (your setting, else the hardest workouts, else age) over the supine
+    /// resting heart rate; without one, over the nightly resting heart rate, which reads high.
+    private var wod: WodEstimate? {
+        guard let m = inputs?.maxHR else { return nil }
+        if let s = currentSupine,
+           let v = VO2maxEngine.hrRatioVO2max(maxHR: m.bpm, restingHR: s.bpm, sex: profile.sex) {
+            return WodEstimate(vo2max: v, maxHR: m, restingHR: s.bpm, supineDay: s.day)
+        }
+        if let i = restingInputs,
+           let v = VO2maxEngine.hrRatioVO2max(maxHR: m.bpm, restingHR: i.restingHR, sex: profile.sex) {
+            return WodEstimate(vo2max: v, maxHR: m, restingHR: i.restingHR, supineDay: nil)
+        }
+        return nil
+    }
+
+    /// The value from WODs on the day of each supine measurement (today's HRmax: it barely moves in a year).
+    private func wodValue(for s: Repository.SupineRestingHR) -> Double? {
+        inputs?.maxHR.flatMap { VO2maxEngine.hrRatioVO2max(maxHR: $0.bpm, restingHR: s.bpm, sex: profile.sex) }
+    }
+
     // MARK: - Summary
 
     private var summaryTiles: some View {
-        HStack(alignment: .top, spacing: NoopMetrics.space3) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: NoopMetrics.space3, alignment: .top)],
+                  alignment: .leading, spacing: NoopMetrics.space3) {
             tile(title: String(localized: "From runs and walks"),
                  value: exercise.map { whole($0.vo2max) },
                  detail: exercise.map { String(localized: "\($0.sessions.count) sessions") },
                  tint: StrandPalette.effortColor)
+            tile(title: String(localized: "From WODs"),
+                 value: wod.map { whole($0.vo2max) },
+                 detail: wod.map { $0.supineDay == nil ? String(localized: "provisional") : String(localized: "lying down") },
+                 tint: StrandPalette.metricRose)
             tile(title: String(localized: "At rest"),
                  value: resting.map { whole($0.vo2max) },
                  detail: resting.map { "± \(one($0.standardError))" },
@@ -147,6 +196,7 @@ struct VO2maxView: View {
 
     private var seriesExercise: String { String(localized: "From runs and walks") }
     private var seriesRest: String { String(localized: "At rest") }
+    private var seriesWod: String { String(localized: "From WODs") }
     private var seriesEntries: String { String(localized: "Your entries") }
     private var seriesApple: String { "Apple Health" }
 
@@ -172,12 +222,17 @@ struct VO2maxView: View {
         dayPoints(entries.map { ($0.day, $0.value) }, series: seriesEntries, prefix: "m")
     }
     private var applePoints: [ChartPoint] { dayPoints(appleHealth, series: seriesApple, prefix: "a") }
+    private var wodPoints: [ChartPoint] {
+        dayPoints(supine.reversed().compactMap { s in wodValue(for: s).map { (day: s.day, value: $0) } },
+                  series: seriesWod, prefix: "w")
+    }
 
     private var hasChartData: Bool { !chartSeries.isEmpty }
 
     /// The series that have points in the window, with their colours (the legend lists only these).
     private var chartSeries: [(name: String, color: Color)] {
         [(seriesExercise, StrandPalette.effortColor, !exerciseTrend.isEmpty),
+         (seriesWod, StrandPalette.metricRose, !wodPoints.isEmpty),
          (seriesRest, StrandPalette.chargeColor, !restPoints.isEmpty),
          (seriesEntries, StrandPalette.metricPurple, !entryPoints.isEmpty),
          (seriesApple, StrandPalette.metricCyan, !applePoints.isEmpty)]
@@ -197,6 +252,15 @@ struct VO2maxView: View {
                         PointMark(x: .value("Date", p.date), y: .value("VO₂max", p.value))
                             .foregroundStyle(by: .value("Series", p.series))
                             .symbolSize(18)
+                    }
+                    ForEach(wodPoints) { p in
+                        LineMark(x: .value("Date", p.date), y: .value("VO₂max", p.value),
+                                 series: .value("Series", p.series))
+                            .foregroundStyle(by: .value("Series", p.series))
+                        PointMark(x: .value("Date", p.date), y: .value("VO₂max", p.value))
+                            .foregroundStyle(by: .value("Series", p.series))
+                            .symbol(.triangle)
+                            .symbolSize(40)
                     }
                     ForEach(restPoints) { p in
                         LineMark(x: .value("Date", p.date), y: .value("VO₂max", p.value),
@@ -337,6 +401,75 @@ struct VO2maxView: View {
         }
     }
 
+    // MARK: - From WODs
+
+    private var wodCard: some View {
+        NoopCard(tint: StrandPalette.metricRose) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("From your WODs").font(StrandFont.headline)
+                if let w = wod {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(whole(w.vo2max)).font(StrandFont.number(40)).foregroundStyle(StrandPalette.textPrimary)
+                        Text("mL/kg/min").font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+                    }
+                    inputLine(String(localized: "Max heart rate"),
+                              "\(Int(w.maxHR.bpm.rounded())) bpm · \(maxHRSourceLabel(w.maxHR.source))")
+                    if let day = w.supineDay {
+                        inputLine(String(localized: "Resting heart rate"),
+                                  String(localized: "\(Int(w.restingHR.rounded())) bpm lying down, \(shortDate(day))"))
+                    } else {
+                        inputLine(String(localized: "Resting heart rate"),
+                                  String(localized: "\(Int(w.restingHR.rounded())) bpm at night, asleep"))
+                        Text("Provisional: your resting heart rate asleep is lower than the one measured awake and lying down that this method is built on, so this value reads high. Measure it lying down for the real one.")
+                            .font(StrandFont.caption).foregroundStyle(StrandPalette.statusWarning)
+                    }
+                    if w.maxHR.source == .agePredicted {
+                        Text("Your max heart rate is estimated from your age, and this value moves in proportion to it. Train hard with the strap on, or set your max heart rate in Settings if you know it from a test.")
+                            .font(StrandFont.caption).foregroundStyle(StrandPalette.statusWarning)
+                    }
+                } else {
+                    Text("Needs a max heart rate and a resting heart rate. Measure your resting heart rate lying down to see this value.")
+                        .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+                }
+                NoopButton("Measure resting heart rate", systemImage: "bed.double",
+                           kind: currentSupine == nil ? .primary : .secondary) { showRestingCapture = true }
+                if !supine.isEmpty { supineList }
+                Text("A WOD has no pace or power to measure, but it takes your heart close to its maximum. The heart-rate ratio method (Uth 2004) needs only that and your resting heart rate: about 15 × max heart rate ÷ resting heart rate. Each beat of resting heart rate moves the value by about 1 mL/kg/min, so it needs the resting heart rate the method was built on: awake, lying down, after 15 minutes of rest. In independent tests it was off by about 7–8 mL/kg/min for one person (Esco 2012): no more precise than the estimate at rest, so read it as a second opinion, not a test.")
+                    .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+            }
+        }
+        .confirmationDialog("Delete this measurement?", isPresented: Binding(
+            get: { pendingSupineDelete != nil }, set: { if !$0 { pendingSupineDelete = nil } }),
+                            titleVisibility: .visible, presenting: pendingSupineDelete) { s in
+            Button("Delete", role: .destructive) {
+                Task { await repo.deleteSupineRestingHR(day: s.day) }
+            }
+        }
+    }
+
+    private var supineList: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Resting heart rate lying down").strandOverline()
+            ForEach(supine.prefix(5)) { s in
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(shortDate(s.day)).font(StrandFont.caption).foregroundStyle(StrandPalette.textSecondary)
+                    Spacer(minLength: 8)
+                    Text(verbatim: "\(Int(s.bpm.rounded())) bpm")
+                        .font(StrandFont.captionNumber).foregroundStyle(StrandPalette.textPrimary)
+                    if let v = wodValue(for: s) {
+                        Text(verbatim: "→ \(whole(v))")
+                            .font(StrandFont.captionNumber).foregroundStyle(StrandPalette.textTertiary)
+                    }
+                    Button { pendingSupineDelete = s } label: {
+                        Image(systemName: "trash").font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Delete this measurement")
+                }
+            }
+        }
+    }
+
     // MARK: - At rest
 
     private var restingCard: some View {
@@ -351,20 +484,106 @@ struct VO2maxView: View {
                     }
                     inputLine(String(localized: "Resting heart rate"),
                               String(localized: "\(Int(i.restingHR.rounded())) bpm (median of \(i.nights) nights)"))
-                    inputLine(String(localized: "Waist"), "\(whole(profile.waistCm)) cm")
+                    waistLine
                     inputLine(String(localized: "Activity index (HUNT, 0–15)"), one(i.paIndex))
                     Text("From your age, sex, waist, resting heart rate and how much you train. Estimates made at rest are the less accurate kind: expect it to be off by more than the one from your runs and walks.")
                         .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
                 } else if profile.waistCm <= 0 {
                     Text("Add your waist circumference to see this estimate: it is one of the model's inputs.")
                         .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
-                    NoopButton("Open Settings", systemImage: "gearshape", kind: .secondary) { showSettings = true }
+                    waistEditor
                 } else {
                     Text("Needs at least \(FitnessAgeEngine.minCoverageDays) nights of resting heart rate in the last week.")
                         .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+                    waistLine
                 }
             }
         }
+    }
+
+    // MARK: - Waist (edited here, stored in the profile like the Settings field)
+
+    private var imperial: Bool { UnitSystem(rawValue: unitSystemRaw) == .imperial }
+    private var waistUnit: String { imperial ? "in" : "cm" }
+    /// The Settings field's range: 60–160 cm.
+    private static let waistRangeCm: ClosedRange<Double> = 60...160
+
+    private func waistDisplay(_ cm: Double) -> String {
+        imperial ? "\(whole(UnitFormatter.cmToInches(cm))) in" : "\(whole(cm)) cm"
+    }
+
+    /// The typed waist in centimetres, nil when empty or outside the range (24–63 in, as in Settings).
+    private var typedWaistCm: Double? {
+        guard let v = Double(waistText.replacingOccurrences(of: ",", with: ".").trimmingCharacters(in: .whitespaces))
+        else { return nil }
+        if imperial {
+            return (24...63).contains(v) ? min(Self.waistRangeCm.upperBound, v * UnitFormatter.centimetersPerInch) : nil
+        }
+        return Self.waistRangeCm.contains(v) ? v : nil
+    }
+
+    @ViewBuilder private var waistLine: some View {
+        if editingWaist {
+            waistEditor
+        } else {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Waist").font(StrandFont.caption).foregroundStyle(StrandPalette.textSecondary)
+                Spacer(minLength: 8)
+                Text(verbatim: waistDisplay(profile.waistCm))
+                    .font(StrandFont.captionNumber).foregroundStyle(StrandPalette.textPrimary)
+                Button("Edit") { startEditingWaist() }
+                    .buttonStyle(.plain)
+                    .font(StrandFont.caption)
+                    .foregroundStyle(StrandPalette.accent)
+                    .accessibilityLabel("Edit waist")
+            }
+        }
+    }
+
+    private var waistEditor: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Waist").strandOverline()
+            HStack(spacing: 8) {
+                TextField(imperial ? String(localized: "e.g. 32") : String(localized: "e.g. 82"), text: $waistText)
+                    .textFieldStyle(.plain)
+                    .font(StrandFont.bodyNumber)
+                    .foregroundStyle(StrandPalette.textPrimary)
+                    .numericKeyboard()
+                    .focused($focused, equals: .waist)
+                    .onSubmit(saveWaist)
+                    .padding(.horizontal, 12).padding(.vertical, 9)
+                    .background(StrandPalette.surfaceInset, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                Text(verbatim: waistUnit).font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+                NoopButton("Save", kind: .secondary, action: saveWaist)
+                    .disabled(typedWaistCm == nil)
+                if editingWaist {
+                    NoopButton("Cancel", kind: .tertiary) { editingWaist = false; focused = nil }
+                }
+            }
+            if !waistText.isEmpty && typedWaistCm == nil {
+                Text(imperial ? String(localized: "Enter a waist between 24 and 63 in.")
+                              : String(localized: "Enter a waist between 60 and 160 cm."))
+                    .font(StrandFont.caption).foregroundStyle(StrandPalette.statusWarning)
+            } else {
+                Text("Standing relaxed, tape level at your navel. Saved to your profile (also in Settings).")
+                    .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+            }
+        }
+    }
+
+    private func startEditingWaist() {
+        let cm = profile.waistCm
+        waistText = cm > 0 ? whole(imperial ? UnitFormatter.cmToInches(cm) : cm) : ""
+        editingWaist = true
+        focused = .waist
+    }
+
+    private func saveWaist() {
+        guard let cm = typedWaistCm else { return }
+        profile.waistCm = cm.rounded()
+        waistText = ""
+        editingWaist = false
+        focused = nil
     }
 
     // MARK: - Your values
@@ -392,6 +611,9 @@ struct VO2maxView: View {
         let then = endOfDay(entry.day)
         let exerciseThen = then.flatMap { VO2maxEngine.summarize(estimates, asOf: $0) }
         let restThen = restingWeekly.last { $0.day <= entry.day && daysBetween($0.day, entry.day).map { $0 <= 14 } == true }
+        let wodThen = supine.first {
+            $0.day <= entry.day && daysBetween($0.day, entry.day).map { $0 <= VO2maxEngine.supineValidDays } == true
+        }.flatMap(wodValue(for:))
         return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -409,10 +631,13 @@ struct VO2maxView: View {
             if let x = exerciseThen {
                 comparisonLine(String(localized: "From runs and walks then"), estimate: x.vo2max, measured: entry.value)
             }
+            if let w = wodThen {
+                comparisonLine(String(localized: "From WODs then"), estimate: w, measured: entry.value)
+            }
             if let r = restThen {
                 comparisonLine(String(localized: "At rest then"), estimate: r.value, measured: entry.value)
             }
-            if exerciseThen == nil && restThen == nil {
+            if exerciseThen == nil && wodThen == nil && restThen == nil {
                 Text("No estimate from that time to compare with.")
                     .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
             }

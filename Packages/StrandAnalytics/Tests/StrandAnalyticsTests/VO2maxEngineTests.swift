@@ -1,5 +1,6 @@
 import XCTest
 @testable import StrandAnalytics
+import WhoopProtocol
 import WhoopStore
 
 /// VO2max from walks and runs (ACSM oxygen cost + the VO2-reserve method, Swain et al. 2004) and at rest
@@ -144,6 +145,33 @@ final class VO2maxEngineTests: XCTestCase {
         let trend = VO2maxEngine.trend(all)
         XCTAssertEqual(trend.map(\.start), [t0 - 20 * 86_400, t0 - 10 * 86_400, t0 - 86_400])
         XCTAssertEqual(trend.map(\.estimate.vo2max), [50, 53, 53])
+    }
+
+    // MARK: - From WODs (heart-rate ratio)
+
+    func testHeartRateRatioUsesUthsFactors() {
+        // Men 15.3 × 190 / 50 = 58.14; women 14.5 × 180 / 60 = 43.5 (Uth 2004, 2005).
+        XCTAssertEqual(VO2maxEngine.hrRatioVO2max(maxHR: 190, restingHR: 50, sex: "male")!, 58.14, accuracy: 1e-9)
+        XCTAssertEqual(VO2maxEngine.hrRatioVO2max(maxHR: 180, restingHR: 60, sex: "female")!, 43.5, accuracy: 1e-9)
+        XCTAssertEqual(VO2maxEngine.hrRatioVO2max(maxHR: 190, restingHR: 50, sex: "nonbinary"),
+                       VO2maxEngine.hrRatioVO2max(maxHR: 190, restingHR: 50, sex: "male"))
+        XCTAssertNil(VO2maxEngine.hrRatioVO2max(maxHR: 60, restingHR: 60, sex: "male"))
+        XCTAssertNil(VO2maxEngine.hrRatioVO2max(maxHR: 190, restingHR: 0, sex: "male"))
+    }
+
+    func testSupineRestingHRIsTheMeanOfTheFinalTwoMinutes() {
+        // 15 minutes at 1 Hz: settling at 70 bpm for 13 minutes, then 58 bpm for the final two.
+        let start = t0
+        let capture = (0..<900).map { HRSample(ts: start + $0, bpm: $0 < 780 ? 70 : 58) }
+        XCTAssertEqual(VO2maxEngine.supineRestingHR(capture, start: start), 58)
+        // Stopped after 13 min 20 s: the final two minutes were never recorded.
+        XCTAssertNil(VO2maxEngine.supineRestingHR(Array(capture.prefix(800)), start: start))
+        // 30 of the final 120 seconds missing: 75% coverage, below the 80% floor.
+        let gappy = capture.filter { !($0.ts >= start + 800 && $0.ts < start + 830) }
+        XCTAssertNil(VO2maxEngine.supineRestingHR(gappy, start: start))
+        // Two readings in the same second count once for coverage and both enter the mean.
+        let doubled = capture + [HRSample(ts: start + 899, bpm: 60)]
+        XCTAssertEqual(VO2maxEngine.supineRestingHR(doubled, start: start)!, (58.0 * 120 + 60) / 121, accuracy: 1e-9)
     }
 
     // MARK: - At rest

@@ -488,7 +488,7 @@ The flag is informational: Charge itself is unchanged and nothing suggests carbs
 ## VO₂max (`VO2maxEngine`)
 
 Source: `VO2maxEngine.swift`, screen `VO2maxView`; full method, validation and references in
-[VO2MAX.md](VO2MAX.md). Three views side by side, never blended:
+[VO2MAX.md](VO2MAX.md). Four views side by side, never blended:
 
 - **From runs and walks.** Each steady walk or run (10–90 min, ≥ 1 km, 50–85 % of heart-rate reserve, pace
   inside the equation's range) is a single-stage submaximal test: the ACSM oxygen cost of its pace
@@ -499,7 +499,13 @@ Source: `VO2maxEngine.swift`, screen `VO2maxView`; full method, validation and r
   second-highest believable workout peak of the year, else Tanaka. The number is the median of the newest
   ≤ 5 sessions of 90 days, stored per session day as `vo2max_exercise`.
 - **At rest.** The HUNT non-exercise model (Nes et al. 2011) ± its SEE, weekly as `vo2max_est` (Fitness Age).
-- **Your values.** Entered by hand (`vo2max_manual`, source `manual-vo2max`), each compared with both estimates
+  The waist it needs can be typed on the VO₂max screen.
+- **From WODs.** Heart-rate ratio `PF · HRmax / HRrest` (PF 15.3 men, Uth et al. 2004; 14.5 women, Uth 2005)
+  with the HRmax above and HRrest measured awake and supine after 15 min of rest (Castagna et al. 2022): a
+  guided 15-minute capture with the strap, mean of the final 2 min (`supineRestingHR`), stored as
+  `vo2max_rhr_supine`, valid 60 days. Without one it falls back on the nightly resting HR and is labelled
+  provisional (reads high). Independent SEE 6.9–7.9 mL/kg/min (Esco et al. 2012).
+- **Your values.** Entered by hand (`vo2max_manual`, source `manual-vo2max`), each compared with every estimate
   at that date.
 
 `Tools/vo2max-validation` checks the assumptions on 981 laboratory treadmill tests (PhysioNet, Malaga): the
