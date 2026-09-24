@@ -1,0 +1,61 @@
+# Compile check with Xcode 26: the compiler of the TestFlight build (noop_build.yml) and of a current Mac.
+# app-build.yml compiles with Xcode 16.4, whose type checker accepts some expressions Xcode 26 gives up on,
+# so this job builds the iPhone app (with its embedded Watch app) for a real device, unsigned, with Xcode 26.
+# No secrets, no signing, no artifacts: it only checks that it builds.
+name: App build (Xcode 26)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude-automatic-build]
+    paths:
+      - 'Strand/**'
+      - 'StrandiOS/**'
+      - 'StrandiOSShared/**'
+      - 'StrandiOSWidgets/**'
+      - 'NOOPWatch/**'
+      - 'NOOPWatchComplications/**'
+      - 'Packages/**'
+      - 'project.yml'
+      - 'Config/**'
+      - '.github/workflows/xcode26-compile.yml'
+
+concurrency:
+  group: xcode26-compile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - name: Select Xcode 26
+        run: |
+          set -e
+          current=$(xcodebuild -version | head -1 | awk '{print $2}')
+          echo "Runner default: Xcode $current"
+          if [ "${current%%.*}" -lt 26 ]; then
+            newest=$(ruby -e 'puts Dir["/Applications/Xcode_26*.app"].max_by { |p| Gem::Version.new(p[/Xcode_([\d.]+)\.app\z/, 1] || "0") }')
+            if [ -z "$newest" ]; then
+              echo "::error::No Xcode 26 on this runner image."
+              exit 1
+            fi
+            sudo xcode-select --switch "$newest/Contents/Developer"
+          fi
+          xcodebuild -version
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build NOOPiOS for iPhone (with the Watch app)
+        run: >-
+          xcodebuild -project Strand.xcodeproj -scheme NOOPiOS -configuration Debug
+          -destination 'generic/platform=iOS'
+          CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+          build
