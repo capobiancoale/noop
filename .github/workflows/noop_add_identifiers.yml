@@ -1,0 +1,72 @@
+# NOOP browser build — step 2. Registers the four identifiers under YOUR Apple team, with capabilities:
+#   com.<TEAMID>.noopapp.noop                       App Groups + HealthKit   (iPhone app)
+#   com.<TEAMID>.noopapp.noop.widgets               App Groups               (widgets / Live Activity)
+#   com.<TEAMID>.noopapp.noop.watch                 App Groups + HealthKit   (Apple Watch app)
+#   com.<TEAMID>.noopapp.noop.watch.complications   App Groups               (watch complication)
+# The App Group itself must then be created and ticked by hand (Apple's API can't) — see the summary
+# this run prints, or fastlane/BROWSER_BUILD.md step 7. Adapted from LoopKit/LoopWorkspace.
+name: 2. Add Identifiers
+run-name: Add Identifiers (${{ github.ref_name }})
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate
+    uses: ./.github/workflows/noop_validate_secrets.yml
+    secrets: inherit
+
+  identifiers:
+    name: Add Identifiers
+    needs: validate
+    runs-on: macos-26
+    env:
+      MATCH_REPO: ${{ vars.MATCH_REPO || 'NOOP-Match-Secrets' }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v5
+
+      - name: Install Project Dependencies
+        run: bundle install
+
+      # Keep match from printing its parameter tables into the (public) log.
+      - name: Patch Match Tables
+        run: |
+          TABLE_PRINTER_PATH=$(bundle exec ruby -e 'puts Gem::Specification.find_by_name("fastlane").gem_dir')/match/lib/match/table_printer.rb
+          if [ -f "$TABLE_PRINTER_PATH" ]; then
+            sed -i "" "/puts(Terminal::Table.new(params))/d" "$TABLE_PRINTER_PATH"
+          else
+            echo "::warning::table_printer.rb not found — match tables will be printed (harmless, secrets stay masked)."
+          fi
+
+      # Sync the runner clock (workaround from https://github.com/actions/runner/issues/2996)
+      - name: Sync clock
+        run: sudo sntp -sS time.windows.com
+
+      - name: Fastlane Provision
+        run: bundle exec fastlane identifiers
+        env:
+          TEAMID: ${{ secrets.TEAMID }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          FASTLANE_KEY_ID: ${{ secrets.FASTLANE_KEY_ID }}
+          FASTLANE_ISSUER_ID: ${{ secrets.FASTLANE_ISSUER_ID }}
+          FASTLANE_KEY: ${{ secrets.FASTLANE_KEY }}
+
+      - name: Next step (manual, once)
+        run: |
+          {
+            echo "### ✅ Identifiers ready — one manual step left"
+            echo ""
+            echo "Apple's API can't create an App Group, so do this once at https://developer.apple.com/account/resources/identifiers/list/applicationGroup :"
+            echo ""
+            echo "1. **+** → App Groups → description \`NOOP\`, identifier \`group.com.<YOUR-TEAMID>.noopapp.noop\` → Register."
+            echo "2. Switch the list to **App IDs**. For each of the four NOOP identifiers (\`…noopapp.noop\`, \`.widgets\`, \`.watch\`, \`.watch.complications\`):"
+            echo "   open it → **App Groups** → **Configure** → tick \`group.com.<YOUR-TEAMID>.noopapp.noop\` → Continue → **Save**."
+            echo "3. Then run **3. Create Certificates**."
+            echo ""
+            echo "(<YOUR-TEAMID> is your 10-character Team ID — the log shows it masked as \`***\`.)"
+          } >> "$GITHUB_STEP_SUMMARY"

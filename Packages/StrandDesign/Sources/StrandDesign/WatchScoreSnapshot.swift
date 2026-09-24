@@ -74,8 +74,16 @@ public struct WatchScoreSnapshot: Codable, Equatable, Sendable {
     // the group too (belt and braces alongside updateApplicationContext), so a freshly launched watch
     // reads the last known value immediately.
 
-    /// The shared app group both the watch app and its complication read the snapshot from.
-    public static let appGroupId = "group.com.noopapp.noop"
+    /// The shared app group both the watch app and its complication read the snapshot from. Resolved from
+    /// the running target's own `AppGroupIdentifier` Info.plist key (injected from $(APP_GROUP_ID) in
+    /// project.yml), the same way `WidgetSnapshot.suiteName` / `WatchScoreStore.suiteName` do, so a build
+    /// under another Apple team (namespaced App Group) keeps every default-parameter `save()` / `load()`
+    /// on the group that's actually provisioned. The literal is the canonical fallback when the key is
+    /// absent (e.g. the macOS host / unit tests), which keeps today's behaviour unchanged.
+    public static let appGroupId: String = {
+        Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String
+            ?? "group.com.noopapp.noop"
+    }()
     /// The UserDefaults key the latest snapshot is stored under in the shared app group.
     public static let storageKey = "latestWatchSnapshot"
 

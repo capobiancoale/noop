@@ -29,6 +29,6 @@
 	<key>WKApplication</key>
 	<true/>
 	<key>WKCompanionAppBundleIdentifier</key>
-	<string>com.noopapp.noop</string>
+	<string>$(NOOP_BUNDLE_PREFIX).noop</string>
 </dict>
 </plist>

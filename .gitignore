@@ -95,3 +95,12 @@ __pycache__/
 # Local release artifacts (zips/ipas built for upload; never tracked)
 dist/
 err.txt
+
+# TestFlight browser build (fastlane) — local byproducts, never tracked. See fastlane/BROWSER_BUILD.md.
+/buildlog/
+/project.ci.yml
+/Gemfile.lock
+fastlane/report.xml
+fastlane/README.md
+fastlane/new_certificate_needed.txt
+fastlane/test_output/

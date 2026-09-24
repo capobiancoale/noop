@@ -1,0 +1,18 @@
+# fastlane match: where NOOP's signing certificate + provisioning profiles are stored (encrypted with
+# MATCH_PASSWORD) — a PRIVATE repository on your own GitHub account.
+#
+# Default: <your-account>/NOOP-Match-Secrets, kept separate from Loop's "Match-Secrets" so NOOP's own
+# MATCH_PASSWORD can't collide with the one that encrypts Loop's. To share Loop's repository instead,
+# set the repository variable MATCH_REPO to "Match-Secrets" and use Loop's MATCH_PASSWORD.
+
+owner = ENV["GITHUB_REPOSITORY_OWNER"]
+repo = ENV["MATCH_REPO"].to_s.strip
+repo = "NOOP-Match-Secrets" if repo.empty?
+
+git_url("https://github.com/#{owner}/#{repo}.git")
+
+storage_mode("git")
+
+type("appstore")
+
+# The docs are available on https://docs.fastlane.tools/actions/match

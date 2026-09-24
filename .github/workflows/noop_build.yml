@@ -1,0 +1,172 @@
+# NOOP browser build — step 4. Builds NOOP (iPhone app + widgets + Apple Watch app + complication),
+# signs it with your certificates and uploads it to TestFlight. No Mac, no Xcode on your side.
+# Adapted from LoopKit/LoopWorkspace (build_loop.yml / build_loop_auto.yml). Guide: fastlane/BROWSER_BUILD.md
+#
+# When it runs:
+#   • By hand — Actions → "4. Build NOOP" → Run workflow. Always builds.
+#   • Automatically on every push to this branch that changes the app (sources, packages, project.yml,
+#     fastlane). Turn it off with the repository variable AUTO_BUILD_ON_PUSH = false.
+#   • Monthly (1st of the month), to always have a fresh TestFlight build (they expire after 90 days).
+#     GitHub runs schedules ONLY from the repository's default branch: this fires only if this branch is
+#     the default one (Settings → General → Default branch). Otherwise just start it by hand now and then.
+# Push/scheduled runs are skipped quietly (no red ❌) until the TestFlight secrets are configured.
+name: 4. Build NOOP
+run-name: Build NOOP (${{ github.ref_name }} · ${{ github.event_name }})
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude-automatic-build]
+    paths:
+      - 'Strand/**'
+      - 'StrandiOS/**'
+      - 'StrandiOSShared/**'
+      - 'StrandiOSWidgets/**'
+      - 'NOOPWatch/**'
+      - 'NOOPWatchComplications/**'
+      - 'Packages/**'
+      - 'project.yml'
+      - 'fastlane/Fastfile'
+      - 'fastlane/Matchfile'
+      - 'Gemfile'
+  schedule:
+    - cron: "33 7 1 * *" # 07:33 UTC on the 1st of each month
+
+permissions:
+  contents: read
+
+# One TestFlight build at a time per branch: a push during a running build queues (newest wins) instead
+# of racing it for the same build number.
+concurrency:
+  group: noop-testflight-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: Decide whether to build
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.decide.outputs.build }}
+    steps:
+      - name: Decide
+        id: decide
+        env:
+          CONFIGURED: ${{ secrets.TEAMID != '' && secrets.GH_PAT != '' && secrets.MATCH_PASSWORD != '' && secrets.FASTLANE_KEY_ID != '' && secrets.FASTLANE_ISSUER_ID != '' && secrets.FASTLANE_KEY != '' }}
+          EVENT: ${{ github.event_name }}
+          AUTO_BUILD_ON_PUSH: ${{ vars.AUTO_BUILD_ON_PUSH }}
+        run: |
+          auto=$(echo "$AUTO_BUILD_ON_PUSH" | tr '[:upper:]' '[:lower:]')
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            build=true;  reason="started by hand"
+          elif [ "$CONFIGURED" != "true" ]; then
+            build=false; reason="the TestFlight secrets are not configured yet — see fastlane/BROWSER_BUILD.md"
+          elif [ "$EVENT" = "push" ] && [ "$auto" = "false" ]; then
+            build=false; reason="automatic builds on push are off (repository variable AUTO_BUILD_ON_PUSH = false)"
+          else
+            build=true;  reason="automatic ($EVENT)"
+          fi
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+          if [ "$build" = "true" ]; then
+            echo "### 🚀 Building NOOP for TestFlight — $reason" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### ⏭️ Build skipped — $reason" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # Validates the secrets, then creates/refreshes the certificate + profiles (renews them if expired and
+  # ENABLE_NUKE_CERTS is 'true').
+  check_certs:
+    name: Check certificates
+    needs: [gate]
+    if: needs.gate.outputs.build == 'true'
+    uses: ./.github/workflows/noop_create_certs.yml
+    secrets: inherit
+
+  build:
+    name: Build
+    needs: [gate, check_certs]
+    if: needs.gate.outputs.build == 'true'
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      MATCH_REPO: ${{ vars.MATCH_REPO || 'NOOP-Match-Secrets' }}
+    steps:
+      # App Store Connect only accepts builds made with a current SDK: use Xcode 26 (the runner default
+      # when it already is 26+, otherwise the newest stable Xcode 26 installed).
+      - name: Select Xcode 26
+        run: |
+          set -e
+          current=$(xcodebuild -version | head -1 | awk '{print $2}')
+          echo "Runner default: Xcode $current"
+          if [ "${current%%.*}" -lt 26 ]; then
+            newest=$(ruby -e 'puts Dir["/Applications/Xcode_26*.app"].max_by { |p| Gem::Version.new(p[/Xcode_([\d.]+)\.app\z/, 1] || "0") }')
+            if [ -z "$newest" ]; then
+              echo "::error::No Xcode 26 on this runner image. App Store Connect requires the iOS 26 SDK."
+              exit 1
+            fi
+            sudo xcode-select --switch "$newest/Contents/Developer"
+          fi
+          xcodebuild -version
+
+      - name: Checkout Repo for building
+        uses: actions/checkout@v5
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Install Project Dependencies
+        run: bundle install
+
+      # Keep match from printing its parameter tables into the (public) log.
+      - name: Patch Match Tables
+        run: |
+          TABLE_PRINTER_PATH=$(bundle exec ruby -e 'puts Gem::Specification.find_by_name("fastlane").gem_dir')/match/lib/match/table_printer.rb
+          if [ -f "$TABLE_PRINTER_PATH" ]; then
+            sed -i "" "/puts(Terminal::Table.new(params))/d" "$TABLE_PRINTER_PATH"
+          else
+            echo "::warning::table_printer.rb not found — match tables will be printed (harmless, secrets stay masked)."
+          fi
+
+      # Sync the runner clock (workaround from https://github.com/actions/runner/issues/2996)
+      - name: Sync clock
+        run: sudo sntp -sS time.windows.com
+
+      # Generates Strand.xcodeproj for your team, signs, archives → NOOP.ipa
+      - name: Fastlane Build & Archive
+        run: bundle exec fastlane build_noop
+        env:
+          TEAMID: ${{ secrets.TEAMID }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          FASTLANE_KEY_ID: ${{ secrets.FASTLANE_KEY_ID }}
+          FASTLANE_ISSUER_ID: ${{ secrets.FASTLANE_ISSUER_ID }}
+          FASTLANE_KEY: ${{ secrets.FASTLANE_KEY }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+
+      - name: Fastlane upload to TestFlight
+        run: bundle exec fastlane release
+        env:
+          TEAMID: ${{ secrets.TEAMID }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          FASTLANE_KEY_ID: ${{ secrets.FASTLANE_KEY_ID }}
+          FASTLANE_ISSUER_ID: ${{ secrets.FASTLANE_ISSUER_ID }}
+          FASTLANE_KEY: ${{ secrets.FASTLANE_KEY }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+
+      - name: Summary
+        if: success()
+        run: |
+          {
+            echo "### ✅ NOOP uploaded to TestFlight"
+            echo ""
+            echo "Apple processes the build in ~5–20 minutes. Then open the **TestFlight** app on your iPhone → NOOP → **Install**"
+            echo "(the Apple Watch app installs from the Watch app → Available Apps, or automatically if enabled)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The xcodebuild log, for diagnosing a failed build. Kept briefly: the repository is public.
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: build-log
+          path: buildlog
+          if-no-files-found: ignore
+          retention-days: 7
