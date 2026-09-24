@@ -132069,6 +132069,96 @@
           }
         }
       }
+    },
+    "Importing from Apple Health": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importazione da Apple Health"
+          }
+        }
+      }
+    },
+    "Updating from Apple Health": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiornamento da Apple Health"
+          }
+        }
+      }
+    },
+    "Pause import": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metti in pausa l'importazione"
+          }
+        }
+      }
+    },
+    "You can keep using NOOP meanwhile: the import carries on while you look around.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puoi continuare a usare NOOP: l'importazione prosegue mentre navighi."
+          }
+        }
+      }
+    },
+    "The screen stays on until it's done: locking the iPhone pauses the import, and it resumes when you open NOOP again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lo schermo resta acceso fino alla fine: se blocchi l'iPhone l'importazione va in pausa e riprende quando riapri NOOP."
+          }
+        }
+      }
+    },
+    "History, last 14 months": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Storico, ultimi 14 mesi"
+          }
+        }
+      }
+    },
+    "Resume import": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riprendi l'importazione"
+          }
+        }
+      }
+    },
+    "Paused: Apple Health can't be read while iPhone is locked. The import carries on from where it stopped when you open NOOP again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In pausa: Apple Health non si può leggere mentre l'iPhone è bloccato. L'importazione riprende da dove si era fermata quando riapri NOOP."
+          }
+        }
+      }
+    },
+    "Import paused. It carries on from where it stopped next time you open NOOP, or when you tap Resume import.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importazione in pausa. Riprende da dove si era fermata la prossima volta che apri NOOP, oppure quando tocchi Riprendi l'importazione."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
