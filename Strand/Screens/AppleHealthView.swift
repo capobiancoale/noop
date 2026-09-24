@@ -444,8 +444,8 @@ struct AppleHealthView: View {
                     }
 
                 case .authorized:
-                    if let p = health.progress {
-                        syncProgress(p)
+                    if health.syncing {
+                        HealthImportProgressBlock(progress: health.importProgress, pause: { health.pauseSync() })
                     } else {
                         if let last = health.lastSync {
                             Text("Last synced \(relativeAgo(last.timeIntervalSince1970)).")
@@ -502,45 +502,6 @@ struct AppleHealthView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-        }
-    }
-
-    /// The running import in detail: how far, what it is reading and which days, that NOOP stays usable,
-    /// and a pause button (everything saved stays saved; it resumes from there).
-    private func syncProgress(_ p: HealthKitBridge.SyncProgress) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(p.isHistoryImport ? String(localized: "Importing from Apple Health")
-                     : String(localized: "Updating from Apple Health"))
-                    .font(StrandFont.subhead)
-                    .foregroundStyle(StrandPalette.textSecondary)
-                Spacer()
-                Text(p.fraction, format: .percent.precision(.fractionLength(0)))
-                    .font(StrandFont.captionNumber)
-                    .foregroundStyle(StrandPalette.textPrimary)
-            }
-            ProgressView(value: p.fraction)
-                .tint(StrandPalette.metricCyan)
-            Text(verbatim: "\(p.step) · \(p.period)")
-                .font(StrandFont.caption)
-                .foregroundStyle(StrandPalette.textTertiary)
-            Text("You can keep using NOOP meanwhile: the import carries on while you look around.")
-                .font(StrandFont.caption)
-                .foregroundStyle(StrandPalette.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
-            if p.isHistoryImport {
-                Text("The screen stays on until it's done: locking the iPhone pauses the import, and it resumes when you open NOOP again.")
-                    .font(StrandFont.caption)
-                    .foregroundStyle(StrandPalette.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Button {
-                health.pauseSync()
-            } label: {
-                Label("Pause", systemImage: "pause.fill")
-            }
-            .buttonStyle(.bordered)
-            .tint(StrandPalette.metricCyan)
         }
     }
     #endif
@@ -1085,5 +1046,55 @@ private func appleHealthPreviewData() -> AppleHealthView.PreviewData {
         .environmentObject(Repository(deviceId: "preview"))
         .frame(width: 920, height: 600)
         .preferredColorScheme(.dark)
+}
+#endif
+
+#if os(iOS)
+/// The running Apple Health import in detail, on the Apple Health card: how far, what it is reading and
+/// which days, that NOOP stays usable meanwhile, and a pause button (everything saved stays saved; it
+/// resumes from there). Observes only the import's progress object, so the chart-heavy screen around it
+/// doesn't re-render on every progress step.
+private struct HealthImportProgressBlock: View {
+    @ObservedObject var progress: HealthKitBridge.ImportProgress
+    let pause: () -> Void
+
+    var body: some View {
+        if let p = progress.current {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(p.isHistoryImport ? String(localized: "Importing from Apple Health")
+                         : String(localized: "Updating from Apple Health"))
+                        .font(StrandFont.subhead)
+                        .foregroundStyle(StrandPalette.textSecondary)
+                    Spacer()
+                    Text(p.fraction, format: .percent.precision(.fractionLength(0)))
+                        .font(StrandFont.captionNumber)
+                        .foregroundStyle(StrandPalette.textPrimary)
+                }
+                ProgressView(value: p.fraction)
+                    .tint(StrandPalette.metricCyan)
+                Text(verbatim: "\(p.step) · \(p.period)")
+                    .font(StrandFont.caption)
+                    .foregroundStyle(StrandPalette.textTertiary)
+                Text("You can keep using NOOP meanwhile: the import carries on while you look around.")
+                    .font(StrandFont.caption)
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if p.isHistoryImport {
+                    Text("The screen stays on until it's done: locking the iPhone pauses the import, and it resumes when you open NOOP again.")
+                        .font(StrandFont.caption)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Button(action: pause) {
+                    Label("Pause", systemImage: "pause.fill")
+                }
+                .buttonStyle(.bordered)
+                .tint(StrandPalette.metricCyan)
+            }
+        } else {
+            ProgressView()
+        }
+    }
 }
 #endif

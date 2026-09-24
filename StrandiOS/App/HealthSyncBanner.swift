@@ -4,17 +4,28 @@ import StrandDesign
 
 /// Floating progress card above the tab bar while Apple Health data comes in: the one-time history
 /// import, or a sync the user started. It shows that the import is working, how far it has got and what it
-/// is reading, with a pause button, while the rest of NOOP stays usable. Only this view observes the
-/// HealthKit bridge, so the tab shell doesn't re-render on every progress step. A quiet refresh of recent
-/// days shows only on the Apple Health screen.
+/// is reading, with a pause button, while the rest of NOOP stays usable. Only the inner view observes the
+/// import's progress object, so neither the tab shell nor the screens re-render on every progress step. A
+/// quiet refresh of recent days shows only on the Apple Health screen.
 struct HealthSyncBanner: View {
     @EnvironmentObject private var health: HealthKitBridge
 
     var body: some View {
-        let visible = health.progress?.showsBanner == true
+        HealthSyncBannerContent(progress: health.importProgress, pause: { health.pauseSync() })
+    }
+}
+
+/// The banner itself, observing only the import's progress object.
+private struct HealthSyncBannerContent: View {
+    @ObservedObject var progress: HealthKitBridge.ImportProgress
+    let pause: () -> Void
+
+    var body: some View {
+        let visible = progress.current?.showsBanner == true
         VStack(spacing: 0) {
-            if visible, let p = health.progress {
+            if visible, let p = progress.current {
                 card(p)
+                    .padding(.bottom, 10)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
@@ -37,7 +48,7 @@ struct HealthSyncBanner: View {
                 Text(p.fraction, format: .percent.precision(.fractionLength(0)))
                     .font(StrandFont.captionNumber)
                     .foregroundStyle(StrandPalette.textSecondary)
-                Button { health.pauseSync() } label: {
+                Button(action: pause) {
                     Image(systemName: "pause.circle.fill")
                         .font(.system(size: 20))
                         .foregroundStyle(StrandPalette.textTertiary)

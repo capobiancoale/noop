@@ -87,9 +87,11 @@ struct RootTabView: View {
                     }
             )
 
-            VStack(spacing: 10) {
+            VStack(spacing: 0) {
                 // Apple Health import progress (history import / a sync the user started), floating just
-                // above the bar on every tab, so the app stays usable while the data comes in.
+                // above the bar on every tab, so the app stays usable while the data comes in. Zero-height
+                // and gap-free when idle (its own bottom padding only exists while it shows), so the bar
+                // never moves.
                 HealthSyncBanner()
                 FloatingTabBar(selection: $selectedTab, onReselect: { _ in
                     // Re-tapping the active tab refreshes that page's data (2026-07-02).

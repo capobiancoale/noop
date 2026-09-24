@@ -31,8 +31,16 @@ final class HealthKitBridge: ObservableObject {
     /// The most recent failure surfaced by `sync` / `writeBack`. Cleared on a successful run. UI binds
     /// here so an Apple Health auth revoke, quota hit, or invalid sample is visible instead of silent.
     @Published private(set) var lastError: String?
-    /// What the running import is doing, for the progress bars (nil when nothing is running).
-    @Published private(set) var progress: SyncProgress?
+    /// What the running import is doing, for the progress bars. Its own observable object, so a progress
+    /// tick re-renders only the progress views, not every screen that observes the bridge (the Apple
+    /// Health screen holds many charts); `syncing` above tells those screens when a run starts and ends.
+    let importProgress = ImportProgress()
+
+    /// The running import's progress (nil when nothing is running).
+    @MainActor
+    final class ImportProgress: ObservableObject {
+        @Published fileprivate(set) var current: SyncProgress?
+    }
     /// A calm status line, not an error: why an import paused, and that it carries on by itself.
     @Published private(set) var statusNote: String?
 
@@ -341,8 +349,8 @@ final class HealthKitBridge: ObservableObject {
     /// Work is planned by `HealthImportPlan` as 30-day windows, newest first: the last
     /// `HealthImportPlan.recentDays` (90) days, then, until it is complete, the one-time ~14-month history
     /// import, which resumes below the oldest window already saved. Each window's reads run four at a time,
-    /// its rows are built off the main actor and saved before the next window starts, and `progress` is
-    /// published after every read, so the app stays usable and shows how far the import has got. A locked
+    /// its rows are built off the main actor and saved before the next window starts, and `importProgress`
+    /// is updated after every read, so the app stays usable and shows how far the import has got. A locked
     /// iPhone (HealthKit can't be read) pauses the import instead of storing empty answers as data.
     ///
     /// - Parameters:
@@ -362,7 +370,7 @@ final class HealthKitBridge: ObservableObject {
         pauseRequested = false
         resyncRequested = false
         let outcome = await runImport(days: days, userInitiated: userInitiated, includeHistory: includeHistory)
-        progress = nil
+        importProgress.current = nil
         syncing = false
         if outcome == .locked, resyncRequested, UIApplication.shared.applicationState == .active {
             resyncRequested = false
@@ -402,9 +410,9 @@ final class HealthKitBridge: ObservableObject {
             let period = Self.periodLabel(window)
             let report: (Int, String) -> Void = { [weak self] done, step in
                 let within = Double(done) / Double(readsPerWindow + 1)
-                self?.progress = SyncProgress(fraction: (Double(index) + within) / Double(windows.count),
-                                              step: step, period: period, isHistoryImport: isHistoryRun,
-                                              userInitiated: userInitiated)
+                self?.importProgress.current = SyncProgress(
+                    fraction: (Double(index) + within) / Double(windows.count), step: step, period: period,
+                    isHistoryImport: isHistoryRun, userInitiated: userInitiated)
             }
             report(0, specs.first?.group.label ?? "")
             do {
