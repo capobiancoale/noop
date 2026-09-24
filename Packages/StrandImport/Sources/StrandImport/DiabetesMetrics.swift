@@ -229,8 +229,11 @@ public enum DiabetesMetrics {
         // the reading they start at.
         let sorted = readings.sorted { $0.ts < $1.ts }
         var eventsByDay: [String: Int] = [:]
+        // The reading an event starts at: the first at or after its start (else the last), found by binary
+        // search — a linear scan per event was quadratic over a year of CGM data.
         for e in hypoEvents(sorted, low: thresholds.low, severeLow: thresholds.severeLow, tzOffsetSeconds: nil) {
-            if let r = sorted.first(where: { $0.ts >= e.start }) ?? sorted.last { eventsByDay[r.day, default: 0] += 1 }
+            let i = firstIndex(in: sorted, atOrAfter: e.start)
+            if let r = i < sorted.count ? sorted[i] : sorted.last { eventsByDay[r.day, default: 0] += 1 }
         }
         var byDay: [String: Acc] = [:]
         // Preserve first-seen day order isn't needed (dictionary output), but per-day order IS the
@@ -274,6 +277,16 @@ public enum DiabetesMetrics {
             )
         }
         return out
+    }
+
+    /// Index of the first reading at or after `ts` in readings sorted ascending by time (`count` when none).
+    static func firstIndex(in sorted: [GlucoseReading], atOrAfter ts: Double) -> Int {
+        var lo = 0, hi = sorted.count
+        while lo < hi {
+            let mid = (lo + hi) / 2
+            if sorted[mid].ts < ts { lo = mid + 1 } else { hi = mid }
+        }
+        return lo
     }
 
     // MARK: Hypoglycaemia events (Battelino 2023)
@@ -435,14 +448,20 @@ public enum DiabetesMetrics {
         let pad = postMinutes * 60.0
         struct Acc { var min: Double?; var lows = 0 }
         var byDay: [String: Acc] = [:]
+        // Sorted once, then each workout's window is found by binary search and walked only over its own
+        // readings — the old scan of every reading per workout was quadratic over a year of data.
+        let sorted = readings.sorted { $0.ts < $1.ts }
         for w in workouts {
             let lo = w.start
             let hi = w.end + pad
-            for r in readings where r.ts >= lo && r.ts <= hi {
+            var i = firstIndex(in: sorted, atOrAfter: lo)
+            while i < sorted.count, sorted[i].ts <= hi {
+                let r = sorted[i]
                 var a = byDay[w.day] ?? Acc()
                 a.min = a.min.map { Swift.min($0, r.mgdl) } ?? r.mgdl
                 if r.mgdl < thresholds.low { a.lows += 1 }
                 byDay[w.day] = a
+                i += 1
             }
         }
         return byDay.reduce(into: [String: PostWorkoutGlucose]()) { dict, kv in

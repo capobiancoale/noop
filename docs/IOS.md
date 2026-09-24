@@ -426,6 +426,32 @@ the static-export importer and the live HealthKit importer converge on one schem
 > Keep both directions strictly opt-in and on-device — consistent with NOOP's
 > offline, no-cloud stance.
 
+### How the live import runs (`HealthKitBridge.sync`, `HealthImportReader`, `HealthImportPlan`)
+
+- **What is read.** The last **90 days** are re-read on every full refresh (when the user taps *Sync now*,
+  or automatically when the last full refresh is over 6 hours old; otherwise opening the app re-reads the
+  last 7 days). Until it is complete, a one-time **history import** then continues back to about 14 months.
+  Observer wakes in the background re-read only the days that changed and never take on the history.
+- **In windows.** `HealthImportPlan` (StrandImport, unit-tested) cuts the period into day-aligned windows of
+  at most 30 days, newest first. Each window's 19 daily statistics queries (average and maximum heart rate
+  share one) and its glucose, insulin, sleep and workout sample reads run four at a time; the rows are built
+  off the main actor (`HealthImportReader.rows`) and saved before the next window starts, so recent data
+  shows up first, memory stays bounded and the app stays usable. The history import records the oldest
+  window saved and resumes below it.
+- **Identical to one whole-period read.** Each window reads a margin and keeps only its own days: statistics
+  and sleep start a day early (HealthKit splits a cumulative sample that crosses midnight across both days;
+  a sleep sample counts on the day it ends), glucose from 3 hours before to 24 hours after (a hypo already
+  under way at midnight belongs to the day it started; a late workout keeps its full 2-hour post-exercise
+  window). `HealthImportWindowingTests` proves the windowed glucose KPIs, hypo counts, post-exercise lows
+  and sleep minutes equal the whole-period computation, day by day, across a change of time.
+- **Progress.** `HealthKitBridge.progress` is published after every read: a floating banner above the tab
+  bar (history import or a sync the user started) and a detailed bar on the Apple Health screen, with the
+  step, the days being read and a Pause button. What is saved stays saved; *Resume import* continues.
+- **Locked iPhone.** HealthKit refuses reads while the device is locked. That error now pauses the import
+  (nothing is stored for the window being read) instead of being stored as "no data", which used to leave
+  empty days and still mark the history import as done. The screen stays on during the history import while
+  NOOP is open; a background-task assertion lets the window in flight finish if the user switches app.
+
 ---
 
 ## Concrete iOS target structure

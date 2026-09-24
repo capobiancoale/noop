@@ -1,6 +1,7 @@
 #if os(iOS)
 import Foundation
 import HealthKit
+import UIKit
 import WhoopStore
 import StrandImport
 
@@ -30,6 +31,26 @@ final class HealthKitBridge: ObservableObject {
     /// The most recent failure surfaced by `sync` / `writeBack`. Cleared on a successful run. UI binds
     /// here so an Apple Health auth revoke, quota hit, or invalid sample is visible instead of silent.
     @Published private(set) var lastError: String?
+    /// What the running import is doing, for the progress bars (nil when nothing is running).
+    @Published private(set) var progress: SyncProgress?
+    /// A calm status line, not an error: why an import paused, and that it carries on by itself.
+    @Published private(set) var statusNote: String?
+
+    /// Progress of one sync run.
+    struct SyncProgress: Equatable {
+        /// 0…1 over the whole run.
+        var fraction: Double
+        /// What is being read now ("Heart", "Sleep", "Saving…"), localized.
+        var step: String
+        /// The days of the window being read, e.g. "27 Jul – 25 Aug 2026", localized.
+        var period: String
+        /// Part of the one-time history import (about 14 months), not only a refresh of recent days.
+        var isHistoryImport: Bool
+        /// Started from a button (Enable / Sync now / Resume) rather than by the app on its own.
+        var userInitiated: Bool
+        /// The floating banner shows the long or asked-for runs; a quiet refresh shows only in Apple Health.
+        var showsBanner: Bool { isHistoryImport || userInitiated }
+    }
 
     private let store = HKHealthStore()
     private let repo: Repository
@@ -76,7 +97,7 @@ final class HealthKitBridge: ObservableObject {
     }
 
     // Every id here ends up in the HealthKit permission dialog. Only request what `sync` actually
-    // aggregates into `DayAgg`; adding read scopes the app never consumes makes the consent prompt
+    // aggregates into `HealthImportReader.DayAgg`; adding read scopes the app never consumes makes the consent prompt
     // noisier and surfaces a privacy ask we don't honour.
     private static let quantityReadIds: [HKQuantityTypeIdentifier] = [
         .heartRate, .restingHeartRate, .heartRateVariabilitySDNN, .oxygenSaturation,
@@ -217,7 +238,7 @@ final class HealthKitBridge: ObservableObject {
     /// recent days current; 7 covers a weekend of missed wakes. Exposed for the existing scenePhase
     /// hook in `StrandiOSApp` to call — no other file is edited.
     func foregroundCatchUp() async {
-        await sync(days: 7)
+        await sync(days: HealthImportPlan.catchUpDays)
     }
 
     /// Drive an incremental sync off an observer wake. We use an `HKAnchoredObjectQuery` per type to
@@ -233,9 +254,10 @@ final class HealthKitBridge: ObservableObject {
         let cal = Calendar.current
         let daysBack = cal.dateComponents([.day], from: cal.startOfDay(for: touched),
                                           to: cal.startOfDay(for: Date())).day ?? 0
-        // Clamp to a sane window: at least today, and never re-walk more than a month from one wake.
+        // Clamp to a sane window: at least today, and never re-walk more than a month from one wake. An
+        // observer wake (often in the background, often locked) never takes on the history import.
         let window = max(1, min(31, daysBack + 1))
-        await sync(days: window)
+        await sync(days: window, includeHistory: false)
     }
 
     /// Advance this type's stored anchor over any new samples and return the OLDEST sample date seen,
@@ -276,225 +298,257 @@ final class HealthKitBridge: ObservableObject {
 
     // MARK: - Read → store
 
-    /// Pull the last `days` of Apple Health into the on-device store under the `apple-health` source,
-    /// then write NOOP's own computed metrics back into Health. Safe to call repeatedly (idempotent
-    /// upserts keyed by day).
-    func sync(days: Int = 30) async {
-        guard auth == .authorized, !syncing else { return }
+    /// Pause / resume and background-time state of the running import.
+    private var pauseRequested = false
+    private var resyncRequested = false
+    private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+
+    private static let historyDoneKey = "hkHistoryImport.v2.done"
+    private static let historySavedFromKey = "hkHistoryImport.v2.savedFrom"
+    private static let lastFullRefreshKey = "hkRecentRefresh.v1.at"
+
+    /// Start of the oldest history window already saved (nil when the history import hasn't saved any).
+    private var historySavedFrom: Date? {
+        let t = UserDefaults.standard.double(forKey: Self.historySavedFromKey)
+        return t > 0 ? Date(timeIntervalSince1970: t) : nil
+    }
+
+    /// When the last `HealthImportPlan.recentDays` refresh finished (persisted across launches).
+    private var lastFullRefresh: Date? {
+        get {
+            let t = UserDefaults.standard.double(forKey: Self.lastFullRefreshKey)
+            return t > 0 ? Date(timeIntervalSince1970: t) : nil
+        }
+        set { UserDefaults.standard.set(newValue?.timeIntervalSince1970 ?? 0, forKey: Self.lastFullRefreshKey) }
+    }
+
+    /// Share (0…1) of the one-time history import saved so far; 1 once complete.
+    var historyFraction: Double {
+        if UserDefaults.standard.bool(forKey: Self.historyDoneKey) { return 1 }
+        return HealthImportPlan.historyFraction(savedFrom: historySavedFrom, now: Date())
+    }
+
+    /// Ask the running import to stop after the reads in flight. Everything already saved stays saved; the
+    /// next sync (the next time NOOP opens, or Resume) carries on from there.
+    func pauseSync() {
+        guard syncing else { return }
+        pauseRequested = true
+    }
+
+    /// Read Apple Health into the on-device store under the `apple-health` source, then write NOOP's own
+    /// computed metrics back into Health. Safe to call repeatedly (idempotent upserts keyed by day).
+    ///
+    /// Work is planned by `HealthImportPlan` as 30-day windows, newest first: the last
+    /// `HealthImportPlan.recentDays` (90) days, then, until it is complete, the one-time ~14-month history
+    /// import, which resumes below the oldest window already saved. Each window's reads run four at a time,
+    /// its rows are built off the main actor and saved before the next window starts, and `progress` is
+    /// published after every read, so the app stays usable and shows how far the import has got. A locked
+    /// iPhone (HealthKit can't be read) pauses the import instead of storing empty answers as data.
+    ///
+    /// - Parameters:
+    ///   - days: calendar days of recent data to refresh; nil picks it: all `recentDays` when started from a
+    ///     button or when the last full refresh is over six hours old, else `catchUpDays`.
+    ///   - userInitiated: started from a button (shows the floating progress banner).
+    ///   - includeHistory: continue the history import if it is unfinished (observer wakes pass false).
+    func sync(days: Int? = nil, userInitiated: Bool = false, includeHistory: Bool = true) async {
+        guard auth == .authorized else { return }
+        guard !syncing else {
+            // Asked again while a run is going (the app returning to the foreground, a button): served once
+            // the current run ends, if that run had to stop early because the iPhone locked.
+            resyncRequested = true
+            return
+        }
         syncing = true
-        defer { syncing = false }
-        guard let store = await repo.storeHandle() else { return }
+        pauseRequested = false
+        resyncRequested = false
+        let outcome = await runImport(days: days, userInitiated: userInitiated, includeHistory: includeHistory)
+        progress = nil
+        syncing = false
+        if outcome == .locked, resyncRequested, UIApplication.shared.applicationState == .active {
+            resyncRequested = false
+            await sync(days: days, userInitiated: userInitiated, includeHistory: includeHistory)
+        }
+    }
 
-        // One-time deep backfill: the routine sync only pulls 30 days, which is too little history for
-        // a metric to unlock the Month/3M/… range chips (they gate on the data's own span). On the FIRST
-        // authorized sync we widen the window to ~14 months so all of Apple Health's history — glucose,
-        // insulin, carbs and vitals included — lands at once and the ranges become selectable. Bounded
-        // and persisted so it runs once; only glucose is read raw (bounded, ~a few MB), everything else
-        // is a server-side daily statistics query, so this stays cheap. (#ranges)
-        let deepKey = "hkDeepBackfill.v1"
-        let needDeepBackfill = !UserDefaults.standard.bool(forKey: deepKey)
-        let effectiveDays = needDeepBackfill ? max(days, 430) : days
+    private enum ImportOutcome { case finished, paused, locked, failed }
 
-        let cal = Calendar.current
-        let end = Date()
-        guard let start = cal.date(byAdding: .day, value: -effectiveDays, to: cal.startOfDay(for: end)) else { return }
+    private func runImport(days: Int?, userInitiated: Bool, includeHistory: Bool) async -> ImportOutcome {
+        guard let whoop = await repo.storeHandle() else { return .failed }
+        let now = Date()
+        let recentDays = days ?? (userInitiated ? HealthImportPlan.recentDays
+            : HealthImportPlan.automaticRefreshDays(lastFullRefresh: lastFullRefresh, now: now))
+        let windows = HealthImportPlan.plan(
+            now: now, routineDays: recentDays, includeHistory: includeHistory,
+            historyDone: UserDefaults.standard.bool(forKey: Self.historyDoneKey),
+            historySavedFrom: historySavedFrom)
+        guard !windows.isEmpty else { return .finished }
+        let isHistoryRun = windows.contains(where: \.isHistory)
+        let lastRecentIndex = windows.lastIndex(where: { !$0.isHistory })
+        let bigRun = windows.count > 1 || userInitiated
 
-        var byDay: [String: DayAgg] = [:]
-        func agg(_ day: String) -> DayAgg { byDay[day] ?? DayAgg() }
-
-        // Quantity aggregates per day.
-        await collect(.restingHeartRate, unit: HKUnit.count().unitDivided(by: .minute()), start: start, end: end, op: .discreteAverage) { day, v in
-            var a = agg(day); a.restingHr = v; byDay[day] = a
-        }
-        await collect(.heartRate, unit: HKUnit.count().unitDivided(by: .minute()), start: start, end: end, op: .discreteAverage) { day, v in
-            var a = agg(day); a.avgHr = v; byDay[day] = a
-        }
-        await collect(.heartRate, unit: HKUnit.count().unitDivided(by: .minute()), start: start, end: end, op: .discreteMax) { day, v in
-            var a = agg(day); a.maxHr = v; byDay[day] = a
-        }
-        await collect(.heartRateVariabilitySDNN, unit: .secondUnit(with: .milli), start: start, end: end, op: .discreteAverage) { day, v in
-            var a = agg(day); a.hrv = v; byDay[day] = a
-        }
-        await collect(.oxygenSaturation, unit: .percent(), start: start, end: end, op: .discreteAverage) { day, v in
-            var a = agg(day); a.spo2 = v * 100; byDay[day] = a   // 0…1 → percent
-        }
-        await collect(.respiratoryRate, unit: HKUnit.count().unitDivided(by: .minute()), start: start, end: end, op: .discreteAverage) { day, v in
-            var a = agg(day); a.respRate = v; byDay[day] = a
-        }
-        await collect(.stepCount, unit: .count(), start: start, end: end, op: .cumulativeSum) { day, v in
-            var a = agg(day); a.steps = v; byDay[day] = a
-        }
-        await collect(.activeEnergyBurned, unit: .kilocalorie(), start: start, end: end, op: .cumulativeSum) { day, v in
-            var a = agg(day); a.activeKcal = v; byDay[day] = a
-        }
-        await collect(.basalEnergyBurned, unit: .kilocalorie(), start: start, end: end, op: .cumulativeSum) { day, v in
-            var a = agg(day); a.basalKcal = v; byDay[day] = a
-        }
-        await collect(.vo2Max, unit: HKUnit(from: "ml/kg*min"), start: start, end: end, op: .discreteAverage) { day, v in
-            var a = agg(day); a.vo2max = v; byDay[day] = a
+        statusNote = nil
+        beginBackgroundTime()
+        // The history import only reads while the iPhone is unlocked: keep the screen on while NOOP is open.
+        if isHistoryRun { ScreenIdle.keepAwake(true) }
+        defer {
+            if isHistoryRun { ScreenIdle.keepAwake(false) }
+            endBackgroundTime()
         }
 
-        // Body composition — READ-ONLY import under the apple-health source (#20). Weight, lean mass
-        // and BMI are point-in-time readings, so take the latest-of-day; body-fat reads fine as a
-        // daily average. Body-fat HealthKit gives a 0…1 fraction, scaled to percent like spo2 above.
-        await collect(.bodyMass, unit: .gramUnit(with: .kilo), start: start, end: end, op: .discreteMostRecent) { day, v in
-            var a = agg(day); a.weightKg = v; byDay[day] = a
-        }
-        await collect(.bodyFatPercentage, unit: .percent(), start: start, end: end, op: .discreteAverage) { day, v in
-            var a = agg(day); a.bodyFatPct = v * 100; byDay[day] = a   // 0…1 → percent
-        }
-        await collect(.leanBodyMass, unit: .gramUnit(with: .kilo), start: start, end: end, op: .discreteMostRecent) { day, v in
-            var a = agg(day); a.leanMassKg = v; byDay[day] = a
-        }
-        await collect(.bodyMassIndex, unit: .count(), start: start, end: end, op: .discreteMostRecent) { day, v in
-            var a = agg(day); a.bmi = v; byDay[day] = a
-        }
-
-        // Diabetes & metabolic data — READ-ONLY (from an AID app like Loop writing into Health).
-        // Insulin delivery and carbs are cumulative quantities → the day's total is the natural
-        // aggregate (total daily insulin dose, total carbs). The RICHER glucose KPIs (Time-in-Range,
-        // variability, hypo events, overnight lows) and the basal/bolus split can't come from a
-        // statistics query — they need per-reading counting — so they're computed by the raw-sample
-        // reducers further down. NOT a treatment surface: Health lags the CGM/pump (see header note).
-        await collect(.insulinDelivery, unit: .internationalUnit(), start: start, end: end, op: .cumulativeSum) { day, v in
-            var a = agg(day); a.insulinTotal = v; byDay[day] = a
-        }
-        await collect(.dietaryCarbohydrates, unit: .gram(), start: start, end: end, op: .cumulativeSum) { day, v in
-            var a = agg(day); a.carbsG = v; byDay[day] = a
-        }
-
-        // Body / vitals extras useful to a diabetic athlete — READ-ONLY. Blood pressure (mmHg, daily
-        // mean), hydration (litres/day, summed), waist circumference (cm, latest of day).
-        await collect(.bloodPressureSystolic, unit: .millimeterOfMercury(), start: start, end: end, op: .discreteAverage) { day, v in
-            var a = agg(day); a.bpSystolic = v; byDay[day] = a
-        }
-        await collect(.bloodPressureDiastolic, unit: .millimeterOfMercury(), start: start, end: end, op: .discreteAverage) { day, v in
-            var a = agg(day); a.bpDiastolic = v; byDay[day] = a
-        }
-        await collect(.dietaryWater, unit: .liter(), start: start, end: end, op: .cumulativeSum) { day, v in
-            var a = agg(day); a.waterL = v; byDay[day] = a
-        }
-        await collect(.waistCircumference, unit: .meterUnit(with: .centi), start: start, end: end, op: .discreteMostRecent) { day, v in
-            var a = agg(day); a.waistCm = v; byDay[day] = a
-        }
-
-        // Rich glucose KPIs from raw CGM readings (mean/min/max feed the daily aggregate below; the
-        // band %s, variability, hypo events and overnight lows are emitted as their own metric points).
-        // The same readings drive the glucose-around-exercise linkage once workouts are read.
-        let glucoseReadings = await collectGlucoseReadings(start: start, end: end)
-        let glucoseStats = DiabetesMetrics.glucoseDaily(glucoseReadings)
-        for (day, g) in glucoseStats {
-            var a = agg(day); a.glucoseAvg = g.mean; a.glucoseMin = g.min; a.glucoseMax = g.max; byDay[day] = a
-        }
-        // Insulin basal/bolus split (statistics gives only the combined total above).
-        let insulinStats = DiabetesMetrics.insulinDaily(await collectInsulinDoses(start: start, end: end))
-
-        // Sleep minutes per day (asleep stages summed; attributed to wake day).
-        await collectSleep(start: start, end: end) { day, asleepMin, deepMin, remMin, coreMin in
-            var a = agg(day)
-            a.asleepMin = asleepMin; a.deepMin = deepMin; a.remMin = remMin; a.coreMin = coreMin
-            byDay[day] = a
-        }
-
-        // Build + upsert the store rows under the apple-health source.
-        let appleRows = byDay.map { (day, a) in
-            AppleDaily(day: day, steps: a.steps.map { Int($0) },
-                       activeKcal: a.activeKcal, basalKcal: a.basalKcal, vo2max: a.vo2max,
-                       avgHr: a.avgHr.map { Int($0.rounded()) }, maxHr: a.maxHr.map { Int($0.rounded()) },
-                       walkingHr: nil, weightKg: a.weightKg)
-        }
-        let dmRows = byDay.map { (day, a) in
-            DailyMetric(day: day, totalSleepMin: a.asleepMin, efficiency: nil,
-                        deepMin: a.deepMin, remMin: a.remMin, lightMin: a.coreMin, disturbances: nil,
-                        restingHr: a.restingHr.map { Int($0.rounded()) }, avgHrv: a.hrv,
-                        recovery: nil, strain: nil, exerciseCount: nil,
-                        spo2Pct: a.spo2, skinTempDevC: nil, respRateBpm: a.respRate)
-        }
-        // Flatten to the generic metricSeries the shared Apple Health screen, the Today apple-health
-        // sparklines, and the Metric Explorer read from — repo.series(key:source:"apple-health")
-        // queries ONLY metricSeries, so without this every tile/chart renders "—" after a successful
-        // sync. Reuse the importer's canonical key mapping so the keys match the macOS path exactly.
-        // Body composition (weight/body_fat/lean_mass/bmi) now reads live on iOS (#20) and flows
-        // through the same metricPoints keys as the file importer. iOS still doesn't collect
-        // awake/in-bed minutes, so those stay nil and emit no points — correct.
-        let aggregates = byDay.map { (day, a) in
-            AppleDailyAggregate(
-                day: day,
-                restingHr: a.restingHr,
-                hrvSDNN: a.hrv,
-                spo2Pct: a.spo2,
-                respRate: a.respRate,
-                avgHr: a.avgHr,
-                maxHr: a.maxHr,
-                steps: a.steps,
-                activeKcal: a.activeKcal,
-                basalKcal: a.basalKcal,
-                vo2max: a.vo2max,
-                weightKg: a.weightKg,
-                bodyFatPct: a.bodyFatPct,
-                leanMassKg: a.leanMassKg,
-                bmi: a.bmi,
-                asleepMin: a.asleepMin,
-                deepMin: a.deepMin,
-                remMin: a.remMin,
-                coreMin: a.coreMin,
-                glucoseAvg: a.glucoseAvg,
-                glucoseMin: a.glucoseMin,
-                glucoseMax: a.glucoseMax,
-                insulinTotal: a.insulinTotal,
-                carbsG: a.carbsG,
-                bpSystolic: a.bpSystolic,
-                bpDiastolic: a.bpDiastolic,
-                waterL: a.waterL,
-                waistCm: a.waistCm
-            )
-        }
-        var points = AppleHealthAggregator.metricPoints(aggregates)
-            .map { MetricPoint(day: $0.day, key: $0.key, value: $0.value) }
-        // Advanced diabetes KPIs that don't live on the shared AppleDailyAggregate model — emitted
-        // straight into metricSeries so Explore/Compare/correlations pick them up like any other key.
-        // Every value is a real measurement; a day with no glucose data emits nothing (never a zero).
-        points.append(contentsOf: diabetesMetricPoints(glucose: glucoseStats, insulin: insulinStats))
-
-        // Workouts the user logged in Apple Health (Apple Watch rings, gym apps, etc.). macOS already
-        // imports these from a static Health export and Android reads them from Health Connect; iOS now
-        // reads them live on-device too, so the platforms reach parity. ON-DEVICE ONLY: this is a plain
-        // HealthKit read of workouts NOOP did NOT author, never any cloud/3rd-party API. (#835)
-        let workoutRows = await collectWorkouts(start: start, end: end)
-
-        // Glucose response around exercise (Tier 4): the lowest glucose (and hypo count) inside each
-        // workout window, extended past the session end to catch the acute post-exercise drop. Reuses
-        // the glucose readings already fetched — no extra query. A day only appears when a real reading
-        // fell inside a workout window, so "no data" stays "no data" (never a fabricated value).
-        let workoutWindows = workoutRows.map {
-            WorkoutWindow(start: Double($0.startTs), end: Double($0.endTs),
-                          day: HealthKitBridge.dayString(Date(timeIntervalSince1970: TimeInterval($0.startTs))))
-        }
-        for (day, p) in DiabetesMetrics.postWorkoutGlucose(readings: glucoseReadings, workouts: workoutWindows) {
-            if let m = p.minMgdl {
-                points.append(MetricPoint(day: day, key: "glucose_postex_min", value: m))
-                points.append(MetricPoint(day: day, key: "glucose_postex_lows", value: Double(p.lows)))
+        let specs = HealthImportReader.statSpecs()
+        let readsPerWindow = specs.count + 4            // + glucose, insulin doses, sleep, workouts
+        var savedAny = false
+        for (index, window) in windows.enumerated() {
+            let period = Self.periodLabel(window)
+            let report: (Int, String) -> Void = { [weak self] done, step in
+                let within = Double(done) / Double(readsPerWindow + 1)
+                self?.progress = SyncProgress(fraction: (Double(index) + within) / Double(windows.count),
+                                              step: step, period: period, isHistoryImport: isHistoryRun,
+                                              userInitiated: userInitiated)
+            }
+            report(0, specs.first?.group.label ?? "")
+            do {
+                if pauseRequested { throw CancellationError() }
+                let reads = try await readWindow(window, specs: specs, report: report)
+                report(readsPerWindow, String(localized: "Saving…"))
+                let rows = await Task.detached(priority: .userInitiated) {
+                    HealthImportReader.rows(for: window, reads: reads)
+                }.value
+                try await whoop.upsertAppleDaily(rows.apple, deviceId: appleDeviceId)
+                try await whoop.upsertDailyMetrics(rows.daily, deviceId: appleDeviceId)
+                try await whoop.upsertMetricSeries(rows.points, deviceId: appleDeviceId)
+                if !rows.workouts.isEmpty { try await whoop.upsertWorkouts(rows.workouts, deviceId: appleDeviceId) }
+                savedAny = true
+                if window.isHistory { noteHistorySaved(from: window.start, now: now) }
+                if index == lastRecentIndex, recentDays >= HealthImportPlan.recentDays { lastFullRefresh = now }
+                // The newest window first lands on screen right away; the rest follows as it arrives.
+                if index == 0, windows.count > 1 { await repo.refresh() }
+            } catch HealthImportReader.ReadError.locked {
+                statusNote = String(localized: "Paused: Apple Health can't be read while iPhone is locked. The import carries on from where it stopped when you open NOOP again.")
+                if savedAny { await repo.refresh() }
+                return .locked
+            } catch is CancellationError {
+                statusNote = String(localized: "Import paused. It carries on from where it stopped next time you open NOOP, or when you tap Resume import.")
+                if savedAny { await repo.refresh() }
+                return .paused
+            } catch {
+                lastError = String(localized: "Apple Health sync failed: \(error.localizedDescription)")
+                if savedAny { await repo.refresh() }
+                return .failed
             }
         }
 
-        // Persist all the apple-health rows AND write back, advancing lastSync only when the WHOLE
-        // round-trip succeeds. The three read-side upserts used to be swallowed by `try?`, so a failed
-        // import (e.g. a disk-full GRDB write) dropped rows yet still cleared lastError and advanced
-        // lastSync — a false "success", and the next delta sync skipped the window. (Reimplemented
-        // from @vulnix0x4's PR #375.)
+        // Every window saved: write NOOP's own metrics back into Health, advancing lastSync only when the
+        // whole round-trip succeeds (a failed write must not look like a success; PR #375).
         do {
-            try await store.upsertAppleDaily(appleRows, deviceId: appleDeviceId)
-            try await store.upsertDailyMetrics(dmRows, deviceId: appleDeviceId)
-            try await store.upsertMetricSeries(points, deviceId: appleDeviceId)
-            if !workoutRows.isEmpty { try await store.upsertWorkouts(workoutRows, deviceId: appleDeviceId) }
-            try await writeBack(whoopStore: store)
-            // The deep backfill has now landed — mark it done so later syncs use the light 30-day window.
-            if needDeepBackfill { UserDefaults.standard.set(true, forKey: deepKey) }
+            try await writeBack(whoopStore: whoop)
             lastSync = Date()
             lastError = nil
         } catch {
             lastError = String(localized: "Apple Health sync failed: \(error.localizedDescription)")
         }
+        if bigRun { await repo.refresh() }
+        return .finished
+    }
+
+    /// Read one window: every daily statistics query plus the raw glucose, insulin, sleep and workout
+    /// samples, `parallelReads` at a time, reporting each finished read. A pause request stops it after
+    /// the reads in flight (nothing of this window is saved; it is read again next time).
+    private static let parallelReads = 4
+
+    private func readWindow(_ window: HealthImportWindow, specs: [HealthImportReader.StatSpec],
+                            report: (Int, String) -> Void) async throws -> HealthImportReader.WindowReads {
+        enum Job { case stat(Int), glucose, insulin, sleep, workouts }
+        enum Output: @unchecked Sendable {
+            case stat(Int, [String: HealthImportReader.DayStats])
+            case glucose([GlucoseReading]), insulin([InsulinDose]), sleep([SleepStageSample]), workouts([WorkoutRow])
+        }
+        let hk = store
+        let jobs: [Job] = specs.indices.map { Job.stat($0) } + [.glucose, .insulin, .sleep, .workouts]
+        func operation(_ job: Job) -> @Sendable () async throws -> Output {
+            switch job {
+            case .stat(let i):
+                let spec = specs[i]
+                return { .stat(i, try await HealthImportReader.dailyStatistics(spec, window: window, store: hk)) }
+            case .glucose:
+                return { .glucose(try await HealthImportReader.glucoseReadings(around: window, store: hk)) }
+            case .insulin:
+                return { .insulin(try await HealthImportReader.insulinDoses(in: window, store: hk)) }
+            case .sleep:
+                return { .sleep(try await HealthImportReader.sleepSamples(for: window, store: hk)) }
+            case .workouts:
+                return { .workouts(try await HealthImportReader.workouts(in: window, store: hk)) }
+            }
+        }
+
+        var reads = HealthImportReader.WindowReads(stats: Array(repeating: [:], count: specs.count))
+        try await withThrowingTaskGroup(of: Output.self) { group in
+            var next = 0
+            while next < min(Self.parallelReads, jobs.count) {
+                group.addTask(operation: operation(jobs[next]))
+                next += 1
+            }
+            var done = 0
+            while let output = try await group.next() {
+                let step: String
+                switch output {
+                case .stat(let i, let values): reads.stats[i] = values; step = specs[i].group.label
+                case .glucose(let g): reads.glucose = g; step = HealthImportReader.Group.diabetes.label
+                case .insulin(let d): reads.insulin = d; step = HealthImportReader.Group.diabetes.label
+                case .sleep(let s): reads.sleep = s; step = HealthImportReader.Group.sleep.label
+                case .workouts(let w): reads.workouts = w; step = HealthImportReader.Group.workouts.label
+                }
+                done += 1
+                report(done, step)
+                if pauseRequested {
+                    group.cancelAll()
+                    throw CancellationError()
+                }
+                if next < jobs.count {
+                    group.addTask(operation: operation(jobs[next]))
+                    next += 1
+                }
+            }
+        }
+        return reads
+    }
+
+    /// Record that history is saved down to `start`, and mark the history import done once it reaches
+    /// the target (about 14 months back).
+    private func noteHistorySaved(from start: Date, now: Date) {
+        if historySavedFrom.map({ start < $0 }) ?? true {
+            UserDefaults.standard.set(start.timeIntervalSince1970, forKey: Self.historySavedFromKey)
+        }
+        if HealthImportPlan.historyComplete(savedFrom: start, now: now) {
+            UserDefaults.standard.set(true, forKey: Self.historyDoneKey)
+        }
+    }
+
+    /// "27 Jul – 25 Aug 2026": the days a window covers, in the user's locale.
+    private static func periodLabel(_ window: HealthImportWindow) -> String {
+        let last = window.end.addingTimeInterval(-1)
+        return window.start.formatted(.dateTime.day().month(.abbreviated)) + " – "
+            + last.formatted(.dateTime.day().month(.abbreviated).year())
+    }
+
+    /// Ask iOS for extra time when the user leaves NOOP mid-import, so the window being read can finish and
+    /// be saved. When the time runs out the import is simply suspended with the app and carries on (or
+    /// pauses, if the iPhone locked meanwhile) when NOOP comes back.
+    private func beginBackgroundTime() {
+        guard backgroundTask == .invalid else { return }
+        backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "Apple Health import") { [weak self] in
+            // iOS calls this on the main thread, synchronously, and needs the task ended before it returns.
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.endBackgroundTime()
+            }
+        }
+    }
+
+    private func endBackgroundTime() {
+        guard backgroundTask != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(backgroundTask)
+        backgroundTask = .invalid
     }
 
     // MARK: - Write back (NOOP → Health)
@@ -574,90 +628,11 @@ final class HealthKitBridge: ObservableObject {
         try await self.store.save(candidates.map { $0.sample })
     }
 
-    private struct DayAgg {
-        var restingHr: Double?; var avgHr: Double?; var maxHr: Double?; var hrv: Double?
-        var spo2: Double?; var respRate: Double?; var steps: Double?
-        var activeKcal: Double?; var basalKcal: Double?; var vo2max: Double?
-        var weightKg: Double?; var bodyFatPct: Double?; var leanMassKg: Double?; var bmi: Double?
-        var asleepMin: Double?; var deepMin: Double?; var remMin: Double?; var coreMin: Double?
-        var glucoseAvg: Double?; var glucoseMin: Double?; var glucoseMax: Double?
-        var insulinTotal: Double?; var carbsG: Double?
-        var bpSystolic: Double?; var bpDiastolic: Double?; var waterL: Double?; var waistCm: Double?
-    }
-
     /// Excludes NOOP's own write-back samples from reads, so the two-way sync never reads its own
     /// output back in as "apple-health" data — which would make the strap and "Apple Health" plot the
     /// same line for a strap-only user, and bias the apple-health average for someone who also has a
     /// watch. `HKSource.default()` is this app's own source. (Reimplemented from @vulnix0x4's PR #375.)
-    private static var notNoopAuthored: NSPredicate {
-        NSCompoundPredicate(notPredicateWithSubpredicate: HKQuery.predicateForObjects(from: [HKSource.default()]))
-    }
-
-    private func collect(_ id: HKQuantityTypeIdentifier, unit: HKUnit, start: Date, end: Date,
-                         op: HKStatisticsOptions, sink: @escaping (String, Double) -> Void) async {
-        guard let type = HKQuantityType.quantityType(forIdentifier: id) else { return }
-        let cal = Calendar.current
-        let anchor = cal.startOfDay(for: start)
-        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-            HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate),
-            Self.notNoopAuthored,
-        ])
-        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
-            let q = HKStatisticsCollectionQuery(quantityType: type, quantitySamplePredicate: predicate,
-                                                options: op, anchorDate: anchor,
-                                                intervalComponents: DateComponents(day: 1))
-            q.initialResultsHandler = { _, results, _ in
-                results?.enumerateStatistics(from: start, to: end) { stats, _ in
-                    let q: HKQuantity?
-                    switch op {
-                    case .cumulativeSum:     q = stats.sumQuantity()
-                    case .discreteAverage:   q = stats.averageQuantity()
-                    case .discreteMax:       q = stats.maximumQuantity()
-                    case .discreteMin:       q = stats.minimumQuantity()
-                    case .discreteMostRecent: q = stats.mostRecentQuantity()
-                    default:                 q = stats.averageQuantity()
-                    }
-                    if let q { sink(HealthKitBridge.dayString(stats.startDate), q.doubleValue(for: unit)) }
-                }
-                cont.resume()
-            }
-            store.execute(q)
-        }
-    }
-
-    private func collectSleep(start: Date, end: Date,
-                              sink: @escaping (String, Double?, Double?, Double?, Double?) -> Void) async {
-        guard let type = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return }
-        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-            HKQuery.predicateForSamples(withStart: start, end: end, options: []),
-            Self.notNoopAuthored,
-        ])
-        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
-            let q = HKSampleQuery(sampleType: type, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, _ in
-                var asleep: [String: Double] = [:], deep: [String: Double] = [:]
-                var rem: [String: Double] = [:], core: [String: Double] = [:]
-                for case let s as HKCategorySample in samples ?? [] {
-                    let mins = s.endDate.timeIntervalSince(s.startDate) / 60
-                    let day = HealthKitBridge.dayString(s.endDate)
-                    switch s.value {
-                    case HKCategoryValueSleepAnalysis.asleepDeep.rawValue:
-                        deep[day, default: 0] += mins; asleep[day, default: 0] += mins
-                    case HKCategoryValueSleepAnalysis.asleepREM.rawValue:
-                        rem[day, default: 0] += mins; asleep[day, default: 0] += mins
-                    case HKCategoryValueSleepAnalysis.asleepCore.rawValue, HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue:
-                        core[day, default: 0] += mins; asleep[day, default: 0] += mins
-                    default:
-                        break
-                    }
-                }
-                for day in Set(asleep.keys) {
-                    sink(day, asleep[day], deep[day], rem[day], core[day])
-                }
-                cont.resume()
-            }
-            store.execute(q)
-        }
-    }
+    private static var notNoopAuthored: NSPredicate { HealthImportReader.notNoopAuthored() }
 
     // MARK: - Diabetes (rich KPIs from raw samples)
 
@@ -665,7 +640,7 @@ final class HealthKitBridge: ObservableObject {
     /// [] unless Health is authorized. ON-DEVICE ONLY — a plain read of samples NOOP did not author.
     func glucoseWindow(start: Date, end: Date) async -> [GlucoseReading] {
         guard auth == .authorized else { return [] }
-        return await collectGlucoseReadings(start: start, end: end)
+        return (try? await HealthImportReader.glucoseReadings(from: start, to: end, store: store)) ?? []
     }
 
     /// On-demand insulin-delivery samples over `[start, end)` (units, epoch-seconds, bolus vs basal),
@@ -719,180 +694,12 @@ final class HealthKitBridge: ObservableObject {
         }
     }
 
-    /// Fetch raw CGM readings over `[start, end)` as `GlucoseReading`s (ascending by time), each
-    /// bucketed into its local civil day with a local minute-of-day (for the overnight window). Read
-    /// in mg/dL — HealthKit converts on read, so the value is unit-unambiguous. ON-DEVICE ONLY: a plain
-    /// HealthKit read of samples NOOP did not author. Feeds `DiabetesMetrics` for every glucose KPI.
-    private func collectGlucoseReadings(start: Date, end: Date) async -> [GlucoseReading] {
-        guard let type = HKQuantityType.quantityType(forIdentifier: .bloodGlucose) else { return [] }
-        let mgdL = HKUnit(from: "mg/dL")
-        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-            HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate),
-            Self.notNoopAuthored,
-        ])
-        return await withCheckedContinuation { (cont: CheckedContinuation<[GlucoseReading], Never>) in
-            let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
-            let q = HKSampleQuery(sampleType: type, predicate: predicate,
-                                  limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
-                var out: [GlucoseReading] = []
-                for case let s as HKQuantitySample in samples ?? [] {
-                    let comps = Calendar.current.dateComponents([.hour, .minute], from: s.startDate)
-                    out.append(GlucoseReading(
-                        ts: s.startDate.timeIntervalSince1970,
-                        day: HealthKitBridge.dayString(s.startDate),
-                        minutesLocal: (comps.hour ?? 0) * 60 + (comps.minute ?? 0),
-                        mgdl: s.quantity.doubleValue(for: mgdL)))
-                }
-                cont.resume(returning: out)
-            }
-            store.execute(q)
-        }
-    }
-
-    /// Fetch insulin-delivery samples over `[start, end)` tagged basal/bolus/unknown by the HealthKit
-    /// delivery-reason metadata, in international units, bucketed by local civil day. ON-DEVICE ONLY.
-    private func collectInsulinDoses(start: Date, end: Date) async -> [InsulinDose] {
-        guard let type = HKQuantityType.quantityType(forIdentifier: .insulinDelivery) else { return [] }
-        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-            HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate),
-            Self.notNoopAuthored,
-        ])
-        return await withCheckedContinuation { (cont: CheckedContinuation<[InsulinDose], Never>) in
-            let q = HKSampleQuery(sampleType: type, predicate: predicate,
-                                  limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, _ in
-                var out: [InsulinDose] = []
-                for case let s as HKQuantitySample in samples ?? [] {
-                    let kind: InsulinDose.Kind
-                    if let num = s.metadata?[HKMetadataKeyInsulinDeliveryReason] as? NSNumber,
-                       let reason = HKInsulinDeliveryReason(rawValue: num.intValue) {
-                        kind = reason == .basal ? .basal : .bolus
-                    } else {
-                        kind = .unknown
-                    }
-                    out.append(InsulinDose(day: HealthKitBridge.dayString(s.startDate),
-                                           units: s.quantity.doubleValue(for: .internationalUnit()),
-                                           kind: kind))
-                }
-                cont.resume(returning: out)
-            }
-            store.execute(q)
-        }
-    }
-
-    /// Flatten the rich glucose + insulin daily stats into metric points. The band percentages, hypo
-    /// count and basal/bolus split are emitted for every day that HAS data — a 0% or 0-count is a real,
-    /// good result, not "missing" — while variability and overnight values appear only when defined.
-    /// A day with no readings never enters the input dicts, so the UI shows an honest "—" instead.
-    private func diabetesMetricPoints(glucose: [String: GlucoseDayStats],
-                                      insulin: [String: InsulinDayStats]) -> [MetricPoint] {
-        var out: [MetricPoint] = []
-        for (day, g) in glucose {
-            out.append(MetricPoint(day: day, key: "glucose_tir", value: g.tirPct))
-            out.append(MetricPoint(day: day, key: "glucose_tbr", value: g.tbrPct))
-            out.append(MetricPoint(day: day, key: "glucose_tbr_severe", value: g.tbrSeverePct))
-            out.append(MetricPoint(day: day, key: "glucose_tar", value: g.tarPct))
-            out.append(MetricPoint(day: day, key: "glucose_tar_high", value: g.tarHighPct))
-            out.append(MetricPoint(day: day, key: "glucose_hypos", value: Double(g.hypoEvents)))
-            if let cv = g.cvPct { out.append(MetricPoint(day: day, key: "glucose_cv", value: cv)) }
-            if let ovm = g.overnightMean { out.append(MetricPoint(day: day, key: "glucose_overnight_avg", value: ovm)) }
-            if let ovl = g.overnightMin { out.append(MetricPoint(day: day, key: "glucose_overnight_min", value: ovl)) }
-        }
-        for (day, i) in insulin {
-            out.append(MetricPoint(day: day, key: "insulin_basal", value: i.basal))
-            out.append(MetricPoint(day: day, key: "insulin_bolus", value: i.bolus))
-        }
-        return out
-    }
-
     // MARK: - Workouts (#835)
-
-    /// Read the workouts the user logged in Apple Health over `[start, end)` and map each to a
-    /// `WorkoutRow` under the apple-health source. ON-DEVICE ONLY: a straight HealthKit `HKWorkout` query,
-    /// no cloud or third-party API. NOOP-authored workouts are excluded (the same `notNoopAuthored`
-    /// predicate the metric reads use) so our own write-back never re-imports as "Apple Health". Mirrors
-    /// the macOS export importer and the Android Health Connect importer, which already ingest workouts,
-    /// closing the iOS gap. The upsert is idempotent on (deviceId, startTs), so re-running a sync window
-    /// refreshes rather than duplicates.
-    private func collectWorkouts(start: Date, end: Date) async -> [WorkoutRow] {
-        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-            HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate),
-            Self.notNoopAuthored,
-        ])
-        return await withCheckedContinuation { (cont: CheckedContinuation<[WorkoutRow], Never>) in
-            let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
-            let q = HKSampleQuery(sampleType: HKObjectType.workoutType(), predicate: predicate,
-                                  limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
-                var rows: [WorkoutRow] = []
-                for case let workout as HKWorkout in samples ?? [] {
-                    let startTs = Int(workout.startDate.timeIntervalSince1970)
-                    let endTs = max(Int(workout.endDate.timeIntervalSince1970), startTs)
-                    let duration = workout.duration > 0 ? workout.duration : Double(endTs - startTs)
-                    rows.append(WorkoutRow(
-                        startTs: startTs,
-                        endTs: endTs,
-                        sport: Self.sportName(workout.workoutActivityType),
-                        source: HealthKitBridge.appleWorkoutSource,
-                        durationS: duration,
-                        energyKcal: workout.totalEnergyBurned?.doubleValue(for: .kilocalorie()),
-                        avgHr: nil,
-                        maxHr: nil,
-                        strain: nil,
-                        distanceM: workout.totalDistance?.doubleValue(for: .meter()),
-                        zonesJSON: nil,
-                        notes: nil))
-                }
-                cont.resume(returning: rows)
-            }
-            store.execute(q)
-        }
-    }
 
     /// Source tag stamped on workouts imported from Apple Health. Matches the macOS importer's
     /// `WorkoutSource.appleHealthSource` ("apple-health") and `appleDeviceId`, so the workout list and
     /// source filters treat an iOS-read workout exactly like a macOS-imported one.
-    static let appleWorkoutSource = "apple-health"
-
-    /// Map an `HKWorkoutActivityType` to NOOP's human sport label. Strength training routes to the
-    /// shared lifting sport so a gym session lands in the Lifting lane; anything we don't name explicitly
-    /// falls back to a generic "Workout" rather than an opaque numeric type.
-    private static func sportName(_ type: HKWorkoutActivityType) -> String {
-        switch type {
-        case .running:                    return "Running"
-        case .walking:                    return "Walking"
-        case .hiking:                     return "Hiking"
-        case .cycling:                    return "Cycling"
-        case .traditionalStrengthTraining,
-             .functionalStrengthTraining: return LiftingImporter.sport
-        case .highIntensityIntervalTraining: return "HIIT"
-        case .coreTraining:               return "Core training"
-        case .yoga:                       return "Yoga"
-        case .pilates:                    return "Pilates"
-        case .rowing:                     return "Rowing"
-        case .elliptical:                 return "Elliptical"
-        case .stairClimbing, .stairs:     return "Stairs"
-        case .jumpRope:                   return "Jump rope"
-        case .boxing, .kickboxing:        return "Boxing"
-        case .basketball:                 return "Basketball"
-        case .soccer:                     return "Soccer"
-        case .americanFootball:           return "Football"
-        case .baseball:                   return "Baseball"
-        case .badminton:                  return "Badminton"
-        case .tennis:                     return "Tennis"
-        case .tableTennis:                return "Table tennis"
-        case .volleyball:                 return "Volleyball"
-        case .squash, .racquetball:       return "Squash"
-        case .martialArts, .taiChi:       return "Martial arts"
-        case .dance, .cardioDance, .socialDance: return "Dancing"
-        case .golf:                       return "Golf"
-        case .climbing:                   return "Climbing"
-        case .downhillSkiing, .crossCountrySkiing: return "Skiing"
-        case .snowboarding:               return "Snowboarding"
-        case .swimming:                   return "Swimming"
-        case .surfingSports:              return "Surfing"
-        case .paddleSports:               return "Paddling"
-        default:                          return "Workout"
-        }
-    }
+    static let appleWorkoutSource = HealthImportReader.workoutSource
 
     // MARK: - Entitlement detection (#348)
 

@@ -155,7 +155,9 @@ struct StrandiOSApp: App {
                 model.applySmartAlarm()
                 Task {
                     health.refreshAuthIfPreviouslyGranted()
-                    await health.sync()
+                    // Its own task: the first Apple Health import runs for minutes (it shows its own progress
+                    // and the app stays usable), and the widget + watch refresh below mustn't wait for it.
+                    Task { await health.sync() }
                     await WidgetSnapshot.publish(from: model)
                     // Push the wrist on the SAME refresh as the Home-screen widget so the watch, the
                     // widget and Today never disagree about which day they describe. Without this the

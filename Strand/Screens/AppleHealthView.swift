@@ -428,7 +428,7 @@ struct AppleHealthView: View {
                     Button {
                         Task {
                             await health.requestAuthorization()
-                            await health.sync()
+                            await health.sync(userInitiated: true)
                             await load()
                         }
                     } label: {
@@ -444,26 +444,55 @@ struct AppleHealthView: View {
                     }
 
                 case .authorized:
-                    if let last = health.lastSync {
-                        Text("Last synced \(relativeAgo(last.timeIntervalSince1970)).")
-                            .font(StrandFont.subhead)
-                            .foregroundStyle(StrandPalette.textSecondary)
+                    if let p = health.progress {
+                        syncProgress(p)
                     } else {
-                        Text("Connected. Reading on launch and when you return to NOOP.")
-                            .font(StrandFont.subhead)
-                            .foregroundStyle(StrandPalette.textSecondary)
-                    }
-                    Button {
-                        Task {
-                            await health.sync()
-                            await load()
+                        if let last = health.lastSync {
+                            Text("Last synced \(relativeAgo(last.timeIntervalSince1970)).")
+                                .font(StrandFont.subhead)
+                                .foregroundStyle(StrandPalette.textSecondary)
+                        } else {
+                            Text("Connected. Reading on launch and when you return to NOOP.")
+                                .font(StrandFont.subhead)
+                                .foregroundStyle(StrandPalette.textSecondary)
                         }
-                    } label: {
-                        Label("Sync now", systemImage: "arrow.triangle.2.circlepath")
+                        let history = health.historyFraction
+                        if history < 1 {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text("History, last 14 months")
+                                    Spacer()
+                                    Text(history, format: .percent.precision(.fractionLength(0)))
+                                        .font(StrandFont.captionNumber)
+                                }
+                                .font(StrandFont.caption)
+                                .foregroundStyle(StrandPalette.textSecondary)
+                                ProgressView(value: history)
+                                    .tint(StrandPalette.metricCyan)
+                            }
+                        }
+                        Button {
+                            Task {
+                                await health.sync(userInitiated: true)
+                                await load()
+                            }
+                        } label: {
+                            if history < 1 {
+                                Label("Resume import", systemImage: "arrow.down.circle")
+                            } else {
+                                Label("Sync now", systemImage: "arrow.triangle.2.circlepath")
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(StrandPalette.metricCyan)
+                        .disabled(health.syncing)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(StrandPalette.metricCyan)
-                    .disabled(health.syncing)
+                    if let note = health.statusNote {
+                        Text(note)
+                            .font(StrandFont.footnote)
+                            .foregroundStyle(StrandPalette.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
 
                 if let err = health.lastError {
@@ -473,6 +502,45 @@ struct AppleHealthView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+        }
+    }
+
+    /// The running import in detail: how far, what it is reading and which days, that NOOP stays usable,
+    /// and a pause button (everything saved stays saved; it resumes from there).
+    private func syncProgress(_ p: HealthKitBridge.SyncProgress) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(p.isHistoryImport ? String(localized: "Importing from Apple Health")
+                     : String(localized: "Updating from Apple Health"))
+                    .font(StrandFont.subhead)
+                    .foregroundStyle(StrandPalette.textSecondary)
+                Spacer()
+                Text(p.fraction, format: .percent.precision(.fractionLength(0)))
+                    .font(StrandFont.captionNumber)
+                    .foregroundStyle(StrandPalette.textPrimary)
+            }
+            ProgressView(value: p.fraction)
+                .tint(StrandPalette.metricCyan)
+            Text(verbatim: "\(p.step) · \(p.period)")
+                .font(StrandFont.caption)
+                .foregroundStyle(StrandPalette.textTertiary)
+            Text("You can keep using NOOP meanwhile: the import carries on while you look around.")
+                .font(StrandFont.caption)
+                .foregroundStyle(StrandPalette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+            if p.isHistoryImport {
+                Text("The screen stays on until it's done: locking the iPhone pauses the import, and it resumes when you open NOOP again.")
+                    .font(StrandFont.caption)
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Button {
+                health.pauseSync()
+            } label: {
+                Label("Pause", systemImage: "pause.fill")
+            }
+            .buttonStyle(.bordered)
+            .tint(StrandPalette.metricCyan)
         }
     }
     #endif
