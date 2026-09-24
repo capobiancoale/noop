@@ -144,13 +144,55 @@ pNN50 = 100 · (count of |ΔNN| > 50 ms) / (N − 1)
 
 `rmssdRaw(_:)` and `sdnnRaw(_:)` are the raw primitives (no filtering, return `nil` for fewer than 2 values).
 
-### Cleaning pipeline (`cleanRR`)
+### Cleaning pipeline (`clean` / `cleanTimed`)
 
-1. **Range filter** — drop intervals outside `[rrMinMs, rrMaxMs] = [300, 2000]` ms (≈ 200 bpm to 30 bpm).
-2. **Ectopic rejection (Malik-style)** — drop any beat deviating more than `ectopicThreshold = 0.20` (20%) from a **local median** over a centered window of `2·ectopicWindowRadius + 1 = 5` beats. Beats with too small a neighbourhood are kept.
-3. **Sufficiency gate** — require at least `minBeats = 20` clean intervals before returning a trustworthy result; otherwise `HRVResult.empty(...)`.
+1. **Hard plausibility split** — values outside `[150, 3000]` ms are not heartbeats (dropouts, noise): they are
+   removed and split the series. With timestamps, a time gap longer than the interval (+2 s of 1-s stamp
+   slack) also splits it. Successive differences are never taken across a split.
+2. **Artefact correction — Lipponen & Tarvainen (2019)**, the automatic correction Kubios HRV applies by
+   default (`RRArtefactCorrection.swift`). Adaptive thresholds (5.2 quartile deviations over 91 beats) and a
+   decision flow classify each beat as ectopic, missed, extra or long/short; extra detections are merged,
+   missed beats split in two, ectopic and misplaced beats re-estimated with a cubic spline. Correcting
+   instead of deleting keeps every successive difference between truly adjacent beats.
+3. **Physiological range** — corrected values outside `[300, 2000]` ms (≈ 200–30 bpm) are removed and split.
+4. **Sufficiency gate** — at least `minBeats = 20` clean intervals, otherwise `HRVResult.empty(...)`.
 
-> **Honest substitution.** The reference Python pipeline ran neurokit2's Kubios / Lipponen–Tarvainen (2019) artifact classifier, which isn't available on-device. NOOP substitutes the classical **Malik et al. (1989)** 20%-local-median rule — a simpler, fully deterministic approximation of the same intent (remove physiologically impossible beat-to-beat jumps before computing HRV). It does not model the missed/extra-beat insertion that Kubios does.
+This replaces the earlier Malik (1989) 20%-of-local-median deletion. A fixed 20% rule cannot adapt to the
+person's own variability: on a real five-minute stretch of large sinus arrhythmia from PhysioNet Fantasia
+(f1y01, every beat annotated normal) it deletes 22 of 300 genuine beats and cuts RMSSD by more than a third,
+while Lipponen–Tarvainen flags none (pinned in `RRArtefactCorrectionTests`).
+
+**Validation.** `Tools/hrv-validation` reruns the paper's own evaluation on the same public database
+(Fantasia, 8 recordings, 61,437 normal intervals, 611 simulated artefacts per class):
+
+| Beats | Detected — NOOP (paper) |
+|---|---|
+| Normal, kept as normal | 99.84% (99.96%) |
+| Missed / extra | 100% / 99.2% (100% / 100%) |
+| Misaligned by 2 / 4 / 8 × RMSSD | 61% / 99.0% / 100% (54% / 99.3% / 100%) |
+
+On 48 five-minute samples, RMSSD errors of +427% (missed), +181% (extra) and +34% (misaligned, q = 4) become
+−3.0%, −2.7% and −2.8% after correction; clean samples move by −2.8%. With the same threshold reading the
+labels match NeuroKit2's open implementation on 99.9996% of 245,259 intervals.
+
+One interpretation is documented in the source: eqs. 2 and 6 print the quartile deviation of |x|, but the
+paper's own justification of α = 5.2 ("covers 99.95% of all beats if normally distributed") only holds for
+the signed series (5.2 × 0.674σ = 3.5σ). The signed reading is the one that reproduces the paper's Table 1;
+the |x| reading (NeuroKit2's) flags 1.1% of normal beats and detects 89% of the smallest displacements.
+
+### Nightly window quality (`windowQuality`)
+
+`SleepSession.avgHRV` is the mean RMSSD of the 5-min windows that pass three evidence-based gates:
+
+- **≥ 120 s of clean beats** — RMSSD from 2 minutes tracks a 5-minute reference at r = 0.986
+  (Munoz et al., PLoS One 2015, n = 3,387);
+- **≤ 5% corrected beats** — Kubios' default acceptance threshold ("the number of corrected beats should not be
+  too high (preferably <5%) not to cause significant distortion", Kubios HRV Scientific User's Guide);
+- **≤ 36% of delivered intervals lost** — RMSSD stayed within 5% with up to 36% of intervals removed
+  (Sheridan et al., Psychiatry Investig 2020).
+
+A window that needed too much repair is excluded rather than averaged in; a night with no accepted window
+has no HRV rather than an inflated one.
 
 ### API
 
@@ -159,7 +201,7 @@ HRVAnalyzer.analyze(_ rr: [RRInterval], windowStart: Int?, windowEnd: Int?) -> H
 HRVAnalyzer.analyze(rawRR: [Double]) -> HRVResult
 ```
 
-`HRVResult` carries `rmssd`, `sdnn`, `meanNN`, `pnn50`, plus `nInput` and `nClean` (counts before/after cleaning) for transparency.
+`HRVResult` carries `rmssd`, `sdnn`, `meanNN`, `pnn50`, plus `nInput`, `nClean`, `nDropped` and `nCorrected` for transparency. A spot reading can also pass `maxRejectedFraction` (default 0.35) to refuse a capture where too many beats were lost or corrected.
 
 ---
 
@@ -306,7 +348,7 @@ Consecutive same-stage epochs are merged into `StageSegment`s tiling `[start, en
 
 ### Outputs
 
-- `SleepSession` — `start`, `end`, `efficiency` (AASM `asleep / in-bed`, where `asleep = in-bed − wake`), `stages`, per-session `restingHR` (lowest 5-min rolling-mean HR) and `avgHRV` (mean RMSSD over 5-min tumbling windows).
+- `SleepSession` — `start`, `end`, `efficiency` (AASM `asleep / in-bed`, where `asleep = in-bed − wake`), `stages`, per-session `restingHR` (lowest 5-min rolling-mean HR) and `avgHRV` (mean RMSSD over the quality-accepted 5-min tumbling windows, see `windowQuality`).
 - `hypnogramMetrics(_:)` — AASM-style roll-up: TIB / TST / SPT / SOL / REM latency / WASO / efficiency / disturbances, plus deep/REM/light minutes and percentages.
 
 ---
@@ -499,7 +541,7 @@ Apple Health XML ──┘                                         │
 
 ## Conventions & honesty notes
 
-- **Approximate by design.** Charge, Effort, Rest (and sleep stages, workout intensity, calories) are transparent approximations of published methods — not reproductions of any proprietary algorithm. They're **independent approximations from a consumer strap, built on open science — not medical advice, and not WHOOP's official scores.** Each engine's source header states exactly where it approximates (e.g. Malik instead of Kubios; RMSSD-only parasympathetic tone; normal-approx p-values).
+- **Approximate by design.** Charge, Effort, Rest (and sleep stages, workout intensity, calories) are transparent approximations of published methods — not reproductions of any proprietary algorithm. They're **independent approximations from a consumer strap, built on open science — not medical advice, and not WHOOP's official scores.** Each engine's source header states exactly where it approximates (e.g. RMSSD-only parasympathetic tone; normal-approx p-values).
 - **One scale, honest about certainty.** All three scores are 0–100 and each rides a Solid / Building / Calibrating confidence tier; a score that can't be computed honestly shows nothing rather than a number.
 - **Deterministic.** No randomness, no wall-clock dependence inside the math, no DB/network access. Same inputs → same outputs, which makes the package unit-testable against fixed vectors.
 - **Robust statistics.** z-scores use EWMA mean-absolute-deviation (`× 1.253` to a Gaussian σ); resting HR uses 5-minute bin minima; HR display uses windowed medians — all chosen to resist single-sample outliers.

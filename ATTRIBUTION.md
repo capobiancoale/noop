@@ -45,6 +45,13 @@ own Charge/Rest, and **never** reads or displays Oura's encrypted readiness or s
 documented Oura file-import lane (`Packages/StrandImport/Sources/StrandImport/OuraExportParser.swift`)
 remains available as a fallback.
 
+## Test and validation data
+- **PhysioNet Fantasia Database** (doi:10.13026/C2RG61, Open Data Commons Attribution License v1.0) — two
+  short RR-interval excerpts (records f1o10 and f1y01) in the StrandAnalytics tests, and the downloaded
+  beat annotations `Tools/hrv-validation` uses to validate the HRV artefact correction. Iyengar N, Peng C-K,
+  Morin R, Goldberger AL, Lipsitz LA. Age-related alterations in the fractal scaling of cardiac interbeat
+  interval dynamics. Am J Physiol 1996;271:R1078–R1084.
+
 ## Other
 - **GRDB.swift** (`groue/GRDB.swift`) — SQLite persistence (via Swift Package Manager).
 - **MarkdownUI** (`gonzalezreal/swift-markdown-ui`) — renders the AI Coach's Markdown
