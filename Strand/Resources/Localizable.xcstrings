@@ -131059,6 +131059,676 @@
           }
         }
       }
+    },
+    "Your aerobic fitness estimated from your own data, next to the values you measure": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua forma aerobica stimata dai tuoi dati, accanto ai valori che misuri"
+          }
+        }
+      }
+    },
+    "Delete this value?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminare questo valore?"
+          }
+        }
+      }
+    },
+    "From runs and walks": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da corse e camminate"
+          }
+        }
+      }
+    },
+    "At rest": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A riposo"
+          }
+        }
+      }
+    },
+    "Your latest": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo ultimo"
+          }
+        }
+      }
+    },
+    "Your entries": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I tuoi valori"
+          }
+        }
+      }
+    },
+    "Last 12 months": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultimi 12 mesi"
+          }
+        }
+      }
+    },
+    "Series": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serie"
+          }
+        }
+      }
+    },
+    "mL/kg/min": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mL/kg/min"
+          }
+        }
+      }
+    },
+    "VO₂max over the last 12 months": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VO₂max negli ultimi 12 mesi"
+          }
+        }
+      }
+    },
+    "From your runs and walks": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dalle tue corse e camminate"
+          }
+        }
+      }
+    },
+    "From 1 session in the last 90 days.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da 1 sessione negli ultimi 90 giorni."
+          }
+        }
+      }
+    },
+    "Median of %lld sessions in the last 90 days (%@–%@).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mediana di %lld sessioni negli ultimi 90 giorni (%@–%@)."
+          }
+        }
+      }
+    },
+    "With fewer than 3 sessions the number can move a lot from one run to the next.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con meno di 3 sessioni il valore può cambiare molto da una corsa all'altra."
+          }
+        }
+      }
+    },
+    "No walks or runs with a distance yet.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora nessuna camminata o corsa con una distanza."
+          }
+        }
+      }
+    },
+    "None of your recent walks or runs qualifies yet.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna delle tue camminate o corse recenti è ancora utilizzabile."
+          }
+        }
+      }
+    },
+    "Record a walk or run with GPS in NOOP, or import it from Apple Health or a GPX, TCX or FIT file, with the strap on: at least 10 minutes at a steady pace, hard enough to breathe faster than normal (50–85% of your heart-rate reserve).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra una camminata o una corsa con il GPS in NOOP, oppure importala da Apple Health o da un file GPX, TCX o FIT, indossando la fascia: almeno 10 minuti a ritmo costante, abbastanza intensi da respirare più velocemente del normale (50–85% della riserva di frequenza cardiaca)."
+          }
+        }
+      }
+    },
+    "your setting": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "la tua impostazione"
+          }
+        }
+      }
+    },
+    "from your hardest workouts": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dai tuoi allenamenti più intensi"
+          }
+        }
+      }
+    },
+    "estimated from age": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "stimata dall'età"
+          }
+        }
+      }
+    },
+    "Sessions that count": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessioni utilizzate"
+          }
+        }
+      }
+    },
+    "Show all %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra tutte (%lld)"
+          }
+        }
+      }
+    },
+    "Run": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corsa"
+          }
+        }
+      }
+    },
+    "Walk": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camminata"
+          }
+        }
+      }
+    },
+    "HRR": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FCR"
+          }
+        }
+      }
+    },
+    "Not counted (last 90 days)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non conteggiate (ultimi 90 giorni)"
+          }
+        }
+      }
+    },
+    "%lld × %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld × %@"
+          }
+        }
+      }
+    },
+    "no heart rate from the strap, or no resting heart rate yet": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nessuna frequenza cardiaca dalla fascia, o ancora nessuna frequenza a riposo"
+          }
+        }
+      }
+    },
+    "shorter than 10 minutes or 1 km": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "più brevi di 10 minuti o di 1 km"
+          }
+        }
+      }
+    },
+    "longer than 90 minutes (heart rate drifts up)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "più lunghe di 90 minuti (la frequenza cardiaca tende a salire)"
+          }
+        }
+      }
+    },
+    "pace outside the range the equations cover": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ritmo fuori dall'intervallo coperto dalle equazioni"
+          }
+        }
+      }
+    },
+    "too easy (under 50% of heart-rate reserve)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "troppo facili (sotto il 50% della riserva di frequenza cardiaca)"
+          }
+        }
+      }
+    },
+    "too hard to be steady (over 85% of heart-rate reserve)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "troppo intense per essere costanti (oltre l'85% della riserva di frequenza cardiaca)"
+          }
+        }
+      }
+    },
+    "± %@ mL/kg/min": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "± %@ mL/kg/min"
+          }
+        }
+      }
+    },
+    "%lld bpm (median of %lld nights)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld bpm (mediana di %lld notti)"
+          }
+        }
+      }
+    },
+    "Activity index (HUNT, 0–15)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indice di attività (HUNT, 0–15)"
+          }
+        }
+      }
+    },
+    "From your age, sex, waist, resting heart rate and how much you train. Estimates made at rest are the less accurate kind: expect it to be off by more than the one from your runs and walks.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da età, sesso, girovita, frequenza cardiaca a riposo e quanto ti alleni. Le stime a riposo sono le meno precise: aspettati un errore maggiore rispetto a quella da corse e camminate."
+          }
+        }
+      }
+    },
+    "Add your waist circumference to see this estimate: it is one of the model's inputs.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi la circonferenza della vita per vedere questa stima: è uno dei dati del modello."
+          }
+        }
+      }
+    },
+    "Open Settings": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri Impostazioni"
+          }
+        }
+      }
+    },
+    "Needs at least %lld nights of resting heart rate in the last week.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servono almeno %lld notti di frequenza cardiaca a riposo nell'ultima settimana."
+          }
+        }
+      }
+    },
+    "Your values": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I tuoi valori"
+          }
+        }
+      }
+    },
+    "Add a VO₂max value": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi un valore di VO₂max"
+          }
+        }
+      }
+    },
+    "Enter a VO₂max from a lab test, a field test or another device to see how the estimates compare with it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci un VO₂max da un test in laboratorio, un test sul campo o un altro dispositivo per vedere come si confrontano le stime."
+          }
+        }
+      }
+    },
+    "Delete this value": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina questo valore"
+          }
+        }
+      }
+    },
+    "From runs and walks then": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da corse e camminate, a quella data"
+          }
+        }
+      }
+    },
+    "At rest then": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A riposo, a quella data"
+          }
+        }
+      }
+    },
+    "No estimate from that time to compare with.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna stima di quel periodo con cui confrontarlo."
+          }
+        }
+      }
+    },
+    "How this is worked out": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Come viene calcolato"
+          }
+        }
+      }
+    },
+    "From runs and walks: the oxygen cost of each steady session's pace (ACSM equations, level ground) is scaled up to your maximum through your heart-rate reserve, which tracks your oxygen-uptake reserve (Swain 1997, 1998). One steady stage estimated VO₂max within about 4 mL/kg/min in a lab validation (Swain 2004). The number is the median of your latest sessions.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da corse e camminate: il costo in ossigeno del ritmo di ogni sessione costante (equazioni ACSM, terreno piano) viene riportato al tuo massimo attraverso la riserva di frequenza cardiaca, che segue la riserva di consumo di ossigeno (Swain 1997, 1998). In una validazione di laboratorio una sola fase costante ha stimato il VO₂max con un errore di circa 4 mL/kg/min (Swain 2004). Il valore è la mediana delle tue sessioni più recenti."
+          }
+        }
+      }
+    },
+    "At rest: the HUNT fitness model (Nes 2011) from age, sex, waist, resting heart rate and activity.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A riposo: il modello di forma fisica HUNT (Nes 2011) da età, sesso, girovita, frequenza cardiaca a riposo e attività."
+          }
+        }
+      }
+    },
+    "Across 14 studies, wearable estimates made during exercise had no average bias and 95% of people within about ±10 mL/kg/min; those made at rest read about 2 mL/kg/min high with a wider spread (INTERLIVE, Molina-Garcia 2022). A lab test with gas analysis stays the reference.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 14 studi, le stime dei dispositivi indossabili fatte durante l'esercizio non avevano un errore medio e il 95% delle persone era entro circa ±10 mL/kg/min; quelle a riposo risultavano circa 2 mL/kg/min più alte, con una dispersione maggiore (INTERLIVE, Molina-Garcia 2022). Il riferimento resta un test di laboratorio con analisi dei gas."
+          }
+        }
+      }
+    },
+    "Hills, heat, fatigue, a strap reading your cadence instead of your pulse, or a wrong max heart rate all push the estimate off. Set your max heart rate in Settings if you know it from a test.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salite, caldo, stanchezza, una fascia che legge la cadenza invece del battito o una frequenza massima sbagliata falsano la stima. Imposta la tua frequenza cardiaca massima nelle Impostazioni se la conosci da un test."
+          }
+        }
+      }
+    },
+    "From a lab test, a field test or another device.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da un test in laboratorio, un test sul campo o un altro dispositivo."
+          }
+        }
+      }
+    },
+    "e.g. 48.5": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "es. 48,5"
+          }
+        }
+      }
+    },
+    "Enter a value between %lld and %lld.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci un valore tra %lld e %lld."
+          }
+        }
+      }
+    },
+    "Measured on": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Misurato il"
+          }
+        }
+      }
+    },
+    "Date of the measurement": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data della misurazione"
+          }
+        }
+      }
+    },
+    "How": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Come"
+          }
+        }
+      }
+    },
+    "Lab test (gas analysis)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test in laboratorio (analisi dei gas)"
+          }
+        }
+      }
+    },
+    "Field test": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test sul campo"
+          }
+        }
+      }
+    },
+    "Another device or app": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un altro dispositivo o app"
+          }
+        }
+      }
+    },
+    "VO₂ Max (at rest)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VO₂ Max (a riposo)"
+          }
+        }
+      }
+    },
+    "VO₂ Max (from runs and walks)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VO₂ Max (da corse e camminate)"
+          }
+        }
+      }
+    },
+    "VO₂ Max (your entries)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VO₂ Max (i tuoi valori)"
+          }
+        }
+      }
+    },
+    "From your runs and walks, at rest, and your own values": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dalle tue corse e camminate, a riposo e i tuoi valori"
+          }
+        }
+      }
+    },
+    "VO₂max: from your runs and walks, at rest, and your own values": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VO₂max: dalle tue corse e camminate, a riposo e i tuoi valori"
+          }
+        }
+      }
+    },
+    "VO₂max at rest": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VO₂max a riposo"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

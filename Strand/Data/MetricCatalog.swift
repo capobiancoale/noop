@@ -23,6 +23,7 @@ struct MetricDescriptor: Identifiable, Hashable {
         case "xiaomi-band":  return "Mi Band"
         case "nutrition-csv": return String(localized: "Nutrition")
         case "noop-mood":    return String(localized: "Mood")
+        case "manual-vo2max": return String(localized: "Your entries")
         default:             return "Whoop"   // "my-whoop" + on-device computed sources
         }
     }
@@ -108,7 +109,11 @@ enum MetricCatalog {
         d("energy_kcal", String(localized: "Calories"), "Heart", "kcal", "my-whoop", "flame", 0, nil),
         d("vo2max", String(localized: "VO₂ Max"), "Heart", "", "apple-health", "lungs.fill", 1, true),
         d("fitness_age", String(localized: "Fitness Age"), "Heart", "yrs", "my-whoop", "figure.run", 0, false),
-        d("vo2max_est", String(localized: "VO₂ Max (estimated)"), "Heart", "", "my-whoop", "lungs", 1, true),
+        d("vo2max_est", String(localized: "VO₂ Max (at rest)"), "Heart", "", "my-whoop", "lungs", 1, true),
+        d("vo2max_exercise", String(localized: "VO₂ Max (from runs and walks)"), "Heart", "", "my-whoop",
+          "figure.run", 1, true),
+        d("vo2max_manual", String(localized: "VO₂ Max (your entries)"), "Heart", "", "manual-vo2max",
+          "square.and.pencil", 1, true),
         d("vitality", String(localized: "Vitality"), "Heart", "", "my-whoop", "sparkles", 0, true),
         d("body_age", String(localized: "Body Age"), "Heart", "yrs", "my-whoop", "figure.stand", 0, false),
 

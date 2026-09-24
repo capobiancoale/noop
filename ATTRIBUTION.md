@@ -51,6 +51,12 @@ remains available as a fallback.
   beat annotations `Tools/hrv-validation` uses to validate the HRV artefact correction. Iyengar N, Peng C-K,
   Morin R, Goldberger AL, Lipsitz LA. Age-related alterations in the fractal scaling of cardiac interbeat
   interval dynamics. Am J Physiol 1996;271:R1078–R1084.
+- **PhysioNet "Treadmill Maximal Exercise Tests from the Exercise Physiology and Human Performance Lab of the
+  University of Malaga"** (v1.0.1, doi:10.13026/7ezk-j442, CC BY-NC-SA 4.0) — downloaded by
+  `Tools/vo2max-validation` to check the assumptions behind the VO₂max estimate. Nothing from it is committed
+  or shipped; only aggregate results are reported. Mongin D, García Romero J, Alvero Cruz JR (2021),
+  PhysioNet; and Goldberger AL et al. PhysioBank, PhysioToolkit, and PhysioNet. Circulation
+  2000;101(23):e215–e220.
 
 ## Other
 - **GRDB.swift** (`groue/GRDB.swift`) — SQLite persistence (via Swift Package Manager).

@@ -35,11 +35,16 @@ corroborated by the **CERG/NTNU** group that authored the original work.
 ### The PA-index (no questionnaire required)
 
 The Nes model takes a **physical-activity index** that, in HUNT, came from the **HUNT1 PA-Q**
-questionnaire (Kurtze 2008) — a short self-report of weekly exercise frequency, duration and intensity
-mapped onto a 0–7.5 scale. NOOP doesn't ask the user to fill that in. Instead it **reconstructs the
-PA-index on-device** from the measured training signal it already records (workout frequency, duration
-and strain/intensity over the rolling window), mapping it onto the same scale the questionnaire produced.
-This keeps the input honest — it's derived from what you actually did, not what you'd claim on a survey.
+questionnaire (Kurtze 2008) — a short self-report of weekly exercise frequency, intensity and duration,
+multiplied into a 0–15 score. The answers are scored as published for HUNT (Nauman, Nes et al., PLoS One
+2012): frequency never / less than once a week 0, once a week 1, 2–3 times a week 2.5, almost every day 5;
+intensity easy 1, hard 2, near exhaustion 3; duration under 15 min 0.1, 15–29 min 0.38, 30–60 min 0.75,
+over an hour 1.0. NOOP doesn't ask the user to fill that in. Instead it **reconstructs the PA-index
+on-device** from the measured training signal it already records: active days in the last 7 give the
+frequency score (one day 1, two to four 2.5, five or more 5), and the mean Effort of those days gives the
+intensity × duration product. This keeps the input honest — it's derived from what you actually did, not
+what you'd claim on a survey. (Until September 2026 one active day scored 0.5 and two scored 1.0, one
+category below the HUNT coding; that under-read light training weeks.)
 
 ### The Fitness Age itself needs no body measurement
 
@@ -72,7 +77,9 @@ The weekly results are stored in `metricSeries` under two keys, written to the c
 | `fitness_age`  | years      | the headline number (drives the UI)                 |
 | `vo2max_est`   | ml/kg/min  | the explicit VO₂max estimate (only when waist given) |
 
-The UI reads the **latest** `fitness_age` value.
+The UI reads the **latest** `fitness_age` value. The VO₂max screen shows `vo2max_est` as the estimate
+*at rest*, beside the estimate from walks and runs and the values you enter — see
+[VO2MAX.md](VO2MAX.md).
 
 ## Honesty disclaimer
 

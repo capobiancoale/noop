@@ -973,6 +973,30 @@ final class IntelligenceEngine: ObservableObject {
             _ = try? await store.upsertMetricSeries(faPts, deviceId: computedId)
         }
 
+        // ── VO₂max from walks and runs , one point per session day ─────────────────────────────────────
+        // What the exercise estimate read after each qualifying walk or run of the last year (VO2maxEngine: the
+        // ACSM oxygen cost of the pace, extrapolated through %HRR = %VO2R to HRmax, Swain 2004; the median of
+        // the newest ≤5 sessions in 90 days), upserted under the "-noop" source for the metric explorer. The
+        // VO₂max screen recomputes the same thing live, with every session and why it counted or not. Days that
+        // no longer carry a qualifying session (a deleted workout, a new HRmax) are evicted from the year.
+        let vo2Inputs = await repo.vo2maxInputs(days: 365, age: profile.age, userSetMaxHR: profile.hrMaxOverride)
+        var vo2ByDay: [String: Double] = [:]
+        for p in VO2maxEngine.trend(vo2Inputs.estimates) {   // oldest first: a day's last session wins
+            vo2ByDay[Repository.dayString(Date(timeIntervalSince1970: TimeInterval(p.start)))] = p.estimate.vo2max
+        }
+        if !vo2ByDay.isEmpty {
+            _ = try? await store.upsertMetricSeries(
+                vo2ByDay.map { MetricPoint(day: $0.key, key: "vo2max_exercise", value: $0.value) }, deviceId: computedId)
+        }
+        let vo2Window = (from: Repository.dayString(Date().addingTimeInterval(-365 * 86_400)),
+                         to: Repository.dayString(Date().addingTimeInterval(86_400)))
+        let storedVO2 = (try? await store.metricSeries(deviceId: computedId, key: "vo2max_exercise",
+                                                       from: vo2Window.from, to: vo2Window.to)) ?? []
+        for stale in storedVO2 where vo2ByDay[stale.day] == nil {
+            _ = try? await store.deleteMetricSeries(deviceId: computedId, key: "vo2max_exercise",
+                                                    from: stale.day, to: stale.day)
+        }
+
         // ── Vitality / Body Age (Phase 7) , weekly, keyed to the week's Saturday ────────────────────
         // Roll the last 7 days' wearable signals into the mortality-hazard model and upsert a weekly
         // Vitality (0–100) + Body Age. VitalityEngine gates on ≥3 inputs, so a sparse week writes nothing.

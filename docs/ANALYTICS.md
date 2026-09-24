@@ -485,6 +485,27 @@ therefore flags Charge with the night's events (level, minutes, lowest value, ti
 that night-time lows are more likely then (EASD/ISPAD position statement, Moser et al., Diabetologia 2020).
 The flag is informational: Charge itself is unchanged and nothing suggests carbs or insulin.
 
+## VO₂max (`VO2maxEngine`)
+
+Source: `VO2maxEngine.swift`, screen `VO2maxView`; full method, validation and references in
+[VO2MAX.md](VO2MAX.md). Three views side by side, never blended:
+
+- **From runs and walks.** Each steady walk or run (10–90 min, ≥ 1 km, 50–85 % of heart-rate reserve, pace
+  inside the equation's range) is a single-stage submaximal test: the ACSM oxygen cost of its pace
+  (walking 3.5 + 0.1·S, running 3.5 + 0.2·S, S in m/min, level ground), extrapolated to HRmax through
+  %HRR = %VO₂R (Swain & Leutholtz 1997; Swain et al. 1998): `VO₂max = 3.5 + (VO₂ − 3.5) / %HRR` — validated
+  from one steady stage at r 0.89, SEE 4.0 mL/kg/min, no bias (Swain et al. 2004). Heart rate is the strap's
+  per-minute mean after the first 3 minutes; resting HR the 14-night median; HRmax the user's setting, else the
+  second-highest believable workout peak of the year, else Tanaka. The number is the median of the newest
+  ≤ 5 sessions of 90 days, stored per session day as `vo2max_exercise`.
+- **At rest.** The HUNT non-exercise model (Nes et al. 2011) ± its SEE, weekly as `vo2max_est` (Fitness Age).
+- **Your values.** Entered by hand (`vo2max_manual`, source `manual-vo2max`), each compared with both estimates
+  at that date.
+
+`Tools/vo2max-validation` checks the assumptions on 981 laboratory treadmill tests (PhysioNet, Malaga): the
+submaximal HR–VO₂ line reaches VO₂max at HRmax with bias +0.85, SD 5.5 mL/kg/min (SD 7.0 with an age-predicted
+HRmax), and Tanaka's HRmax is unbiased there (−0.9 bpm, SD 9.1).
+
 ## `WorkoutDetector` + `Calories` — retroactive workout detection
 
 Source: `WorkoutDetector.swift`. Finds workouts in the stored 1 Hz HR + gravity streams (no manual logging).

@@ -304,6 +304,7 @@ struct RootTabView: View {
                     MoreRow("Workouts", "figure.run") { WorkoutsView() }
                     MoreRow("WOD Log", "figure.strengthtraining.traditional") { WodLogView() }
                     MoreRow("Health", "heart.text.square.fill") { HealthView() }
+                    MoreRow("VO₂max", "lungs.fill") { VO2maxView() }
                     MoreRow("Lab Book", "books.vertical.fill") { LabBookView() }
                     MoreRow("Stress", "bolt.heart.fill") { StressView() }
                     MoreRow("Breathe", "wind") { BreathingView() }
