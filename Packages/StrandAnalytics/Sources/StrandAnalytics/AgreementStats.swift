@@ -146,13 +146,16 @@ public enum AgreementStats {
         // MOVER limits of agreement (Zou 2013): combine the CI of the mean with the chi-square CI of the SD.
         let sdLow = sd * (dfEff / Distributions.chiSquareQuantile(0.975, df: dfEff)).squareRoot()
         let sdHigh = sd * (dfEff / Distributions.chiSquareQuantile(0.025, df: dfEff)).squareRoot()
+        // Each math-function call gets its own typed line: on Apple platforms exp/log/pow/hypot… also have
+        // Float16 and CGFloat overloads, and chaining several in one expression makes the newest Swift type
+        // checker give up ("unable to type-check this expression in reasonable time").
         let lo = dMean - z * sd, hi = dMean + z * sd
-        let lowerLimit = Estimate(value: lo,
-                                  lower: lo - hypot(dMean - bias.lower, z * (sdHigh - sd)),
-                                  upper: lo + hypot(bias.upper - dMean, z * (sd - sdLow)))
-        let upperLimit = Estimate(value: hi,
-                                  lower: hi - hypot(dMean - bias.lower, z * (sd - sdLow)),
-                                  upper: hi + hypot(bias.upper - dMean, z * (sdHigh - sd)))
+        let biasDown: Double = dMean - bias.lower, biasUp: Double = bias.upper - dMean
+        let sdUp: Double = z * (sdHigh - sd), sdDown: Double = z * (sd - sdLow)
+        let loDown: Double = hypot(biasDown, sdUp), loUp: Double = hypot(biasUp, sdDown)
+        let hiDown: Double = hypot(biasDown, sdDown), hiUp: Double = hypot(biasUp, sdUp)
+        let lowerLimit = Estimate(value: lo, lower: lo - loDown, upper: lo + loUp)
+        let upperLimit = Estimate(value: hi, lower: hi - hiDown, upper: hi + hiUp)
 
         // Proportional bias and heteroscedasticity against the mean of the methods (Bland & Altman 1999).
         let prop = ols(x: a, y: d)
@@ -218,7 +221,8 @@ public enum AgreementStats {
         for i in 0..<n {
             for j in (i + 1)..<n {
                 guard let a = days[i], let b = days[j] else { continue }
-                total += 2 * pow(rho, Double(abs(b - a)))
+                let lagPower: Double = pow(rho, Double(abs(b - a)))
+                total += 2 * lagPower
             }
         }
         return min(Double(n), Double(n * n) / total)
@@ -250,7 +254,11 @@ public enum AgreementStats {
         }
         let slope = sxy / sxx
         let intercept = my - slope * mx
-        let sse = zip(x, y).reduce(0) { $0 + pow($1.1 - intercept - slope * $1.0, 2) }
+        var sse = 0.0
+        for (xi, yi) in zip(x, y) {
+            let residual: Double = yi - intercept - slope * xi
+            sse += residual * residual
+        }
         let se = (sse / (n - 2) / sxx).squareRoot()
         let t = Distributions.tQuantile(0.975, df: n - 2)
         return Line(intercept: intercept, slope: Estimate(value: slope, lower: slope - t * se, upper: slope + t * se))
@@ -268,14 +276,19 @@ public enum AgreementStats {
         let pc = 2 * sxy / denom
         let r = sxy / (sxx * syy).squareRoot()
         guard abs(pc) < 1, r != 0, n > 2 else { return Estimate(value: pc, lower: pc, upper: pc) }
-        let u = (my - mx) / pow(sxx * syy, 0.25)
-        let varP = ((1 - r * r) * pc * pc * (1 - pc * pc) / (r * r)
-                    + 2 * pow(pc, 3) * (1 - pc) * u * u / r
-                    - 0.5 * pow(pc, 4) * pow(u, 4) / (r * r)) / (n - 2)
-        let seZ = max(varP, 0).squareRoot() / (1 - pc * pc)
-        let zc = atanh(pc)
-        let q = Distributions.normalQuantile(0.975)
-        return Estimate(value: pc, lower: tanh(zc - q * seZ), upper: tanh(zc + q * seZ))
+        let scale: Double = pow(sxx * syy, 0.25)
+        let u: Double = (my - mx) / scale
+        // Lin 1989 variance of ẑ, term by term (see the note on typed lines in analyze).
+        let r2: Double = r * r, pc2: Double = pc * pc, u2: Double = u * u
+        let term1: Double = (1 - r2) * pc2 * (1 - pc2) / r2
+        let term2: Double = 2 * pc2 * pc * (1 - pc) * u2 / r
+        let term3: Double = 0.5 * pc2 * pc2 * u2 * u2 / r2
+        let varP: Double = (term1 + term2 - term3) / (n - 2)
+        let seZ: Double = max(varP, 0).squareRoot() / (1 - pc2)
+        let zc: Double = atanh(pc)
+        let halfWidth: Double = Distributions.normalQuantile(0.975) * seZ
+        let lower: Double = tanh(zc - halfWidth), upper: Double = tanh(zc + halfWidth)
+        return Estimate(value: pc, lower: lower, upper: upper)
     }
 
     static func pearson(_ x: [Double], _ y: [Double]) -> Double? {
@@ -313,7 +326,11 @@ public enum AgreementStats {
 /// incomplete beta and gamma functions, Numerical Recipes 3rd ed. §6.1–6.4), inverted by bisection.
 enum Distributions {
 
-    static func normalCDF(_ x: Double) -> Double { 0.5 * erfc(-x / 2.0.squareRoot()) }
+    static func normalCDF(_ x: Double) -> Double {
+        let scaled: Double = -x / 2.0.squareRoot()
+        let tail: Double = erfc(scaled)
+        return 0.5 * tail
+    }
 
     static func normalQuantile(_ p: Double) -> Double {
         invert(p, lower: -40, upper: 40, cdf: normalCDF)
@@ -352,7 +369,14 @@ enum Distributions {
     static func incompleteBeta(_ x: Double, a: Double, b: Double) -> Double {
         if x <= 0 { return 0 }
         if x >= 1 { return 1 }
-        let front = exp(lgamma(a + b) - lgamma(a) - lgamma(b) + a * log(x) + b * log(1 - x))
+        // One math-function call per typed line (see the note in AgreementStats.analyze).
+        let lnGammaAB: Double = lgamma(a + b)
+        let lnGammaA: Double = lgamma(a)
+        let lnGammaB: Double = lgamma(b)
+        let lnX: Double = log(x)
+        let ln1mX: Double = log(1 - x)
+        let lnFront: Double = lnGammaAB - lnGammaA - lnGammaB + a * lnX + b * ln1mX
+        let front: Double = exp(lnFront)
         if x < (a + 1) / (a + b + 2) { return front * betaContinuedFraction(x, a: a, b: b) / a }
         return 1 - front * betaContinuedFraction(1 - x, a: b, b: a) / b
     }
@@ -366,11 +390,12 @@ enum Distributions {
         var h = d
         for m in 1...10_000 {
             let md = Double(m)
-            var aa = md * (b - md) * x / ((a + 2 * md - 1) * (a + 2 * md))
+            let twoM: Double = 2 * md
+            var aa: Double = md * (b - md) * x / ((a + twoM - 1) * (a + twoM))
             d = 1 + aa * d; if abs(d) < tiny { d = tiny }
             c = 1 + aa / c; if abs(c) < tiny { c = tiny }
             d = 1 / d; h *= d * c
-            aa = -(a + md) * (a + b + md) * x / ((a + 2 * md) * (a + 2 * md + 1))
+            aa = -(a + md) * (a + b + md) * x / ((a + twoM) * (a + twoM + 1))
             d = 1 + aa * d; if abs(d) < tiny { d = tiny }
             c = 1 + aa / c; if abs(c) < tiny { c = tiny }
             d = 1 / d
@@ -384,14 +409,17 @@ enum Distributions {
     /// Regularized lower incomplete gamma P(a, x): series below a + 1, continued fraction above.
     static func incompleteGammaP(_ a: Double, _ x: Double) -> Double {
         if x <= 0 { return 0 }
-        let lnPre = a * log(x) - x - lgamma(a)
+        let lnX: Double = log(x)
+        let lnGammaA: Double = lgamma(a)
+        let lnPre: Double = a * lnX - x - lnGammaA
         if x < a + 1 {
             var sum = 1 / a, term = 1 / a, ap = a
             for _ in 0..<10_000 {
                 ap += 1; term *= x / ap; sum += term
                 if abs(term) < abs(sum) * 1e-16 { break }
             }
-            return sum * exp(lnPre)
+            let pre: Double = exp(lnPre)
+            return sum * pre
         }
         let tiny = 1e-300
         var b = x + 1 - a, c = 1 / tiny, d = 1 / b, h = d
@@ -405,6 +433,7 @@ enum Distributions {
             h *= del
             if abs(del - 1) < 1e-15 { break }
         }
-        return 1 - exp(lnPre) * h
+        let pre: Double = exp(lnPre)
+        return 1 - pre * h
     }
 }
