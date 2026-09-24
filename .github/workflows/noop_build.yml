@@ -7,8 +7,8 @@
 #   • Automatically on every push to this branch that changes the app (sources, packages, project.yml,
 #     fastlane). Turn it off with the repository variable AUTO_BUILD_ON_PUSH = false.
 #   • Monthly (1st of the month), to always have a fresh TestFlight build (they expire after 90 days).
-#     GitHub runs schedules ONLY from the repository's default branch: this fires only if this branch is
-#     the default one (Settings → General → Default branch). Otherwise just start it by hand now and then.
+# GitHub only offers "Run workflow" for, and only fires schedules from, workflows on the DEFAULT branch,
+# so this branch must be the repository's default (Settings → General → Default branch) — guide step 1b.
 # Push/scheduled runs are skipped quietly (no red ❌) until the TestFlight secrets are configured.
 name: 4. Build NOOP
 run-name: Build NOOP (${{ github.ref_name }} · ${{ github.event_name }})

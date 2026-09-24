@@ -31,6 +31,15 @@ Apri <https://github.com/capobiancoale/noop/actions> → **"I understand my work
 > È uno dei motivi più comuni per cui il "Loop automatic build" non parte: sui fork Actions e le
 > esecuzioni programmate sono disattivate di default.
 
+### 1b. Rendi `claude-automatic-build` la branch di default ⚠️ (obbligatorio)
+<https://github.com/capobiancoale/noop/settings> → sezione **Default branch** → icona ⇄ → scegli
+`claude-automatic-build` → **Update** → conferma.
+
+Perché serve: GitHub mostra il pulsante **Run workflow** solo per i workflow presenti nella branch di
+default, e fa partire le build **mensili** programmate solo da lì. Con `main` come default non vedresti
+i pulsanti dei workflow 1–4. (Alternativa: chiedi a Claude di copiare i quattro workflow anche in `main`;
+poi nel menu "Run workflow" scegli la branch `claude-automatic-build`.)
+
 ### 2. Team ID → secret `TEAMID`
 <https://developer.apple.com/account> → **Membership details** → **Team ID** (10 caratteri, maiuscole e numeri).
 
@@ -124,9 +133,8 @@ La domanda sulla crittografia ("Missing Compliance") non comparirà: è già dic
   fastlane) parte da sola una nuova build → ti arriva su TestFlight. Più push ravvicinati si mettono in
   coda (vince l'ultimo), mai due build insieme. Spegnibile con `AUTO_BUILD_ON_PUSH = false`.
 - **Una volta al mese** (il 1°), per avere sempre una build fresca — le build TestFlight scadono dopo
-  **90 giorni**. ⚠️ GitHub esegue gli orari programmati **solo dalla branch di default** del repository
-  (oggi è `main`). Per attivarlo: Settings → General → Default branch → `claude-automatic-build`.
-  Altrimenti basta lanciare "4. Build NOOP" a mano ogni tanto (o fare un push).
+  **90 giorni**. Funziona perché al passo 1b `claude-automatic-build` è diventata la branch di default
+  (GitHub esegue gli orari programmati solo da lì).
 - Finché i secret non sono configurati, le build automatiche vengono **saltate in silenzio** (niente ❌).
 
 **Per portare su TestFlight nuove funzioni:** vanno unite in questa branch — chiedi a Claude di farlo.
@@ -138,6 +146,7 @@ La domanda sulla crittografia ("Missing Compliance") non comparirà: è già dic
 | Messaggio / sintomo | Soluzione |
 |---|---|
 | I workflow non compaiono o non partono | Passo 1: abilita Actions sul fork. |
+| Non c'è il pulsante **Run workflow** / mancano i workflow 1–3 | Passo 1b: `claude-automatic-build` deve essere la branch di default. |
 | `The GH_PAT secret …` | Rigenera il token classic con scope `repo` (passo 4) e aggiorna il secret. |
 | `Unable to decrypt … MATCH_PASSWORD` | La password non è quella che ha cifrato il repository dei certificati. Rimetti quella giusta, oppure svuota `NOOP-Match-Secrets` e rilancia il passo 9. |
 | `Accept the latest Apple Developer Program License Agreement` | Accettalo su <https://developer.apple.com/account>, aspetta qualche minuto, riprova. |
@@ -145,7 +154,7 @@ La domanda sulla crittografia ("Missing Compliance") non comparirà: è già dic
 | `Could not read TestFlight builds for …` | Manca l'app su App Store Connect (passo 8), o il Bundle ID scelto è diverso. |
 | `maximum number of certificates` | Il team ha già troppi certificati di distribuzione (es. quello di Loop). O usi quello di Loop (`MATCH_REPO = Match-Secrets` + `MATCH_PASSWORD` di Loop), oppure revochi un certificato inutilizzato in developer.apple.com → Certificates. |
 | Errore di compilazione Swift | Scarica l'artifact **build-log** dalla pagina della run e passalo a Claude. |
-| La build mensile non parte | Vedi "Build automatiche": serve la branch di default. |
+| La build mensile non parte | Passo 1b: serve che questa sia la branch di default. |
 | Dopo un rinnovo automatico, Loop non builda più | Normale se Loop usa lo stesso team: lancia una volta "3. Create Certificates" di Loop. |
 
 ---
