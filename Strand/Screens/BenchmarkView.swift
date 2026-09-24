@@ -138,9 +138,12 @@ private struct MetricAgreementCard: View {
                      withUnit("\(fmt(r.lowerLimit.value, sign: true)) … \(fmt(r.upperLimit.value, sign: true))"),
                      "[\(fmt(r.lowerLimit.lower, sign: true)), \(fmt(r.lowerLimit.upper, sign: true))] … [\(fmt(r.upperLimit.lower, sign: true)), \(fmt(r.upperLimit.upper, sign: true))]")
             }
-            line(String(localized: "Concordance (Lin)"),
-                 "\(r.concordance.value.formatted(.number.precision(.fractionLength(3)))) · \(strengthLabel(r.concordanceStrength))",
-                 "[\(r.concordance.lower.formatted(.number.precision(.fractionLength(3)))), \(r.concordance.upper.formatted(.number.precision(.fractionLength(3))))]")
+            // Lin's CCC is undefined when either method never varies over the range: omit it then.
+            if r.concordance.value.isFinite {
+                line(String(localized: "Concordance (Lin)"),
+                     "\(r.concordance.value.formatted(.number.precision(.fractionLength(3)))) · \(strengthLabel(r.concordanceStrength))",
+                     "[\(r.concordance.lower.formatted(.number.precision(.fractionLength(3)))), \(r.concordance.upper.formatted(.number.precision(.fractionLength(3))))]")
+            }
             line(String(localized: "Typical error"),
                  withUnit(fmt(r.meanAbsoluteError)) + (r.meanAbsolutePercentError.map { " · \($0.formatted(.number.precision(.fractionLength(1))))%" } ?? ""),
                  r.within10Percent.map { String(localized: "\(Int(($0 * 100).rounded()))% of days within ±10%") })

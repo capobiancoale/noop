@@ -1518,7 +1518,7 @@ final class Repository: ObservableObject {
         case .hrv:
             // #803: plot a TRAILING-WINDOW rMSSD that MOVES across the session, not raw R-R ms mislabelled
             // "HRV". Read the R-R rows (low frequency, safe to load for a window) and hand them to
-            // HRVAnalyzer.rollingRmssd (the SAME range + Malik ectopic filtering the nightly path uses), so
+            // HRVAnalyzer.rollingRmssd (the SAME Lipponen–Tarvainen cleaning the nightly path uses), so
             // each point is an honest windowed rMSSD (ms). A sparse/artifact-heavy window emits nothing
             // rather than a noisy spike. The `to - from` span chooses the window width: a 2-min rMSSD for a
             // zoomed-in look, widening with the visible span so a day-scale view stays readable. The thinning

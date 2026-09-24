@@ -359,6 +359,7 @@ public enum DiabetesMetrics {
             var lastLow = k - 1, longest = k - i, run = 0, censored = false, endIndex = -1
             var p = k
             while p < g.count {
+                // Missing data closes the episode at its last known low; scanning resumes after the gap.
                 guard let x = g[p].mgdl else { censored = true; break }
                 if x < threshold {
                     run = 0
@@ -376,7 +377,9 @@ public enum DiabetesMetrics {
             if endIndex < 0 { censored = true }
             out.append(Episode(first: start, last: lastLow, endIndex: max(endIndex, lastLow),
                                censored: censored, longestLowRun: longest))
-            i = endIndex < 0 ? g.count : endIndex + need
+            // Resume after the recovery run, or at the gap that censored the episode (the trace may carry
+            // later events), or stop when the trace ran out inside it.
+            i = endIndex >= 0 ? endIndex + need : p
         }
         return out
     }

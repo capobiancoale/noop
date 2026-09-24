@@ -350,7 +350,7 @@ targets: [
 
 | Type | Entry points |
 |---|---|
-| `HRVAnalyzer` | `analyze(_:windowStart:windowEnd:)` and `analyze(rawRR:)` → `HRVResult` (RMSSD, SDNN, meanNN, pNN50). Range filter [300, 2000] ms + Malik 20%-local-median ectopic rejection; needs ≥ 20 clean beats. |
+| `HRVAnalyzer` | `analyze(_:windowStart:windowEnd:)` and `analyze(rawRR:)` → `HRVResult` (RMSSD, SDNN, meanNN, pNN50). Implausible values split the series; Lipponen–Tarvainen (2019) artefact correction per run (extra beats merged, missed beats split, ectopic/misplaced beats re-estimated); range [300, 2000] ms; RMSSD over adjacent beats only; needs ≥ 20 clean beats. |
 | `RecoveryScorer` | `restingHR(_:start:end:)`; `recovery(...)` → 0–100 (HRV-dominant z-score + logistic composite); `band(_:)` → `"red"`/`"yellow"`/`"green"`. |
 | `StrainScorer` | `strain(_:maxHR:restingHR:method:sex:denominator:)` → 0–21 (Edwards/Banister TRIMP, log-mapped); `tanakaHRmax(age:)`, `estimateHRmax(_:age:)`, `trimpToStrain(_:)`. |
 | `HRZones` | `zones(age:maxHROverride:)` → `HRZoneSet`; `timeInZone(_:zoneSet:)` → `TimeInZone`. |
@@ -361,6 +361,10 @@ targets: [
 | `CorrelationEngine` | `pearson(_:)`, `alignByDay(_:_:)`, `lagged(x:y:lagDays:)` → `Correlation`. |
 | `ComparisonEngine` | `stat(_:)` → `SeriesStat`; `compare(current:previous:)` / `monthOverMonth(...)` → `PeriodComparison`. |
 | `BehaviorInsights` | `effect(behaviorDays:...)` → `BehaviorEffect`; `rank(...)`, `sentence(_:)`. |
+| `RRArtefactCorrection` | `classify(_:)` → per-interval `Artefact?` (ectopic / missed / extra / long-short); `correct(_:)` → merged, split and spline-filled intervals with their source indices (Lipponen & Tarvainen 2019). |
+| `AgreementStats` | `analyze(_:)` → `Report`: Bland–Altman bias and limits with MOVER CIs, effective n for correlated days, proportional bias and heteroscedasticity, MAE/MAPE, Lin's CCC with CI. |
+| `VO2maxEngine` | `evaluate(_:restingHR:maxHR:)` → one walk/run as a VO₂-reserve test (ACSM oxygen cost, Swain 2004); `summarize(_:asOf:)`, `trend(_:)`; `maxHR(userSet:workoutPeaks:age:)`; `restingEstimate(...)` (HUNT, Nes 2011). |
+| `FitnessAgeEngine` | `estimateVO2max(...)`, `fitnessAge(...)`, `physicalActivityIndexFromStrain(...)` (HUNT PA index 0–15). |
 
 `UserProfile` (`weightKg`, `heightCm`, `age`, `sex`) is the shared profile input.
 

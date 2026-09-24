@@ -358,36 +358,51 @@ public enum HRVAnalyzer {
         public init(ts: Int, rmssd: Double) { self.ts = ts; self.rmssd = rmssd }
     }
 
-    /// Pure rolling/windowed rMSSD over an R-R series (#803). For each input interval, the window is the
-    /// trailing `windowSec` seconds ending at that interval's `ts`; the window's R-R values are cleaned with
-    /// the SAME pipeline the nightly path uses (`cleanTimed`), and a point is emitted only when at least
-    /// `minBeatsPerWindow` clean intervals survive (so a sparse / artifact-heavy window emits nothing
-    /// rather than a noisy spike). The result is one `(ts, rMSSD)` per qualifying window, in input order.
+    /// Pure rolling/windowed rMSSD over an R-R series (#803). The series is cleaned ONCE with the same
+    /// pipeline the nightly path uses (`cleanTimed`: every beat judged against its full 91-beat threshold
+    /// window), then a trailing window of `windowSec` seconds slides over the clean beats. A point is emitted
+    /// at a clean beat's `ts` when the window holds at least `minBeatsPerWindow` clean beats, so a sparse or
+    /// artefact-heavy stretch emits nothing rather than a noisy spike. Successive differences are pooled only
+    /// between adjacent beats of the same run (never across a split or gap), kept as running sums so a
+    /// day-scale timeline is linear in the number of beats instead of re-cleaning every window.
     ///
     /// - Parameters:
     ///   - rr: the R-R intervals (each carries its own wall-clock `ts` and `rrMs`). Need not be pre-sorted;
     ///     sorted ascending by `ts` internally so the trailing window is well-defined.
     ///   - windowSec: the trailing window width in seconds (e.g. 120 for a 2-minute rMSSD).
     ///   - stepSec: emit at most one point per this many seconds of advance (a thinning stride so a 1 Hz
-    ///     stream does not emit a point per beat). 0 (the default) emits a point at every interval.
-    ///   - minBeatsPerWindow: minimum clean intervals a window needs to emit a point. Defaults to a small
+    ///     stream does not emit a point per beat). 0 (the default) emits a point at every beat.
+    ///   - minBeatsPerWindow: minimum clean beats a window needs to emit a point. Defaults to a small
     ///     floor (8) because a short window legitimately holds far fewer beats than the nightly `minBeats`.
     public static func rollingRmssd(rr: [RRInterval],
                                     windowSec: Int,
                                     stepSec: Int = 0,
                                     minBeatsPerWindow: Int = 8) -> [RollingRmssdPoint] {
         guard windowSec > 0, rr.count >= minBeatsPerWindow else { return [] }
-        let sorted = rr.sorted { $0.ts < $1.ts }
+        var beats: [(ts: Int, rrMs: Double, run: Int)] = []
+        for (run, segment) in cleanTimed(rr).segments.enumerated() {
+            for b in segment { beats.append((b.ts, b.rrMs, run)) }
+        }
+        /// Squared successive difference ending at beat `i`, when beat `i − 1` is adjacent (same run).
+        func squaredDiff(endingAt i: Int) -> Double? {
+            guard i > 0, beats[i].run == beats[i - 1].run else { return nil }
+            let d = beats[i].rrMs - beats[i - 1].rrMs
+            return d * d
+        }
         var out: [RollingRmssdPoint] = []
         var lastEmitTs: Int? = nil
-        var left = 0   // index of the oldest interval still inside the trailing window
-        for right in 0..<sorted.count {
-            let edgeTs = sorted[right].ts
-            while left < right && edgeTs - sorted[left].ts > windowSec { left += 1 }
+        var left = 0                  // oldest beat inside the trailing window
+        var sumSq = 0.0, pairs = 0    // successive differences inside [left, right]
+        for right in beats.indices {
+            if let sq = squaredDiff(endingAt: right) { sumSq += sq; pairs += 1 }       // (right − 1, right) enters
+            let edgeTs = beats[right].ts
+            while left < right && edgeTs - beats[left].ts > windowSec {
+                if let sq = squaredDiff(endingAt: left + 1) { sumSq -= sq; pairs -= 1 } // (left, left + 1) leaves
+                left += 1
+            }
             if stepSec > 0, let last = lastEmitTs, edgeTs - last < stepSec { continue }
-            let c = cleanTimed(Array(sorted[left...right]))
-            guard c.beats.count >= minBeatsPerWindow, let r = rmssd(segments: c.valueSegments) else { continue }
-            out.append(RollingRmssdPoint(ts: edgeTs, rmssd: r))
+            guard right - left + 1 >= minBeatsPerWindow, pairs > 0 else { continue }
+            out.append(RollingRmssdPoint(ts: edgeTs, rmssd: (max(0, sumSq) / Double(pairs)).squareRoot()))
             lastEmitTs = edgeTs
         }
         return out

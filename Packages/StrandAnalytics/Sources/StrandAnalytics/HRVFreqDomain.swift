@@ -88,7 +88,7 @@ public enum HRVFreqDomain {
     // MARK: - Public API
 
     /// Frequency-domain HRV from R-R intervals (each carrying its own wall-clock `ts` in seconds and `rrMs`).
-    /// The series is cleaned with the SAME range + Malik ectopic pipeline the time-domain analyzer uses
+    /// The series is cleaned with the SAME Lipponen–Tarvainen pipeline the time-domain analyzer uses
     /// (`HRVAnalyzer.cleanRR`) before the tachogram is built, so an artifact beat cannot inject spurious
     /// power. Returns nil when there are too few clean beats or the R-R span is under `minSpanForHFSec`.
     public static func freqDomain(rr: [RRInterval]) -> Bands? {

@@ -49,8 +49,8 @@ public enum SpotHrvReading {
     }
 
     /// Compute a single spot HRV reading from the raw R-R intervals (ms) gathered during the live
-    /// capture window. Runs NOOP's canonical cleaning + RMSSD (range filter -> Malik ectopic rejection
-    /// -> (n-1) RMSSD), so the value matches the nightly HRV math. Returns `.insufficient` rather than a
+    /// capture window. Runs NOOP's canonical cleaning + RMSSD (plausibility split -> Lipponen–Tarvainen
+    /// correction -> (n-1) RMSSD over adjacent beats), so the value matches the nightly HRV math. Returns `.insufficient` rather than a
     /// number when too few clean beats survive — never a fabricated figure.
     ///
     /// - Parameters:

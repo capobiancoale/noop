@@ -54,6 +54,8 @@ public enum AgreementStats {
     public enum ConcordanceStrength: String, Sendable {
         case poor, moderate, substantial, almostPerfect
         public init(_ ccc: Double) {
+            // Undefined (one method constant) is not agreement: never let NaN fall through to the top band.
+            guard ccc.isFinite else { self = .poor; return }
             switch ccc {
             case ..<0.90: self = .poor
             case ..<0.95: self = .moderate

@@ -81,6 +81,18 @@ final class HypoEventTests: XCTestCase {
         XCTAssertEqual(e[0].end, t0 + 25 * 60)
     }
 
+    func testEventsAfterAGapAreStillFound() {
+        // A low cut short by a 2-hour sensor gap, then a separate low later the same day: both are events.
+        let first = trace([100, 66, 64, 62])                                   // 00:00–00:15, then data stops
+        let second = trace([100, 95, 67, 65, 63, 90, 95, 100, 105], startMin: 135)   // resumes at 02:15
+        let e = events(first + second)
+        XCTAssertEqual(e.count, 2)
+        XCTAssertTrue(e[0].censored)
+        XCTAssertFalse(e[1].censored)
+        XCTAssertEqual(e[1].start, t0 + (135 + 10) * 60)
+        XCTAssertEqual(e[1].nadir, 63)
+    }
+
     func testFifteenMinuteSensorsNeedTwoLowReadings() {
         // A lone low reading between normal ones (15-min sampling) never spans 15 minutes below 70.
         XCTAssertTrue(events(trace([100, 65, 100, 110], every: 15)).isEmpty)

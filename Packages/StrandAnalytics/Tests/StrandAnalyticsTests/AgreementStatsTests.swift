@@ -151,6 +151,14 @@ final class AgreementStatsTests: XCTestCase {
         XCTAssertEqual(r.meanAbsoluteError, 0)
     }
 
+    func testConstantMethodHasNoConcordanceAndIsNotRatedAgreeing() {
+        // WHOOP reads the same value every day: Lin's CCC is undefined, and must not rank as agreement.
+        let r = A.analyze(pairs(Array(repeating: 96, count: Self.ref.count), Self.ref))!
+        XCTAssertTrue(r.concordance.value.isNaN)
+        XCTAssertEqual(r.concordanceStrength, .poor)
+        XCTAssertEqual(A.ConcordanceStrength(.nan), .poor)
+    }
+
     func testZeroReferenceSkipsRelativeErrors() {
         var ref = Self.ref
         ref[3] = 0

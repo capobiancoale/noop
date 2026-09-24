@@ -155,7 +155,7 @@ struct WodDetailView: View {
         let dayEnd = dayStart + 86_400
         let hr = await repo.hrSamples(from: dayStart, to: dayEnd - 1, limit: 200_000)
         let daysBack = max(2, (Int(Date().timeIntervalSince1970) - dayStart) / 86_400 + 2)
-        let bouts = await repo.workoutRows(days: daysBack)
+        let bouts = await repo.workoutRows(days: daysBack, reconcileHr: false)
             .filter { $0.endTs > dayStart && $0.startTs < dayEnd }
             .map { (start: $0.startTs, end: $0.endTs) }
         let maxHR: Double? = profile.hrMaxOverride > 0 ? Double(profile.hrMaxOverride)

@@ -3963,7 +3963,7 @@ struct TodayView: View {
                 .compactMap { StrainScorer.LoggedSession(wod: $0, tzOffsetSeconds: tzOffset) }
             var bouts: [(start: Int, end: Int)] = []
             if !sessions.isEmpty {
-                bouts = await repo.workoutRows(days: 2)
+                bouts = await repo.workoutRows(days: 2, reconcileHr: false)
                     .filter { $0.endTs > windowStart && $0.startTs < windowEnd }
                     .map { (start: $0.startTs, end: $0.endTs) }
             }
