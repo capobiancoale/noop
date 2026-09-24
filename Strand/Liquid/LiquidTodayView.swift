@@ -15,11 +15,17 @@ import SwiftUI
 import StrandDesign
 import WhoopStore
 import StrandAnalytics
+import StrandImport
 
 struct LiquidTodayView: View {
     @EnvironmentObject var repo: Repository
     @EnvironmentObject var router: NavRouter
     @EnvironmentObject var profile: ProfileStore
+    #if os(iOS)
+    // Apple Health, iOS only — the intraday glucose/carbs/insulin behind the "Heart & Glucose" chart.
+    // Absent on macOS (HealthKitBridge lives in the iOS target), where that chart draws HR-only or hides.
+    @EnvironmentObject var health: HealthKitBridge
+    #endif
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Shared with the real Today's card-customise editor so the two stay in sync.
@@ -34,6 +40,14 @@ struct LiquidTodayView: View {
     @State private var hrValues: [Double] = []     // hrBuckets since midnight → 5-min means
     @State private var workouts: [WorkoutRow] = [] // newest-first
     @State private var sparks: [String: [Double]] = [:]  // KEY METRICS 14-day trend series, computed once in load()
+    @State private var recStrain: [DayScore] = []         // Recovery vs Strain, last 30 days
+    // "Heart & Glucose" intraday cross chart. HR + workout bands come from the store (cross-platform);
+    // glucose/carbs/bolus come from Apple Health (iOS only) and stay empty on macOS ⇒ the section hides.
+    @State private var crossHR: [CrossHRPoint] = []
+    @State private var crossWorkouts: [WorkoutBand] = []
+    @State private var crossGlucose: [GlucoseReading] = []
+    @State private var crossCarbs: [CarbEntry] = []
+    @State private var crossBolus: [InsulinEntry] = []
     // Diabetes recap (apple-health, day-keyed to the selected day). Nil ⇒ the row/section is hidden,
     // never a fabricated zero. Populated from the apple-health metric series in load().
     @State private var glucoseAvg: Double?         // glucose_avg
@@ -207,6 +221,8 @@ struct LiquidTodayView: View {
                     synthesisSection
                     recoveryVitalsSection
                     keyMetricsSection
+                    if hasRecStrain { recoveryStrainSection }
+                    if hasTodayCross { todayCrossSection }
                     if hasWeekData { weekSummarySection }
                     lastWorkoutsSection
                     if hasGlucoseToday { glucoseTodaySection }
@@ -772,6 +788,72 @@ struct LiquidTodayView: View {
         return vals.isEmpty ? nil : vals.reduce(0, +) / Double(vals.count)
     }
 
+    // MARK: - Recovery vs Strain (30-day trend)
+
+    private var hasRecStrain: Bool { recStrain.filter { $0.recovery != nil || $0.strain != nil }.count >= 2 }
+
+    private var recoveryStrainSection: some View {
+        VStack(spacing: 8) {
+            sectionHead("RECOVERY vs STRAIN", trailing: "30 days")
+            card {
+                VStack(alignment: .leading, spacing: 10) {
+                    RecoveryStrainChart(points: recStrain)
+                    HStack(spacing: 16) {
+                        legendDot(StrandPalette.chargeColor, "Recovery")
+                        legendDot(StrandPalette.effortColor, "Strain")
+                    }
+                }
+            }
+        }
+    }
+
+    private func legendDot(_ c: Color, _ label: LocalizedStringKey) -> some View {
+        HStack(spacing: 6) {
+            Circle().fill(c).frame(width: 8, height: 8)
+            Text(label).font(StrandFont.caption).foregroundStyle(StrandPalette.textSecondary)
+        }
+    }
+
+    // MARK: Heart & Glucose (intraday cross)
+
+    /// Show only when there's a real intraday glucose trace (≥2 readings) — that's the series this chart
+    /// exists for and the one the top heart-rate section doesn't already cover. Always false on macOS
+    /// (no Apple Health), so the section is iOS-only in practice without needing a compile guard here.
+    private var hasTodayCross: Bool { crossGlucose.count >= 2 }
+
+    private var todayCrossSection: some View {
+        VStack(spacing: 8) {
+            sectionHead("HEART & GLUCOSE", trailing: crossTrailing)
+            card {
+                VStack(alignment: .leading, spacing: 10) {
+                    TodayCrossChart(hr: crossHR, glucose: crossGlucose, carbs: crossCarbs,
+                                    boluses: crossBolus, workouts: crossWorkouts)
+                    HStack(spacing: 14) {
+                        if crossHR.count >= 2 { legendDot(StrandPalette.metricRose, "Heart") }
+                        legendDot(StrandPalette.accent, "Glucose")
+                        if !crossCarbs.isEmpty { legendDot(StrandPalette.metricAmber, "Carbs") }
+                        if !crossBolus.isEmpty { legendDot(StrandPalette.metricPurple, "Bolus") }
+                    }
+                    Text("Informational only, not medical advice. Carb and insulin choices stay with you and your care team / Loop.")
+                        .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                }
+            }
+        }
+    }
+
+    /// The section overline's right-hand tag: "today" / "yesterday" / a short date for older days.
+    private var crossTrailing: String {
+        switch selectedDayOffset {
+        case 0: return "today"
+        case 1: return "yesterday"
+        default: return Self.crossDayFormatter.string(from: selectedLogicalDay)
+        }
+    }
+
+    private static let crossDayFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "d MMM"; return f
+    }()
+
     private var keyMetricsSection: some View {
         // HRV / Rest HR tiles share the recovery vitals' per-field today-first carry so they don't blank at
         // the rollover while Recovery/Strain/Sleep stay strictly today's own (they are scored surfaces).
@@ -949,6 +1031,11 @@ struct LiquidTodayView: View {
             "rhr":      Self.spark14(repo.days) { $0.restingHr.map(Double.init) },
             "steps":    Self.spark14(repo.days) { $0.steps.map(Double.init) },
         ]
+        // Recovery vs Strain, last 30 days (for the home trend chart).
+        recStrain = repo.days.suffix(30).map {
+            DayScore(id: $0.day, date: Self.dayKeyParser.date(from: $0.day) ?? Date(),
+                     recovery: $0.recovery, strain: $0.strain)
+        }
 
         let cal = Calendar.current
         let dayStart = cal.startOfDay(for: selectedLogicalDay)
@@ -998,8 +1085,25 @@ struct LiquidTodayView: View {
         let stepsSeries = await stepsA
         let stepsByDay = Dictionary(stepsSeries.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
         stepsEst = stepsByDay[selectedDayKey] ?? (selectedDayOffset == 0 ? stepsSeries.last.flatMap { $0.day >= freshCutoff ? $0.value : nil } : nil)
-        hrValues = (await hrA).map { $0.bpm }
+        let hrBucketsDay = await hrA
+        hrValues = hrBucketsDay.map { $0.bpm }
         workouts = await wkA
+
+        // "Heart & Glucose" intraday chart for the selected day. HR keeps its timestamps here (the
+        // sparkline above only needs the bare values); workout bands are the day's sessions clipped to
+        // the window. Glucose/carbs/bolus are read live from Apple Health on iOS (empty on macOS).
+        crossHR = hrBucketsDay.map { CrossHRPoint(date: Date(timeIntervalSince1970: TimeInterval($0.ts)), bpm: $0.bpm) }
+        crossWorkouts = workouts
+            .filter { $0.endTs >= from && $0.startTs <= to }
+            .map { WorkoutBand(start: Date(timeIntervalSince1970: TimeInterval($0.startTs)),
+                               end: Date(timeIntervalSince1970: TimeInterval($0.endTs))) }
+        #if os(iOS)
+        let winStart = Date(timeIntervalSince1970: TimeInterval(from))
+        let winEnd = Date(timeIntervalSince1970: TimeInterval(to))
+        crossGlucose = await health.glucoseWindow(start: winStart, end: winEnd)
+        crossCarbs = await health.carbsWindow(start: winStart, end: winEnd)
+        crossBolus = (await health.insulinWindow(start: winStart, end: winEnd)).filter { $0.bolus }
+        #endif
 
         // Day-key each diabetes series to the selected day (they're daily), with a latest fallback only
         // at offset 0 — mirrors stepsEst above. A missing day stays nil so the row simply doesn't show.
