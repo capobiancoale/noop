@@ -536,7 +536,7 @@ final class Repository: ObservableObject {
     /// Save (create or edit) one user-logged WOD.
     func saveWod(_ r: WodLogRow) async {
         guard let s = await ensureStore() else { return }
-        try? await s.upsertWod(r)
+        _ = try? await s.upsertWod(r)
         onWodsChanged?()
     }
 
@@ -549,7 +549,7 @@ final class Repository: ObservableObject {
     /// Delete one logged WOD by id.
     func deleteWod(id: String) async {
         guard let s = await ensureStore() else { return }
-        try? await s.deleteWod(id: id)
+        _ = try? await s.deleteWod(id: id)
         onWodsChanged?()
     }
 
