@@ -457,6 +457,28 @@ the static-export importer and the live HealthKit importer converge on one schem
   empty days and still mark the history import as done. The screen stays on during the history import while
   NOOP is open; a background-task assertion lets the window in flight finish if the user switches app.
 
+
+### What NOOP writes into Apple Health (`HealthKitBridge.writeToHealth`, `HealthWritePlan`)
+
+At the start of every sync (opening the app, an observer wake, *Sync now*), before the import and independent
+of it, so a long or paused history import never holds it up. Skipped while the iPhone is locked (Health
+can't then say what NOOP already wrote), and one run at a time. Each kind is written only if the user
+allowed it; a kind added later (heart rate) is asked for once, with the app on screen, and the Apple Health
+screen keeps an *Allow* button. The screen shows when NOOP last wrote and what.
+
+- **Heart rate, minute by minute:** the strap's per-minute average (`Repository.heartRatePerMinute`, the
+  dashboard's strap ids), 25–250 bpm only, for minutes that ended 2 min ago or more. The first run covers
+  the last 14 days; later runs look back 72 h behind the newest minute written, so data the strap offloads
+  late still gets in. Minutes NOOP already wrote are read back from Health first and skipped.
+- **Sleep:** each night of the last 14 days that has ended, as *in bed* from its (corrected) onset to its end
+  plus its stages (light → *core*, deep, REM, awake). A night known only by totals (a WHOOP import) is
+  *in bed* only. A night is written again only when it changed (fingerprint of onset, end and stages); its
+  earlier samples are deleted first.
+- **Daily values:** resting heart rate, HRV, SpO₂ and respiratory rate for the last 14 days, read from the
+  computed (`-noop`) and imported strap ids, dated at noon (or now, before noon: never in the future),
+  replaced by their deterministic external UUID.
+- The import never reads NOOP's own samples back (`HealthImportReader.notNoopAuthored`).
+
 ---
 
 ## Concrete iOS target structure
@@ -592,10 +614,10 @@ targets:
 - [x] `MenuBarExtra` replaced by a WidgetKit widget + Live Activity (`StrandiOSWidgets`), reusing `StrandDesign`.
 - [x] iOS action layer: `lockScreen` returns false on iOS, `buzzBack`/`markMoment` portable, **App Intents** exposed (`StrandiOS/System/NOOPAppIntents.swift`).
 - [x] Clipboard + URL-open routed through `Platform.swift` (`PlatformPasteboard`/`PlatformOpen`).
-- [x] `HealthKitBridge` two-way Apple Health (read live + write NOOP metrics). _(See the device-id follow-up flagged below.)_
+- [x] `HealthKitBridge` two-way Apple Health (read live + write the strap's heart rate, sleep and daily metrics).
 - [ ] **Still TODO (needs hardware):** verify BLE on a **physical iPhone** with a real strap — CoreBluetooth has no Simulator. This is the one thing CI/compile can't cover.
 
-> **Open follow-up:** `HealthKitBridge.writeBack` reads NOOP-computed metrics under `deviceId = "my-whoop"`, but the on-device *computed* scores (recovery/HRV/…) are persisted under the **computed** id `"my-whoop-noop"` — so the Apple-Health write-back may read little/nothing for a strap-only user. Behavioural (not a compile issue); fix when the iOS HealthKit path gets device-tested.
+> **Resolved:** the write into Apple Health reads the computed (`"my-whoop-noop"`) daily scores as well as the imported ones, and now also writes heart rate and sleep; see *What NOOP writes into Apple Health* above.
 
 ---
 

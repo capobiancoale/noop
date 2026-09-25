@@ -81,6 +81,10 @@ struct LiquidTodayView: View {
 
     // day navigation (0 = today, 1 = yesterday, …)
     @State private var selectedDayOffset = 0
+    /// Where the Heart & Glucose timeline sits, in the scroll view's space: a sideways drag that starts on
+    /// it moves, zooms or reads the chart, so it must not also change the day. A reference box, so keeping
+    /// it current while the page scrolls never re-renders the screen.
+    @State private var swipeExclusion = SwipeExclusion()
     @State private var showDayPicker = false
 
     // PERF: the body was rescanning repo.days (599 days) ~23× per pass for displayDay and ~3× for
@@ -170,8 +174,10 @@ struct LiquidTodayView: View {
     }
     /// Horizontal swipe between days (left = older, right = newer), clamped to [today, earliest].
     private var daySwipeGesture: some Gesture {
-        DragGesture(minimumDistance: 24)
+        DragGesture(minimumDistance: 24, coordinateSpace: .named(Self.pullSpace))
             .onEnded { value in
+                // A drag that starts on the Heart & Glucose timeline belongs to the chart.
+                guard !swipeExclusion.rects.contains(where: { $0.contains(value.startLocation) }) else { return }
                 let dx = value.translation.width, dy = value.translation.height
                 guard abs(dx) > abs(dy) * 1.5, abs(dx) > 50 else { return }
                 let delta = dx < 0 ? 1 : -1
@@ -248,6 +254,7 @@ struct LiquidTodayView: View {
         }
         .coordinateSpace(name: Self.pullSpace)
         .onPreferenceChange(PullOffsetKey.self) { handlePull($0) }
+        .onPreferenceChange(DaySwipeExclusionKey.self) { swipeExclusion.rects = $0 }
         // The sky is a FIXED full-bleed backdrop drawn behind the scroll content, edge-to-edge under the
         // status bar. A ScrollView background does not scroll with the content, so pulling down never
         // moves the sky (the exact behaviour the scaffold uses on the classic Today).
@@ -407,6 +414,22 @@ struct LiquidTodayView: View {
             }
             // Subtle NOOP wordmark in the sky between header and hero. Perfectly centred (a letter row has
             // no trailing tracking gap the way `Text(...).tracking()` does), with a tap easter egg.
+            if selectedDayOffset > 0 {
+                // Days back (a swipe or the calendar): one tap returns to today.
+                Button {
+                    withAnimation(StrandMotion.interactive) { selectedDayOffset = 0 }
+                } label: {
+                    Label("Back to today", systemImage: "arrow.uturn.forward")
+                        .font(StrandFont.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(.white.opacity(0.18)))
+                        .overlay(Capsule().strokeBorder(.white.opacity(0.28), lineWidth: 1))
+                }
+                .buttonStyle(LiquidPressStyle())
+                .padding(.top, 10)
+            }
             LiquidWordmark()
                 .padding(.top, 30)
             heroCard.padding(.top, 22)
@@ -892,6 +915,13 @@ struct LiquidTodayView: View {
                         .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
                 }
             }
+            .background {
+                // The chart's own drags (move, zoom, read) must not also swipe the day.
+                GeometryReader { g in
+                    Color.clear.preference(key: DaySwipeExclusionKey.self,
+                                           value: [g.frame(in: .named(Self.pullSpace))])
+                }
+            }
         }
     }
 
@@ -1321,6 +1351,16 @@ struct LiquidTodayView: View {
         return TodayView.carriedCaption(priorDayKey: carried.day,
                                         todayKey: displayDay?.day ?? selectedDayKey)
     }
+}
+
+/// The frames (in the Today scroll's space) of views whose own sideways drags must not change the day.
+private final class SwipeExclusion {
+    var rects: [CGRect] = []
+}
+
+private struct DaySwipeExclusionKey: PreferenceKey {
+    static var defaultValue: [CGRect] = []
+    static func reduce(value: inout [CGRect], nextValue: () -> [CGRect]) { value += nextValue() }
 }
 
 /// Carries the Today scroll's top overscroll offset up to the view for the custom liquid pull-to-refresh.

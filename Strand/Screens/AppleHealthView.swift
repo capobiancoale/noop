@@ -493,6 +493,7 @@ struct AppleHealthView: View {
                             .foregroundStyle(StrandPalette.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                    writeStatus
                 }
 
                 if let err = health.lastError {
@@ -502,6 +503,55 @@ struct AppleHealthView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+        }
+    }
+
+    /// What NOOP writes into Apple Health, when it last did and what, and a button when a kind it writes
+    /// was never offered (heart rate, added later).
+    private var writeStatus: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Divider().padding(.vertical, 2)
+            Text("Written to Apple Health")
+                .font(StrandFont.subhead.weight(.semibold))
+                .foregroundStyle(StrandPalette.textPrimary)
+            Text("From the strap: heart rate minute by minute, sleep with its stages, and each day's resting heart rate, HRV, SpO₂ and respiratory rate. Each time NOOP syncs, it adds what's new.")
+                .font(StrandFont.footnote)
+                .foregroundStyle(StrandPalette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let at = health.lastWrite {
+                Group {
+                    if let summary = health.lastWriteSummary {
+                        Text("Last written \(relativeAgo(at.timeIntervalSince1970)): \(summary).")
+                    } else {
+                        Text("Last checked \(relativeAgo(at.timeIntervalSince1970)): nothing new to write.")
+                    }
+                }
+                .font(StrandFont.footnote)
+                .foregroundStyle(StrandPalette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            if let err = health.writeError {
+                Text(err)
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.statusCritical)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if health.writePermissionNeeded {
+                Button {
+                    Task {
+                        await health.requestAuthorization()
+                        await health.writeToHealth()
+                    }
+                } label: {
+                    Label("Allow writing heart rate and sleep", systemImage: "heart.text.square")
+                }
+                .buttonStyle(.bordered)
+                .tint(StrandPalette.metricCyan)
+            }
+            Text("To check: Health app › Browse › Heart › Heart Rate › Data Sources & Access. If a kind is switched off there, NOOP can't write it.")
+                .font(StrandFont.caption)
+                .foregroundStyle(StrandPalette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
     #endif

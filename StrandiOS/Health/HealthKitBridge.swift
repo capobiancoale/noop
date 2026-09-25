@@ -43,6 +43,14 @@ final class HealthKitBridge: ObservableObject {
     }
     /// A calm status line, not an error: why an import paused, and that it carries on by itself.
     @Published private(set) var statusNote: String?
+    /// When NOOP last wrote the strap's data into Apple Health, and what it wrote then.
+    @Published private(set) var lastWrite: Date?
+    @Published private(set) var lastWriteSummary: String?
+    /// Why the last write into Apple Health failed (nil after a successful one).
+    @Published private(set) var writeError: String?
+    /// Some kinds NOOP writes (heart rate, sleep…) were never offered to the user: `requestAuthorization`
+    /// asks for them. The Apple Health screen offers the button.
+    @Published private(set) var writePermissionNeeded = false
 
     /// Progress of one sync run.
     struct SyncProgress: Equatable {
@@ -124,7 +132,9 @@ final class HealthKitBridge: ObservableObject {
         .bloodPressureSystolic, .bloodPressureDiastolic, .dietaryWater, .waistCircumference
     ]
     private static let quantityWriteIds: [HKQuantityTypeIdentifier] = [
-        .restingHeartRate, .heartRateVariabilitySDNN, .oxygenSaturation, .respiratoryRate
+        .restingHeartRate, .heartRateVariabilitySDNN, .oxygenSaturation, .respiratoryRate,
+        // The strap's heart rate, one average per minute (see writeHeartRate).
+        .heartRate
     ]
 
     // MARK: - Authorization
@@ -151,6 +161,7 @@ final class HealthKitBridge: ObservableObject {
             // the authoritative signal; the `.notDetermined` fallback only matters when that check can't
             // run, which on iOS means an App Store build that by definition has the entitlement.
             auth = .authorized
+            updateWritePermissionNeeded()
         } catch {
             // A thrown error here is on a build that carries the entitlement (guarded above), so it's a
             // genuine denial / request failure — keep the normal `.denied` "enable in Settings" path,
@@ -172,9 +183,12 @@ final class HealthKitBridge: ObservableObject {
     /// status, so no system permission sheet is shown.
     func refreshAuthIfPreviouslyGranted() {
         guard auth == .unknown, HKHealthStore.isHealthDataAvailable() else { return }
-        let granted = writeTypes.allSatisfy { store.authorizationStatus(for: $0) == .sharingAuthorized }
+        // Any write kind granted means the user enabled Apple Health before. Not ALL of them: a kind added
+        // later (heart rate) is still undetermined until asked, and must not switch the whole bridge off.
+        let granted = writeTypes.contains { store.authorizationStatus(for: $0) == .sharingAuthorized }
         if granted {
             auth = .authorized
+            updateWritePermissionNeeded()
             // A returning user who already granted access should get the live stream re-armed for this
             // process. enableLiveDelivery is idempotent (HealthKit dedups observers + background
             // delivery per type), so calling it here as well as after a fresh requestAuthorization is safe.
@@ -369,6 +383,9 @@ final class HealthKitBridge: ObservableObject {
         syncing = true
         pauseRequested = false
         resyncRequested = false
+        // Write the strap's data into Health first: it doesn't depend on the import, which can run for
+        // minutes (the one-time history) and stop early when the iPhone locks.
+        await writeToHealth()
         let outcome = await runImport(days: days, userInitiated: userInitiated, includeHistory: includeHistory)
         importProgress.current = nil
         syncing = false
@@ -446,15 +463,9 @@ final class HealthKitBridge: ObservableObject {
             }
         }
 
-        // Every window saved: write NOOP's own metrics back into Health, advancing lastSync only when the
-        // whole round-trip succeeds (a failed write must not look like a success; PR #375).
-        do {
-            try await writeBack(whoopStore: whoop)
-            lastSync = Date()
-            lastError = nil
-        } catch {
-            lastError = String(localized: "Apple Health sync failed: \(error.localizedDescription)")
-        }
+        // Every window saved (the write into Health ran at the start of `sync`).
+        lastSync = Date()
+        lastError = nil
         if bigRun { await repo.refresh() }
         return .finished
     }
@@ -561,21 +572,73 @@ final class HealthKitBridge: ObservableObject {
 
     // MARK: - Write back (NOOP → Health)
 
-    /// Write NOOP's strap-derived daily metrics (resting HR, HRV, SpO₂, respiratory rate) into Apple
-    /// Health so they appear across the user's Health ecosystem.
+    private var writing = false
+    private static let newWriteKindsAskedKey = "hkNewWriteKindsAsked.v2"
+    private static let heartRateNewestKey = "hkHeartRateNewestWritten.v1"
+    private static let sleepWrittenKey = "hkSleepWritten.v1"
+    /// The strap, as the device the heart rate and sleep came from.
+    private static let strapDevice = HKDevice(name: "WHOOP", manufacturer: "WHOOP", model: nil,
+                                              hardwareVersion: nil, firmwareVersion: nil, softwareVersion: nil,
+                                              localIdentifier: nil, udiDeviceIdentifier: nil)
+
+    private func canWrite(_ type: HKObjectType) -> Bool {
+        store.authorizationStatus(for: type) == .sharingAuthorized
+    }
+
+    /// True while some kind NOOP writes has never been offered (a kind added after the user said yes).
+    private func updateWritePermissionNeeded() {
+        writePermissionNeeded = writeTypes.contains { store.authorizationStatus(for: $0) == .notDetermined }
+    }
+
+    /// Write the strap's data into Apple Health: the daily resting heart rate, HRV, SpO₂ and respiratory
+    /// rate, the heart rate minute by minute, and each night's sleep with its stages. Each kind is written
+    /// only if the user allowed it, and each is idempotent: running it again adds only what's missing.
+    /// Skipped while the iPhone is locked, when Health can't tell what NOOP already wrote (writing then
+    /// could double it). Plans: StrandImport.HealthWritePlan.
+    func writeToHealth() async {
+        guard !writing, auth == .authorized, UIApplication.shared.isProtectedDataAvailable,
+              let whoop = await repo.storeHandle() else { return }
+        // One write at a time: two at once could both find the same minutes missing and write them twice.
+        writing = true
+        defer { writing = false }
+        updateWritePermissionNeeded()
+        // Kinds added after the user said yes (heart rate): ask once, with NOOP on screen. The system sheet
+        // lists only those; the Apple Health screen keeps a button for later.
+        if writePermissionNeeded, UIApplication.shared.applicationState == .active,
+           !UserDefaults.standard.bool(forKey: Self.newWriteKindsAskedKey) {
+            UserDefaults.standard.set(true, forKey: Self.newWriteKindsAskedKey)
+            await requestAuthorization()
+        }
+        var parts: [String] = []
+        do {
+            let daily = try await writeDailyValues(whoopStore: whoop)
+            let minutes = try await writeHeartRate()
+            let nights = try await writeSleep()
+            if minutes > 0 { parts.append(String(localized: "minutes of heart rate: \(minutes)")) }
+            if nights > 0 { parts.append(String(localized: "nights of sleep: \(nights)")) }
+            if daily > 0 { parts.append(String(localized: "daily values: \(daily)")) }
+            lastWrite = Date()
+            if !parts.isEmpty { lastWriteSummary = parts.joined(separator: ", ") }
+            writeError = nil
+        } catch {
+            writeError = String(localized: "Writing to Apple Health failed: \(error.localizedDescription)")
+        }
+    }
+
+    /// Write NOOP's strap-derived daily metrics (resting HR, HRV, SpO₂, respiratory rate) for the last
+    /// `days` days.
     ///
     /// Dedup model: each emitted sample carries a deterministic `HKMetadataKeyExternalUUID` derived
     /// from `noopDeviceId + metric + day`. Before saving, we delete any of *our* prior samples that
     /// carry the same key (scoped to `HKSource.default()` so we never touch another app's data) and
     /// then save the fresh batch. HealthKit assigns a new UUID per save, so the previous strategy
-    /// (no metadata, no delete) flooded Health with duplicates on every `sync()`.
-    ///
-    /// Throws on save failure so the caller can decide whether to advance `lastSync`.
-    private func writeBack(whoopStore: WhoopStore, days: Int = 14) async throws {
-        guard auth == .authorized else { return }
+    /// (no metadata, no delete) flooded Health with duplicates on every `sync()`. A day's value is dated
+    /// at its noon, or now before noon (Health takes no samples from the future); kinds the user didn't
+    /// allow are left out, so one switched-off kind doesn't sink the others. Returns how many it wrote.
+    private func writeDailyValues(whoopStore: WhoopStore, days: Int = 14) async throws -> Int {
         let cal = Calendar.current
         let to = HealthKitBridge.dayString(Date())
-        guard let fromDate = cal.date(byAdding: .day, value: -days, to: Date()) else { return }
+        guard let fromDate = cal.date(byAdding: .day, value: -days, to: Date()) else { return 0 }
         let from = HealthKitBridge.dayString(fromDate)
         // Read NOOP's COMPUTED dailies (deviceId + "-noop"), which is the only place a strap-only
         // user's recovery/HRV/RHR/SpO₂/resp lives, then union with any imported `noopDeviceId` rows so
@@ -590,9 +653,11 @@ final class HealthKitBridge: ObservableObject {
 
         struct Candidate { let type: HKQuantityType; let key: String; let sample: HKQuantitySample }
         var candidates: [Candidate] = []
-        func add(_ id: HKQuantityTypeIdentifier, _ unit: HKUnit, _ value: Double, _ day: String, _ at: Date) {
-            guard let type = HKQuantityType.quantityType(forIdentifier: id) else { return }
+        let now = Date().timeIntervalSince1970
+        func add(_ id: HKQuantityTypeIdentifier, _ unit: HKUnit, _ value: Double, _ day: String, _ noon: Date) {
+            guard let type = HKQuantityType.quantityType(forIdentifier: id), canWrite(type) else { return }
             let key = "noop:\(noopDeviceId):\(id.rawValue):\(day)"
+            let at = Date(timeIntervalSince1970: HealthWritePlan.sampleDate(noon: noon.timeIntervalSince1970, now: now))
             let sample = HKQuantitySample(
                 type: type,
                 quantity: .init(unit: unit, doubleValue: value),
@@ -618,7 +683,7 @@ final class HealthKitBridge: ObservableObject {
                 add(.respiratoryRate, HKUnit.count().unitDivided(by: .minute()), rr, row.day, noon)
             }
         }
-        guard !candidates.isEmpty else { return }
+        guard !candidates.isEmpty else { return 0 }
 
         // Delete any of OUR prior samples that carry the same metadata keys, then write the fresh
         // batch. Scoped to HKSource.default() so we never touch a sample written by another app
@@ -634,6 +699,127 @@ final class HealthKitBridge: ObservableObject {
             _ = try? await self.store.deleteObjects(of: type, predicate: pred)
         }
         try await self.store.save(candidates.map { $0.sample })
+        return candidates.count
+    }
+
+    /// Write the strap's heart rate, one average per minute, for the minutes Health doesn't have from NOOP
+    /// yet: the last two weeks the first time, then from three days behind the newest minute written (so
+    /// data the strap offloads late still gets in), a day per read and save. Returns the minutes written.
+    private func writeHeartRate() async throws -> Int {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .heartRate), canWrite(type) else { return 0 }
+        let defaults = UserDefaults.standard
+        let newest = defaults.object(forKey: Self.heartRateNewestKey) as? Double
+        guard let window = HealthWritePlan.heartRateWindow(now: Date().timeIntervalSince1970,
+                                                           newestWritten: newest) else { return 0 }
+        let unit = HKUnit.count().unitDivided(by: .minute())
+        var written = 0
+        var newestSeen = newest ?? 0
+        for chunk in HealthWritePlan.chunks(from: window.from, to: window.to) {
+            let minutes = await repo.heartRatePerMinute(from: Int(chunk.from), to: Int(chunk.to) - 1)
+            guard let last = minutes.last else { continue }
+            let have = try await minutesWritten(of: type, from: chunk.from, to: chunk.to)
+            let missing = HealthWritePlan.missingMinutes(minutes.map { (ts: Double($0.ts), bpm: $0.bpm) },
+                                                         alreadyWritten: have)
+            if !missing.isEmpty {
+                let samples = missing.map { m in
+                    HKQuantitySample(type: type, quantity: HKQuantity(unit: unit, doubleValue: m.bpm),
+                                     start: Date(timeIntervalSince1970: m.ts),
+                                     end: Date(timeIntervalSince1970: m.ts + 59),
+                                     device: Self.strapDevice, metadata: nil)
+                }
+                try await store.save(samples)
+                written += samples.count
+            }
+            newestSeen = max(newestSeen, Double(last.ts))
+            defaults.set(newestSeen, forKey: Self.heartRateNewestKey)
+        }
+        return written
+    }
+
+    /// The minutes (`Int(ts) / 60`) of heart rate NOOP already wrote in [from, to). Throws when Health
+    /// can't answer, so a run never writes blind and doubles what's there.
+    private func minutesWritten(of type: HKQuantityType, from: Double, to: Double) async throws -> Set<Int> {
+        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            HKQuery.predicateForObjects(from: HKSource.default()),
+            HKQuery.predicateForSamples(withStart: Date(timeIntervalSince1970: from),
+                                        end: Date(timeIntervalSince1970: to), options: .strictStartDate),
+        ])
+        return try await withCheckedThrowingContinuation { cont in
+            let q = HKSampleQuery(sampleType: type, predicate: predicate, limit: HKObjectQueryNoLimit,
+                                  sortDescriptors: nil) { _, samples, error in
+                if let error { cont.resume(throwing: error); return }
+                cont.resume(returning: Set((samples ?? []).map { Int($0.startDate.timeIntervalSince1970) / 60 }))
+            }
+            store.execute(q)
+        }
+    }
+
+    /// Write each night of the last two weeks that has ended: in bed from its onset to its end, plus its
+    /// stages (light as Apple's "core"). A night is written again only when it changed (it grew, its onset
+    /// was corrected, it was staged again): NOOP's earlier samples for it are removed first. Returns the
+    /// nights written.
+    private func writeSleep() async throws -> Int {
+        guard let type = HKObjectType.categoryType(forIdentifier: .sleepAnalysis), canWrite(type) else { return 0 }
+        let defaults = UserDefaults.standard
+        var written = (defaults.dictionary(forKey: Self.sleepWrittenKey) as? [String: String]) ?? [:]
+        let now = Date().timeIntervalSince1970
+        let oldest = now - Double(HealthWritePlan.sleepDays) * 86_400
+        let sessions = await repo.allSleepSessions(days: HealthWritePlan.sleepDays + 2)
+        var nights = 0
+        for s in sessions where Double(s.endTs) <= now - 600 && Double(s.endTs) >= oldest {
+            let start = Double(s.effectiveStartTs), end = Double(s.endTs)
+            let key = String(s.startTs)
+            let fingerprint = HealthWritePlan.sleepFingerprint(start: start, end: end, stagesJSON: s.stagesJSON)
+            guard written[key] != fingerprint else { continue }
+            let segments = HealthWritePlan.sleepSegments(start: start, end: end, stagesJSON: s.stagesJSON)
+            guard !segments.isEmpty else { continue }
+            // Remove what NOOP wrote for this night before (an earlier version of it, or an earlier install).
+            var lo = min(start, Double(s.startTs)), hi = end
+            if let old = written[key].flatMap(HealthWritePlan.span(ofFingerprint:)) {
+                lo = min(lo, old.start); hi = max(hi, old.end)
+            }
+            let previous = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                HKQuery.predicateForObjects(from: HKSource.default()),
+                HKQuery.predicateForSamples(withStart: Date(timeIntervalSince1970: lo),
+                                            end: Date(timeIntervalSince1970: hi),
+                                            options: [.strictStartDate, .strictEndDate]),
+            ])
+            try await deleteOwn(type, previous)
+            let samples = segments.map { seg in
+                HKCategorySample(type: type, value: Self.sleepValue(seg.kind),
+                                 start: Date(timeIntervalSince1970: seg.start),
+                                 end: Date(timeIntervalSince1970: seg.end),
+                                 device: Self.strapDevice, metadata: nil)
+            }
+            try await store.save(samples)
+            written[key] = fingerprint
+            nights += 1
+        }
+        // Forget nights too old to be written again.
+        written = written.filter { (Double($0.key) ?? 0) >= oldest - 7 * 86_400 }
+        defaults.set(written, forKey: Self.sleepWrittenKey)
+        return nights
+    }
+
+    /// Delete NOOP's own samples matching `predicate`. Nothing to delete is fine: HealthKit reports it as
+    /// an error (no data), which must not stop the write.
+    private func deleteOwn(_ type: HKObjectType, _ predicate: NSPredicate) async throws {
+        do {
+            _ = try await store.deleteObjects(of: type, predicate: predicate)
+        } catch {
+            let ns = error as NSError
+            guard ns.domain == HKErrorDomain, ns.code == HKError.Code.errorNoData.rawValue else { throw error }
+        }
+    }
+
+    private static func sleepValue(_ kind: HealthWritePlan.SleepKind) -> Int {
+        switch kind {
+        case .inBed: return HKCategoryValueSleepAnalysis.inBed.rawValue
+        case .awake: return HKCategoryValueSleepAnalysis.awake.rawValue
+        case .core: return HKCategoryValueSleepAnalysis.asleepCore.rawValue
+        case .deep: return HKCategoryValueSleepAnalysis.asleepDeep.rawValue
+        case .rem: return HKCategoryValueSleepAnalysis.asleepREM.rawValue
+        }
     }
 
     /// Excludes NOOP's own write-back samples from reads, so the two-way sync never reads its own

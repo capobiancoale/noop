@@ -132659,6 +132659,116 @@
           }
         }
       }
+    },
+    "Back to today": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torna a oggi"
+          }
+        }
+      }
+    },
+    "minutes of heart rate: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minuti di battito: %lld"
+          }
+        }
+      }
+    },
+    "nights of sleep: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "notti di sonno: %lld"
+          }
+        }
+      }
+    },
+    "daily values: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "valori giornalieri: %lld"
+          }
+        }
+      }
+    },
+    "Writing to Apple Health failed: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scrittura in Apple Health non riuscita: %@"
+          }
+        }
+      }
+    },
+    "Written to Apple Health": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scritto in Apple Health"
+          }
+        }
+      }
+    },
+    "From the strap: heart rate minute by minute, sleep with its stages, and each day's resting heart rate, HRV, SpO₂ and respiratory rate. Each time NOOP syncs, it adds what's new.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dalla fascia: il battito minuto per minuto, il sonno con le sue fasi e, per ogni giorno, frequenza a riposo, HRV, SpO₂ e frequenza respiratoria. A ogni sincronizzazione NOOP aggiunge quello che è nuovo."
+          }
+        }
+      }
+    },
+    "Last written %@: %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultima scrittura %@: %@."
+          }
+        }
+      }
+    },
+    "Last checked %@: nothing new to write.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultimo controllo %@: niente di nuovo da scrivere."
+          }
+        }
+      }
+    },
+    "Allow writing heart rate and sleep": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti la scrittura di battito e sonno"
+          }
+        }
+      }
+    },
+    "To check: Health app › Browse › Heart › Heart Rate › Data Sources & Access. If a kind is switched off there, NOOP can't write it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per controllare: app Salute › Sfoglia › Cuore › Frequenza cardiaca › Sorgenti dati e accesso. Se lì un tipo di dato è disattivato, NOOP non può scriverlo."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
