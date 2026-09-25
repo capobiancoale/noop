@@ -132279,6 +132279,386 @@
           }
         }
       }
+    },
+    "Compact": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compatto"
+          }
+        }
+      }
+    },
+    "Standard": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard"
+          }
+        }
+      }
+    },
+    "Large": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grande"
+          }
+        }
+      }
+    },
+    "Every lane is off. Turn one on in the chart settings.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutte le corsie sono spente. Accendine una nelle impostazioni del grafico."
+          }
+        }
+      }
+    },
+    "Drag sideways to move · hold to read · double-tap to zoom out": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina di lato per spostarti · tieni premuto per leggere · doppio tocco per rimpicciolire"
+          }
+        }
+      }
+    },
+    "Pinch or tap + to zoom · hold and slide to read": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pizzica o tocca + per ingrandire · tieni premuto e scorri per leggere"
+          }
+        }
+      }
+    },
+    "Zoom to the WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingrandisci sul WOD"
+          }
+        }
+      }
+    },
+    "Zoom out": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimpicciolisci"
+          }
+        }
+      }
+    },
+    "Zoom in": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingrandisci"
+          }
+        }
+      }
+    },
+    "Customize chart": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personalizza il grafico"
+          }
+        }
+      }
+    },
+    "Full screen": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schermo intero"
+          }
+        }
+      }
+    },
+    "Glucose & heart": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia e battito"
+          }
+        }
+      }
+    },
+    "Carbs & bolus": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carboidrati e boli"
+          }
+        }
+      }
+    },
+    "No glucose readings in this stretch": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna glicemia in questo tratto"
+          }
+        }
+      }
+    },
+    "%lld–%lld, avg %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld–%lld, media %lld"
+          }
+        }
+      }
+    },
+    "%lld min below 70": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min sotto 70"
+          }
+        }
+      }
+    },
+    "No heart rate from the strap in this stretch": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun battito dalla fascia in questo tratto"
+          }
+        }
+      }
+    },
+    "Reading heart rate…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lettura del battito…"
+          }
+        }
+      }
+    },
+    "avg %lld · max %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "media %lld · max %lld"
+          }
+        }
+      }
+    },
+    "Carbs and bolus insulin": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carboidrati e boli di insulina"
+          }
+        }
+      }
+    },
+    "%@ into the WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "al minuto %@ del WOD"
+          }
+        }
+      }
+    },
+    "Workouts and WODs": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allenamenti e WOD"
+          }
+        }
+      }
+    },
+    "Lanes": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corsie"
+          }
+        }
+      }
+    },
+    "Target range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intervallo obiettivo"
+          }
+        }
+      }
+    },
+    "Lower limit": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limite inferiore"
+          }
+        }
+      }
+    },
+    "Upper limit": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limite superiore"
+          }
+        }
+      }
+    },
+    "Below 70 mg/dL is always shaded red: the consensus threshold for a low.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sotto 70 mg/dL è sempre colorato di rosso: la soglia di ipoglicemia del consenso internazionale."
+          }
+        }
+      }
+    },
+    "Heart-rate zones": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zone di frequenza cardiaca"
+          }
+        }
+      }
+    },
+    "Zones run from half your max heart rate up to it, in five equal steps (set your max heart rate in your profile).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le zone vanno da metà della tua frequenza massima fino al massimo, in cinque gradini uguali (la frequenza massima si imposta nel profilo)."
+          }
+        }
+      }
+    },
+    "Figures for the stretch on screen": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valori del tratto sullo schermo"
+          }
+        }
+      }
+    },
+    "Chart size": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dimensione del grafico"
+          }
+        }
+      }
+    },
+    "Display": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visualizzazione"
+          }
+        }
+      }
+    },
+    "Before the WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prima del WOD"
+          }
+        }
+      }
+    },
+    "After the WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo il WOD"
+          }
+        }
+      }
+    },
+    "Around a WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intorno a un WOD"
+          }
+        }
+      }
+    },
+    "The figures above and below the chart keep their own window: 2 h before to 4 h after.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I valori sopra e sotto il grafico mantengono la loro finestra: da 2 h prima a 4 h dopo."
+          }
+        }
+      }
+    },
+    "Restore defaults": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripristina i valori predefiniti"
+          }
+        }
+      }
+    },
+    "Glucose, heart & carbs around the WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia, battito e carboidrati intorno al WOD"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
