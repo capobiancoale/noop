@@ -7,7 +7,9 @@
 //
 // To build and run on your iPhone from Xcode, run `Tools/setup-xcode.sh <TEAMID>` once. It writes
 // Config/Local.xcconfig (git-ignored, never committed) with your Team ID and the same identifiers the
-// TestFlight build uses (com.<TEAMID>.noopapp.noop…), so both ways install the same app. A target-level
-// xcconfig outranks the project-level NOOP_BUNDLE_PREFIX / DEVELOPMENT_TEAM defaults in project.yml.
+// TestFlight build uses (com.<TEAMID>.noopapp.noop…), so both ways install the same app, unless NOOP_APP_ID
+// pins the id of a NOOP already on the iPhone (an AltStore/SideStore install), so Xcode updates that one and
+// its data stays. A target-level xcconfig outranks the project-level NOOP_BUNDLE_PREFIX / NOOP_APP_ID /
+// DEVELOPMENT_TEAM defaults in project.yml.
 
 #include? "Local.xcconfig"

@@ -163,13 +163,39 @@ tuo iPhone), lo **stesso account Apple Developer** di TestFlight e [Homebrew](ht
 4. **Xcode:** in alto scegli lo schema **NOOPiOS** e il tuo iPhone → **▶︎** (⌘R). La firma è automatica:
    Xcode crea da solo i profili di sviluppo e, se non esistono ancora, anche gli identificativi e l'App Group.
 
-Dopo ogni `git pull` rilancia `Tools/setup-xcode.sh <TEAMID>`: rigenera il progetto (i file nuovi entrano
-solo così).
+### Aggiornare senza perdere i dati
+
+Con l'iPhone collegato e sbloccato, dalla cartella `noop`:
+
+```bash
+Tools/update-noop.sh
+```
+
+poi in Xcode **▶︎** (⌘R). Lo script scarica le novità (rimette a posto i file che Xcode modifica da solo a
+ogni build, altrimenti `git pull` si rifiuta di partire), rilancia `Tools/setup-xcode.sh` con lo stesso Team
+ID e rigenera il progetto. **Non eliminare mai NOOP dall'iPhone per aggiornarla**: eliminarla cancella i suoi
+dati.
+
+Perché i dati restano: iOS tiene i dati di un'app solo se la nuova installazione ha lo **stesso identificativo
+(Bundle ID) e lo stesso team**; con un identificativo diverso installa una **seconda NOOP, vuota**, accanto a
+quella vecchia (i dati restano nella vecchia). Per questo lo script:
+- ricorda l'identificativo in `Config/Local.xcconfig` (`NOOP_APP_ID`) e lo riusa ogni volta;
+- se l'iPhone è collegato, guarda quale NOOP c'è sopra (`Tools/noop-on-iphone.sh`, usa `devicectl` di Xcode) e
+  ti dice se Xcode la **aggiornerà** o ne installerebbe una seconda;
+- se sull'iPhone c'è solo una NOOP firmata dal tuo team con un altro identificativo (installata con
+  **AltStore/SideStore**, che la chiamano `com.noopapp.noop.<TEAMID>`, o da una build precedente), costruisce
+  proprio quella, così Xcode la aggiorna. Puoi sceglierla anche a mano:
+  `Tools/setup-xcode.sh <TEAMID> --app-id <identificativo>` (`--app-id default` torna a
+  `com.<TEAMID>.noopapp.noop`).
+
+Una NOOP di un altro sviluppatore o di un altro Apple ID (App Store, TestFlight di altri) può aggiornarla solo
+chi l'ha firmata: per portare i dati nella tua, nella vecchia **Altro → Backup e sincronizzazione → Esegui il
+backup ora** (in una cartella di iCloud Drive), poi nella nuova **Ripristina da un backup…**.
 
 Da sapere:
-- Con gli stessi Bundle ID è **la stessa app**: installarla da Xcode sostituisce quella di TestFlight e
-  viceversa, come un aggiornamento, e i dati restano. Per sicurezza, prima fai un backup dall'app
-  (**Backup e sincronizzazione → Esegui il backup ora**).
+- Con l'identificativo predefinito (`com.<TEAMID>.noopapp.noop`) la build di Xcode e quella di TestFlight sono
+  **la stessa app**: l'una sostituisce l'altra come un aggiornamento, e i dati restano. Per sicurezza, prima
+  fai un backup dall'app (**Backup e sincronizzazione → Esegui il backup ora**).
 - Per tornare alla versione TestFlight basta reinstallarla dall'app TestFlight.
 - Senza `Config/Local.xcconfig` (per esempio sulle macchine di GitHub) non cambia niente: la build
   TestFlight imposta il team da sola.

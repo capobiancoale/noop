@@ -257,6 +257,15 @@ To sign it under your own Apple Developer team, run `Tools/setup-xcode.sh <TEAMI
 TestFlight browser build uses ([`fastlane/BROWSER_BUILD.md`](../fastlane/BROWSER_BUILD.md)), so an Xcode
 build and a TestFlight build are the same app.
 
+iOS keeps an app's data only when an install has the same bundle id and team; any other id installs a second,
+empty app. So the script also pins the app id (`NOOP_APP_ID`, from which `project.yml` derives the widget,
+watch and App Group ids) and, with the iPhone connected, checks the NOOP already on it
+(`Tools/noop-on-iphone.sh`, via `xcrun devicectl`): when the only NOOP there is signed by your team under
+another id (an AltStore/SideStore install is `com.noopapp.noop.<TEAMID>`), it builds that id so Xcode updates
+it; `--app-id <id>` / `--app-id default` choose by hand. To update later, run `Tools/update-noop.sh`: it
+restores the string catalogs and `Package.resolved` that Xcode rewrites on every build (they block
+`git pull`), pulls, and reruns the setup with the saved team and id.
+
 Notes:
 
 - The `NOOPiOS` and `NOOPiOSWidgets` targets deploy to **iOS 17.0**. (The shared packages still

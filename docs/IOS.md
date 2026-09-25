@@ -81,7 +81,11 @@ below.
 > from which `project.yml` derives every bundle id and the App Group (`APP_GROUP_ID`, which both targets'
 > entitlements/Info.plist reference and the runtime `WidgetSnapshot.suiteName` reads back, so nothing is
 > hard-coded in Swift), then regenerates the project, so nothing in `project.yml` needs editing and the
-> setting survives every `xcodegen generate`. The App Group is only needed for the
+> setting survives every `xcodegen generate`. It also pins the app id (`NOOP_APP_ID`) and, with the iPhone
+> connected, builds the id of the NOOP already on it when that one is signed by your team (an AltStore /
+> SideStore install is `com.noopapp.noop.<TEAMID>`), so Xcode **updates** it instead of installing a second,
+> empty NOOP: iOS keeps an app's data only for the same id and team. Update later with
+> `Tools/update-noop.sh`. The App Group is only needed for the
 > **widgets / Live Activity** — if you don't need those, you can skip wiring it and the core app still builds.
 
 > ℹ️ **Cross-platform engineering lives in [`CROSS_PLATFORM.md`](CROSS_PLATFORM.md)** — the shared-code
