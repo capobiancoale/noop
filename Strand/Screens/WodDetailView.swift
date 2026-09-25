@@ -35,6 +35,9 @@ struct WodDetailView: View {
     @State private var chartBoluses: [InsulinEntry] = []
     @State private var chartZoom: ClosedRange<Date>?
     @State private var minutesBelowLow = 0.0
+    /// Minutes in heart-rate zones 1…5 over the WOD's span, from the strap (nil: no heart rate there).
+    @State private var zoneMinutes: [Double]?
+    @State private var zonesLoaded = false
     @AppStorage(TimelinePrefs.wodBeforeMinutes) private var chartBefore = TimelinePrefs.defaultWodBefore
     @AppStorage(TimelinePrefs.wodAfterMinutes) private var chartAfter = TimelinePrefs.defaultWodAfter
     @State private var glucoseResp: WodGlucoseResponse?
@@ -63,6 +66,7 @@ struct WodDetailView: View {
                 Section("Notes") { Text(n).font(.subheadline).foregroundStyle(.secondary) }
             }
             loadSection
+            zonesSection
             if progressionPoints.count >= 2 { progressionSection }
             glucoseSection
         }
@@ -226,6 +230,30 @@ struct WodDetailView: View {
         }
     }
 
+    /// Time in each heart-rate zone over the WOD's span (the recorded workout, else the logged time), from
+    /// the strap's heart rate, on the same zones as the live workout.
+    @ViewBuilder private var zonesSection: some View {
+        if let w = wodWindow {
+            Section {
+                if let z = zoneMinutes, z.reduce(0, +) > 0 {
+                    HRZoneSplitView(minutes: z)
+                        .padding(.vertical, 4)
+                    Text(windowCaption(w)).font(.caption).foregroundStyle(.secondary)
+                    let zones = HRZones.zones(maxHR: Double(profile.hrMax)).zones
+                    if let first = zones.first, let last = zones.last {
+                        Text("Zone 1 starts at \(Int(first.lower.rounded())) bpm and zone 5 at \(Int(last.lower.rounded())) bpm, from your max heart rate of \(profile.hrMax) bpm (Settings).")
+                            .font(.caption2).foregroundStyle(.tertiary)
+                    }
+                } else if zonesLoaded {
+                    Text("No heart rate from the strap during this WOD.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Time in heart-rate zones")
+            }
+        }
+    }
+
     /// Glucose, heart rate and carbs / boluses around the WOD, zoomable down to single minutes.
     private func timelineChart(_ w: WodTimeWindow) -> some View {
         let start = Date(timeIntervalSince1970: w.start)
@@ -325,6 +353,8 @@ struct WodDetailView: View {
         let logged = TimeInterval(e.ts)
         let window = WodTimeWindow.resolve(loggedTs: logged, durationS: (e.resultSeconds ?? e.timeCapS).map(Double.init),
                                            workouts: await recordedWorkouts(around: logged))
+        zoneMinutes = await repo.workoutZoneMinutes(from: Int(window.start), to: Int(window.end), maxHR: profile.hrMax)
+        zonesLoaded = true
         let workoutStart = window.start
         let workoutEnd = window.end
         // The figures use a fixed window, 2 h before to 4 h after; the chart can show up to 3 h before and
