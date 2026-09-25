@@ -514,7 +514,7 @@ struct AppleHealthView: View {
             Text("Written to Apple Health")
                 .font(StrandFont.subhead.weight(.semibold))
                 .foregroundStyle(StrandPalette.textPrimary)
-            Text("From the strap: heart rate minute by minute, sleep with its stages, and each day's resting heart rate, HRV, SpO₂ and respiratory rate. Each time NOOP syncs, it adds what's new.")
+            Text("Heart rate minute by minute, sleep with its stages, workouts and WODs (with their heart rate, energy and time in each zone), VO₂max, and each day's resting heart rate, HRV, SpO₂ and respiratory rate. Each time NOOP syncs, it adds what's new.")
                 .font(StrandFont.footnote)
                 .foregroundStyle(StrandPalette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -543,11 +543,15 @@ struct AppleHealthView: View {
                         await health.writeToHealth()
                     }
                 } label: {
-                    Label("Allow writing heart rate and sleep", systemImage: "heart.text.square")
+                    Label("Allow writing heart rate, workouts and VO₂max", systemImage: "heart.text.square")
                 }
                 .buttonStyle(.bordered)
                 .tint(StrandPalette.metricCyan)
             }
+            Text("Charge, Effort, Rest, Stress and NOOP's other scores have no place in Apple Health, so they stay in NOOP. Steps and the day's calories aren't written either: the iPhone counts them too, and Health would count them twice.")
+                .font(StrandFont.caption)
+                .foregroundStyle(StrandPalette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
             Text("To check: Health app › Browse › Heart › Heart Rate › Data Sources & Access. If a kind is switched off there, NOOP can't write it.")
                 .font(StrandFont.caption)
                 .foregroundStyle(StrandPalette.textTertiary)

@@ -80,10 +80,14 @@ final class HealthKitBridge: ObservableObject {
     /// `noopDeviceId` daily row, so those metrics exist ONLY here.
     private var computedDeviceId: String { noopDeviceId + "-noop" }
 
-    init(repo: Repository, appleDeviceId: String, noopDeviceId: String) {
+    /// The user's max heart rate (profile), for the heart-rate zones written with each workout.
+    private let hrMax: @MainActor () -> Int
+
+    init(repo: Repository, appleDeviceId: String, noopDeviceId: String, hrMax: @escaping @MainActor () -> Int = { 0 }) {
         self.repo = repo
         self.appleDeviceId = appleDeviceId
         self.noopDeviceId = noopDeviceId
+        self.hrMax = hrMax
         // Order matters: a free-signed build with no HealthKit entitlement is dead in the water even
         // where the hardware supports Health, so surface that first. `.unavailable` (no HealthKit at
         // all, e.g. iPad without the framework) still wins where it applies because we only reach the
@@ -109,6 +113,7 @@ final class HealthKitBridge: ObservableObject {
         var s = Set<HKSampleType>()
         for id in HealthKitBridge.quantityWriteIds { if let t = HKObjectType.quantityType(forIdentifier: id) { s.insert(t) } }
         if let sleep = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) { s.insert(sleep) }
+        s.insert(HKObjectType.workoutType())
         return s
     }
 
@@ -134,7 +139,9 @@ final class HealthKitBridge: ObservableObject {
     private static let quantityWriteIds: [HKQuantityTypeIdentifier] = [
         .restingHeartRate, .heartRateVariabilitySDNN, .oxygenSaturation, .respiratoryRate,
         // The strap's heart rate, one average per minute (see writeHeartRate).
-        .heartRate
+        .heartRate,
+        // NOOP's VO₂max estimate; the energy of the workouts NOOP writes (never a day's total).
+        .vo2Max, .activeEnergyBurned
     ]
 
     // MARK: - Authorization
@@ -573,7 +580,8 @@ final class HealthKitBridge: ObservableObject {
     // MARK: - Write back (NOOP → Health)
 
     private var writing = false
-    private static let newWriteKindsAskedKey = "hkNewWriteKindsAsked.v2"
+    private static let newWriteKindsAskedKey = "hkNewWriteKindsAsked.v3"
+    private static let workoutsWrittenKey = "hkWorkoutsWritten.v1"
     private static let heartRateNewestKey = "hkHeartRateNewestWritten.v1"
     private static let sleepWrittenKey = "hkSleepWritten.v1"
     /// The strap, as the device the heart rate and sleep came from.
@@ -612,8 +620,12 @@ final class HealthKitBridge: ObservableObject {
         var parts: [String] = []
         do {
             let daily = try await writeDailyValues(whoopStore: whoop)
+            // Workouts before the heart rate: a workout carries its own minutes of heart rate, which the
+            // heart-rate write then finds already there.
+            let workouts = try await writeWorkouts()
             let minutes = try await writeHeartRate()
             let nights = try await writeSleep()
+            if workouts > 0 { parts.append(String(localized: "workouts: \(workouts)")) }
             if minutes > 0 { parts.append(String(localized: "minutes of heart rate: \(minutes)")) }
             if nights > 0 { parts.append(String(localized: "nights of sleep: \(nights)")) }
             if daily > 0 { parts.append(String(localized: "daily values: \(daily)")) }
@@ -683,6 +695,21 @@ final class HealthKitBridge: ObservableObject {
                 add(.respiratoryRate, HKUnit.count().unitDivided(by: .minute()), rr, row.day, noon)
             }
         }
+        // VO₂max: the estimate from walks and runs on the days it has one, else the weekly estimate at rest
+        // (the two methods aren't mixed within the window). Last 90 days.
+        let vo2From = HealthKitBridge.dayString(Date().addingTimeInterval(-90 * 86_400))
+        var vo2 = (try? await whoopStore.metricSeries(deviceId: computedDeviceId, key: "vo2max_exercise",
+                                                      from: vo2From, to: to)) ?? []
+        if vo2.isEmpty {
+            vo2 = (try? await whoopStore.metricSeries(deviceId: computedDeviceId, key: "vo2max_est",
+                                                      from: vo2From, to: to)) ?? []
+        }
+        let vo2Unit = HKUnit.literUnit(with: .milli).unitDivided(by: HKUnit.gramUnit(with: .kilo).unitMultiplied(by: .minute()))
+        for p in vo2 where p.value > 10 && p.value < 95 {
+            guard let date = HealthKitBridge.date(from: p.day) else { continue }
+            let noon = cal.date(bySettingHour: 12, minute: 0, second: 0, of: date) ?? date
+            add(.vo2Max, vo2Unit, p.value, p.day, noon)
+        }
         guard !candidates.isEmpty else { return 0 }
 
         // Delete any of OUR prior samples that carry the same metadata keys, then write the fresh
@@ -700,6 +727,185 @@ final class HealthKitBridge: ObservableObject {
         }
         try await self.store.save(candidates.map { $0.sample })
         return candidates.count
+    }
+
+    /// Write NOOP's workouts of the last two weeks: the ones the strap recorded or detected and the ones
+    /// recorded in NOOP, and each logged WOD. A WOD matching one of those workouts becomes that workout (as
+    /// Cross Training, with the WOD's name, result, RX/scaled and RPE); a WOD with no recorded workout is
+    /// written over its logged time. Sessions Apple Health already has from another app (an Apple Watch
+    /// workout) and imports from other apps (WHOOP, Hevy, files) are left out. Each workout carries its heart
+    /// rate minute by minute, its energy when NOOP has it, and the minutes in each heart-rate zone (in its
+    /// metadata: Apple Health has no place of its own for zones). A workout is written again only when it
+    /// changes; one that no longer exists (a dismissed detected bout) is removed. Returns the workouts written.
+    private func writeWorkouts() async throws -> Int {
+        let workoutType = HKObjectType.workoutType()
+        guard canWrite(workoutType) else { return 0 }
+        let now = Date().timeIntervalSince1970
+        let rows = await repo.workoutRows(days: HealthWritePlan.workoutDays + 2, reconcileHr: false)
+        var own: [WorkoutRow] = []
+        var others: [HealthWritePlan.WorkoutSpan] = []
+        for r in rows {
+            switch WorkoutSource.classify(r.source) {
+            case .detected, .manual: own.append(r)
+            case .apple: others.append(.init(start: Double(r.startTs), end: Double(r.endTs)))
+            case .whoop, .lifting, .activityFile: break      // another app's session: its app writes it
+            }
+        }
+        let oldest = now - Double(HealthWritePlan.workoutDays) * 86_400
+        let wods = await repo.allWods().filter { Double($0.ts) >= oldest - 86_400 }
+        let wodById = Dictionary(wods.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let ownSpans = own.map { HealthWritePlan.WorkoutSpan(start: Double($0.startTs), end: Double($0.endTs)) }
+        let wodEntries = wods.map { w in
+            HealthWritePlan.WodEntry(id: w.id, loggedTs: Double(w.ts),
+                                     durationS: (w.resultSeconds ?? w.timeCapS).map(Double.init))
+        }
+        let plan = HealthWritePlan.workouts(own: ownSpans, others: others, wods: wodEntries, now: now)
+
+        let defaults = UserDefaults.standard
+        var written = (defaults.dictionary(forKey: Self.workoutsWrittenKey) as? [String: String]) ?? [:]
+        var keep = Set<String>()
+        var count = 0
+        let zoneFloors = HealthWritePlan.zoneFloors(maxHR: Double(hrMax()))
+        for item in plan {
+            let row = item.ownIndex.map { own[$0] }
+            let itemWods = item.wodIds.compactMap { wodById[$0] }
+            let activity = itemWods.isEmpty ? Self.activityType(forSport: row?.sport ?? "") : .crossTraining
+            let minutes = await repo.heartRatePerMinute(from: Int(item.start), to: Int(item.end) - 1)
+                .filter { HealthWritePlan.plausibleBpm.contains($0.bpm) }
+            let zones = zoneFloors.isEmpty ? [] : HealthWritePlan.zoneMinutes(bpm: minutes.map(\.bpm), zoneFloors: zoneFloors)
+            let energy = row?.energyKcal.flatMap { $0 > 0 ? $0 : nil }
+            let key = "\(Int(item.start))-\(Int(item.end))"
+            var metadata: [String: Any] = [HKMetadataKeyExternalUUID: Self.workoutUUID(key)]
+            if !itemWods.isEmpty {
+                metadata[HKMetadataKeyWorkoutBrandName] = itemWods.map(\.title).joined(separator: " + ")
+                metadata["NOOPWod"] = itemWods.map(\.title).joined(separator: " + ")
+                let results = itemWods.compactMap { w in WodFormat.progressionValue(w).map { WodFormat.progressionLabel($0, kind: w.resultKind) } }
+                if !results.isEmpty { metadata["NOOPWodResult"] = results.joined(separator: " + ") }
+                let rx = itemWods.compactMap(\.rx)
+                if !rx.isEmpty { metadata["NOOPWodRX"] = rx.allSatisfy { $0 } ? "RX" : "Scaled" }
+                if let rpe = itemWods.compactMap(\.rpe).max() { metadata["NOOPRPE"] = NSNumber(value: rpe) }
+            }
+            if let strain = row?.strain { metadata["NOOPEffort"] = NSNumber(value: strain) }
+            for (zone, mins) in zones.enumerated() where zone > 0 {
+                metadata["NOOPZone\(zone)Minutes"] = NSNumber(value: mins)
+            }
+            let fingerprint = HealthWritePlan.fingerprint([
+                "\(Int(item.start))", "\(Int(item.end))", "\(activity.rawValue)", "\(minutes.count)",
+                "\(energy ?? 0)", zones.map(String.init).joined(separator: ","),
+                (metadata["NOOPWod"] as? String) ?? "", (metadata["NOOPWodResult"] as? String) ?? "",
+                (metadata["NOOPWodRX"] as? String) ?? "", "\((metadata["NOOPRPE"] as? NSNumber)?.doubleValue ?? 0)",
+            ])
+            keep.insert(key)
+            guard written[key] != fingerprint else { continue }
+            try await removeOwnWorkout(key: key, start: item.start, end: item.end, withSamples: true)
+            try await saveWorkout(activity: activity, start: item.start, end: item.end, minutes: minutes,
+                                  energyKcal: energy, metadata: metadata)
+            written[key] = fingerprint
+            count += 1
+        }
+        // A workout NOOP wrote that no longer exists (a dismissed or re-detected bout): remove exactly that
+        // one, by its id (a new version of it may overlap the same time).
+        for key in Array(written.keys) where !keep.contains(key) {
+            let start = key.split(separator: "-").first.flatMap { Double($0) } ?? 0
+            if start >= oldest { try await removeOwnWorkout(key: key, start: 0, end: 0, withSamples: false) }
+            written[key] = nil
+        }
+        defaults.set(written, forKey: Self.workoutsWrittenKey)
+        return count
+    }
+
+    private static func workoutUUID(_ key: String) -> String { "noop:workout:\(key)" }
+
+    /// Remove the workout NOOP wrote under `key` (found by its id, so an overlapping workout of NOOP's is never
+    /// touched) and, when it is about to be written again over [start, end], NOOP's heart rate in that time
+    /// (the new workout carries it again) and the energy NOOP wrote inside it.
+    private func removeOwnWorkout(key: String, start: Double, end: Double, withSamples: Bool) async throws {
+        let own = HKQuery.predicateForObjects(from: HKSource.default())
+        try await deleteOwn(HKObjectType.workoutType(), NSCompoundPredicate(andPredicateWithSubpredicates: [
+            own, HKQuery.predicateForObjects(withMetadataKey: HKMetadataKeyExternalUUID,
+                                             allowedValues: [Self.workoutUUID(key)]),
+        ]))
+        guard withSamples else { return }
+        let from = Date(timeIntervalSince1970: start), to = Date(timeIntervalSince1970: end)
+        if let hr = HKQuantityType.quantityType(forIdentifier: .heartRate), canWrite(hr) {
+            try await deleteOwn(hr, NSCompoundPredicate(andPredicateWithSubpredicates: [
+                own, HKQuery.predicateForSamples(withStart: from, end: to, options: [])]))
+        }
+        if let energy = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned), canWrite(energy) {
+            try await deleteOwn(energy, NSCompoundPredicate(andPredicateWithSubpredicates: [
+                own, HKQuery.predicateForSamples(withStart: from, end: to, options: [.strictStartDate, .strictEndDate])]))
+        }
+    }
+
+    /// Build and save one workout with its heart rate (minute by minute) and energy.
+    private func saveWorkout(activity: HKWorkoutActivityType, start: Double, end: Double, minutes: [HRBucket],
+                             energyKcal: Double?, metadata: [String: Any]) async throws {
+        let configuration = HKWorkoutConfiguration()
+        configuration.activityType = activity
+        let builder = HKWorkoutBuilder(healthStore: store, configuration: configuration, device: Self.strapDevice)
+        let startDate = Date(timeIntervalSince1970: start), endDate = Date(timeIntervalSince1970: end)
+        var samples: [HKSample] = []
+        if let hr = HKQuantityType.quantityType(forIdentifier: .heartRate), canWrite(hr) {
+            let bpm = HKUnit.count().unitDivided(by: .minute())
+            for m in minutes {
+                let s = max(Double(m.ts), start), e = min(Double(m.ts) + 59, end)
+                guard e > s else { continue }
+                samples.append(HKQuantitySample(type: hr, quantity: HKQuantity(unit: bpm, doubleValue: m.bpm),
+                                                start: Date(timeIntervalSince1970: s), end: Date(timeIntervalSince1970: e),
+                                                device: Self.strapDevice, metadata: nil))
+            }
+        }
+        if let kcal = energyKcal, let type = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned), canWrite(type) {
+            samples.append(HKQuantitySample(type: type, quantity: HKQuantity(unit: .kilocalorie(), doubleValue: kcal),
+                                            start: startDate, end: endDate, device: Self.strapDevice, metadata: nil))
+        }
+        try await Self.run { builder.beginCollection(withStart: startDate, completion: $0) }
+        if !samples.isEmpty { try await Self.run { builder.add(samples, completion: $0) } }
+        try await Self.run { builder.addMetadata(metadata, completion: $0) }
+        try await Self.run { builder.endCollection(withEnd: endDate, completion: $0) }
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+            builder.finishWorkout { _, error in
+                if let error { cont.resume(throwing: error) } else { cont.resume() }
+            }
+        }
+    }
+
+    /// Await a HealthKit call that reports (success, error).
+    private static func run(_ call: (@escaping (Bool, Error?) -> Void) -> Void) async throws {
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+            call { ok, error in
+                if let error { cont.resume(throwing: error) }
+                else if ok { cont.resume() }
+                else { cont.resume(throwing: HKError(.errorInvalidArgument)) }
+            }
+        }
+    }
+
+    /// The Apple Health workout type for a sport name (NOOP's, a WHOOP sport, or a hand-typed one).
+    static func activityType(forSport sport: String) -> HKWorkoutActivityType {
+        let s = sport.lowercased()
+        func has(_ words: String...) -> Bool { words.contains { s.contains($0) } }
+        if has("crossfit", "wod", "functional", "cross training", "crosstraining") { return .crossTraining }
+        if has("hiit", "interval") { return .highIntensityIntervalTraining }
+        if has("run", "jog") { return .running }
+        if has("walk") { return .walking }
+        if has("hik") { return .hiking }
+        if has("cycl", "bike", "biking", "spin") { return .cycling }
+        if has("swim") { return .swimming }
+        if has("row") { return .rowing }
+        if has("strength", "weight", "lift", "gym") { return .traditionalStrengthTraining }
+        if has("yoga") { return .yoga }
+        if has("pilates") { return .pilates }
+        if has("box") { return .boxing }
+        if has("elliptical") { return .elliptical }
+        if has("stair") { return .stairClimbing }
+        if has("dance") { return .cardioDance }
+        if has("tennis") { return .tennis }
+        if has("soccer", "football") { return .soccer }
+        if has("basketball") { return .basketball }
+        if has("climb") { return .climbing }
+        if has("ski") { return .downhillSkiing }
+        return .other
     }
 
     /// Write the strap's heart rate, one average per minute, for the minutes Health doesn't have from NOOP

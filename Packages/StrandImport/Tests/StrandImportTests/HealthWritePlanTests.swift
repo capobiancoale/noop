@@ -86,3 +86,71 @@ final class HealthWritePlanTests: XCTestCase {
         XCTAssertEqual(HealthWritePlan.sampleDate(noon: now + 3_600, now: now), now - 60)
     }
 }
+
+final class HealthWritePlanWorkoutTests: XCTestCase {
+
+    private let now = 1_790_000_000.0
+    private func span(_ startH: Double, _ minutes: Double) -> HealthWritePlan.WorkoutSpan {
+        let s = now - startH * 3_600
+        return .init(start: s, end: s + minutes * 60)
+    }
+
+    func testAWodMatchingAStrapWorkoutBecomesThatWorkout() {
+        let own = [span(5, 40), span(30, 60)]
+        let wod = HealthWritePlan.WodEntry(id: "fran", loggedTs: own[0].start + 300, durationS: 600)
+        let plan = HealthWritePlan.workouts(own: own, others: [], wods: [wod], now: now)
+        XCTAssertEqual(plan.count, 2)
+        XCTAssertEqual(plan.first(where: { $0.ownIndex == 0 })?.wodIds, ["fran"])
+        XCTAssertEqual(plan.first(where: { $0.ownIndex == 1 })?.wodIds, [])
+        XCTAssertEqual(plan.map(\.start), plan.map(\.start).sorted())
+    }
+
+    func testAWodWithNoRecordedWorkoutIsWrittenOverItsLoggedTime() {
+        let wod = HealthWritePlan.WodEntry(id: "cindy", loggedTs: now - 3 * 3_600, durationS: 1_200)
+        let plan = HealthWritePlan.workouts(own: [], others: [], wods: [wod], now: now)
+        XCTAssertEqual(plan, [.init(start: now - 3 * 3_600, end: now - 3 * 3_600 + 1_200, ownIndex: nil, wodIds: ["cindy"])])
+    }
+
+    func testSessionsAppleHealthAlreadyHasAreLeftOut() {
+        let watch = span(5, 45)
+        let own = [span(5, 40)]                                   // the same session, from the strap
+        let wod = HealthWritePlan.WodEntry(id: "murph", loggedTs: watch.start + 60, durationS: 2_400)
+        let plan = HealthWritePlan.workouts(own: own, others: [watch], wods: [wod], now: now)
+        XCTAssertTrue(plan.isEmpty, "\(plan)")
+    }
+
+    func testShortRunningOrOldBoutsAreNotWritten() {
+        let short = span(5, 3)
+        let running = HealthWritePlan.WorkoutSpan(start: now - 1_200, end: now - 60)   // ended a minute ago
+        let old = span(24 * 20, 60)
+        let plan = HealthWritePlan.workouts(own: [short, running, old], others: [], wods: [], now: now)
+        XCTAssertTrue(plan.isEmpty)
+    }
+
+    func testTwoWodsInOneSessionShareTheWorkout() {
+        let own = [span(5, 60)]
+        let a = HealthWritePlan.WodEntry(id: "a", loggedTs: own[0].start + 600, durationS: 600)
+        let b = HealthWritePlan.WodEntry(id: "b", loggedTs: own[0].start + 2_400, durationS: 600)
+        let plan = HealthWritePlan.workouts(own: own, others: [], wods: [b, a], now: now)
+        XCTAssertEqual(plan.map(\.wodIds), [["a", "b"]])
+    }
+
+    func testZoneMinutesCountEachMinuteInItsZone() {
+        // Floors for a max of 200: 100, 120, 140, 160, 180.
+        let floors = [100.0, 120, 140, 160, 180]
+        XCTAssertEqual(HealthWritePlan.zoneMinutes(bpm: [90, 100, 125, 139, 150, 170, 185, 199], zoneFloors: floors),
+                       [1, 1, 2, 1, 1, 2])
+    }
+
+    func testFingerprintsDifferWhenAPartChanges() {
+        XCTAssertEqual(HealthWritePlan.fingerprint(["a", "b"]), HealthWritePlan.fingerprint(["a", "b"]))
+        XCTAssertNotEqual(HealthWritePlan.fingerprint(["a", "b"]), HealthWritePlan.fingerprint(["a", "c"]))
+    }
+}
+
+final class HealthWritePlanZoneTests: XCTestCase {
+    func testZoneFloorsAreTenthsOfTheMaxFromHalf() {
+        XCTAssertEqual(HealthWritePlan.zoneFloors(maxHR: 200), [100, 120, 140, 160, 180])
+        XCTAssertTrue(HealthWritePlan.zoneFloors(maxHR: 0).isEmpty)
+    }
+}
