@@ -132159,6 +132159,126 @@
           }
         }
       }
+    },
+    "%lld min before the WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min prima del WOD"
+          }
+        }
+      }
+    },
+    "during the WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "durante il WOD"
+          }
+        }
+      }
+    },
+    "%lld min after the WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min dopo il WOD"
+          }
+        }
+      }
+    },
+    "Carbs and bolus insulin around this WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carboidrati e boli di insulina intorno al WOD"
+          }
+        }
+      }
+    },
+    "Below 70 mg/dL for about %lld min in this window": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sotto 70 mg/dL per circa %lld min in questa finestra"
+          }
+        }
+      }
+    },
+    "WOD %@–%@ · from the recorded workout": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WOD %@–%@ · dall'allenamento registrato"
+          }
+        }
+      }
+    },
+    "WOD %@–%@ · from the time you logged (no recorded workout found)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WOD %@–%@ · dall'orario inserito (nessun allenamento registrato trovato)"
+          }
+        }
+      }
+    },
+    "Best": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Migliore"
+          }
+        }
+      }
+    },
+    "Scaled": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scaled"
+          }
+        }
+      }
+    },
+    "Faster is higher": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più in alto = più veloce"
+          }
+        }
+      }
+    },
+    "Higher is better": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più in alto = meglio"
+          }
+        }
+      }
+    },
+    "%lld rounds": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld round"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -1,5 +1,6 @@
 #if os(iOS)
 import SwiftUI
+import Charts
 import WhoopStore
 import StrandImport
 import StrandDesign
@@ -27,7 +28,7 @@ struct WodDetailView: View {
     @State private var showEdit = false
 
     // Glucose + carbs + insulin around the WOD (Apple Health, queried live).
-    @State private var glucosePoints: [TrendPoint] = []
+    @State private var timeline: WodGlucoseTimeline?
     @State private var glucoseResp: WodGlucoseResponse?
     @State private var carbsPre = 0.0
     @State private var carbsPost = 0.0
@@ -180,8 +181,7 @@ struct WodDetailView: View {
 
     private var progressionSection: some View {
         Section {
-            WodProgressionChart(history: history)
-            Text("\(progressionPoints.count) attempts").font(.caption).foregroundStyle(.secondary)
+            WodProgressionChart(history: history, currentId: current.id)
         } header: {
             Text("Progression")
         }
@@ -204,14 +204,10 @@ struct WodDetailView: View {
                     Spacer()
                     stat("Lowest", "\(Int(r.minMgdl.rounded()))")
                 }
-                if !glucosePoints.isEmpty {
-                    TrendChart(points: glucosePoints,
-                               gradient: Gradient(colors: [StrandPalette.metricCyan, StrandPalette.metricRose]),
-                               valueRange: 40...300,
-                               height: 130,
-                               valueFormat: { "\(Int($0.rounded())) mg/dL" },
-                               dateFormat: { Self.clock.string(from: $0) },
-                               accessibilityLabel: "Glucose around this WOD")
+                if let tl = timeline, !tl.readings.isEmpty {
+                    Text(windowCaption(tl.window)).font(.caption).foregroundStyle(.secondary)
+                    WodGlucoseChart(timeline: tl)
+                        .padding(.vertical, 4)
                 }
                 HStack {
                     stat("Carbs −2h", "\(Int(carbsPre.rounded())) g")
@@ -228,8 +224,14 @@ struct WodDetailView: View {
                 Text(deltaText(r)).font(.caption).foregroundStyle(.secondary)
                 if let t = trendPerHour { Text(trendText(t)).font(.caption).foregroundStyle(.secondary) }
                 if r.anyLow {
-                    Label("Went below 70 mg/dL in this window", systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption).foregroundStyle(.orange)
+                    if let below = timeline?.minutesBelowLow, below > 0 {
+                        Label(String(localized: "Below 70 mg/dL for about \(Int(below.rounded())) min in this window"),
+                              systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption).foregroundStyle(.orange)
+                    } else {
+                        Label("Went below 70 mg/dL in this window", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption).foregroundStyle(.orange)
+                    }
                 }
                 if let note = tendencyNote() { Text(note).font(.caption).foregroundStyle(.secondary) }
                 Text("Informational only, not medical advice. Carb and insulin choices stay with you and your care team / Loop.")
@@ -284,16 +286,21 @@ struct WodDetailView: View {
         guard !glucoseLoaded, !glucoseLoading else { return }
         glucoseLoading = true
         let e = current
-        let workoutStart = TimeInterval(e.ts)
-        let workoutEnd = workoutStart + TimeInterval(e.timeCapS ?? 20 * 60)
-        let preStart = workoutStart - 2 * 3600
-        let postEnd = workoutEnd + 4 * 3600
+        // Where the WOD really sat: the workout the strap or Apple Health recorded around the logged time
+        // (which may mark its start or its end), else the logged time plus the result time / time cap.
+        let logged = TimeInterval(e.ts)
+        let window = WodTimeWindow.resolve(loggedTs: logged, durationS: (e.resultSeconds ?? e.timeCapS).map(Double.init),
+                                           workouts: await recordedWorkouts(around: logged))
+        let workoutStart = window.start
+        let workoutEnd = window.end
+        let preStart = workoutStart - WodGlucoseTimeline.hoursBefore * 3600
+        let postEnd = workoutEnd + WodGlucoseTimeline.hoursAfter * 3600
         let start = Date(timeIntervalSince1970: preStart)
         let end = Date(timeIntervalSince1970: postEnd)
         let readings = await health.glucoseWindow(start: start, end: end)
         let carbs = await health.carbsWindow(start: start, end: end)
         let insulin = await health.insulinWindow(start: start, end: end)
-        glucosePoints = readings.map { TrendPoint(date: Date(timeIntervalSince1970: $0.ts), value: $0.mgdl) }
+        timeline = WodGlucoseTimeline(window: window, readings: readings, carbs: carbs, insulin: insulin)
         glucoseResp = DiabetesMetrics.wodGlucoseResponse(readings: readings,
                                                          workoutStart: workoutStart, workoutEnd: workoutEnd)
         carbsPre = DiabetesMetrics.carbsIn(carbs, from: preStart, to: workoutStart)
@@ -303,6 +310,23 @@ struct WodDetailView: View {
         trendPerHour = DiabetesMetrics.glucoseSlopePerHour(readings)
         glucoseLoading = false
         glucoseLoaded = true
+    }
+
+    /// Workouts the strap or Apple Health recorded within half a day of `ts`, as candidate spans of the WOD.
+    private func recordedWorkouts(around ts: TimeInterval) async -> [(start: Double, end: Double)] {
+        let daysBack = max(2, Int((Date().timeIntervalSince1970 - ts) / 86_400) + 2)
+        return await repo.workoutRows(days: daysBack, reconcileHr: false)
+            .filter { abs(Double($0.startTs) - ts) < 12 * 3600 }
+            .map { (start: Double($0.startTs), end: Double($0.endTs)) }
+    }
+
+    /// Where the WOD's span on the chart comes from: a recorded workout, or the time the WOD was logged.
+    private func windowCaption(_ w: WodTimeWindow) -> String {
+        let from = Self.clock.string(from: Date(timeIntervalSince1970: w.start))
+        let to = Self.clock.string(from: Date(timeIntervalSince1970: w.end))
+        return w.recorded
+            ? String(localized: "WOD \(from)–\(to) · from the recorded workout")
+            : String(localized: "WOD \(from)–\(to) · from the time you logged (no recorded workout found)")
     }
 
     /// After the edit sheet closes: refresh the list, re-read this WOD (or pop if it was deleted).
@@ -328,32 +352,163 @@ struct WodDetailView: View {
 
 // MARK: - Progression chart (shared)
 
-/// The progression of a WOD title over time: one point per attempt, on the title's own result scale
-/// (max weight / best time / rounds). Shows a prompt when there's fewer than two attempts.
+/// Every attempt at one WOD title over time, on the title's own result scale, with better always up: a "for
+/// time" WOD is plotted as a negative time so a faster result sits higher. RX attempts are filled dots and
+/// scaled ones rings (the two are not the same workout); the best attempt and the one being viewed are
+/// labelled. Shows a prompt with fewer than two attempts.
 struct WodProgressionChart: View {
     let history: [WodLogRow]
-    var body: some View {
-        let pts = history.compactMap { w in
-            WodFormat.progressionValue(w).map {
-                TrendPoint(date: Date(timeIntervalSince1970: TimeInterval(w.ts)), value: $0)
-            }
+    /// The attempt being viewed, drawn larger and labelled (nil on the Bests screen).
+    let currentId: String?
+
+    init(history: [WodLogRow], currentId: String? = nil) {
+        self.history = history
+        self.currentId = currentId
+    }
+
+    private struct Attempt: Identifiable {
+        let id: String
+        let date: Date
+        /// The value plotted: seconds negated for a time (so up is faster), else the result itself.
+        let plotted: Double
+        let rx: Bool?
+        let label: String
+    }
+
+    private var kind: WodResultKind { history.first?.resultKind ?? .none }
+    private var surface: Color { Color(uiColor: .secondarySystemGroupedBackground) }
+
+    private var attempts: [Attempt] {
+        let k = kind
+        return history.compactMap { w -> Attempt? in
+            guard w.resultKind == k, let v = WodFormat.progressionValue(w) else { return nil }
+            return Attempt(id: w.id, date: Date(timeIntervalSince1970: TimeInterval(w.ts)),
+                           plotted: k == .time ? -v : v, rx: w.rx, label: WodFormat.progressionLabel(v, kind: k))
         }
-        let kind = history.first?.resultKind ?? .none
-        let vals = pts.map(\.value)
-        let lo = vals.min() ?? 0
-        let hi = vals.max() ?? 1
-        if pts.count >= 2 {
-            TrendChart(points: pts,
-                       gradient: Gradient(colors: [StrandPalette.effortColor.opacity(0.5), StrandPalette.effortColor]),
-                       valueRange: lo...max(hi, lo + 1),
-                       height: 160,
-                       valueFormat: { WodFormat.progressionLabel($0, kind: kind) },
-                       dateFormat: { WodFormat.day(Int($0.timeIntervalSince1970)) },
-                       accessibilityLabel: "Progression")
+        .sorted { $0.date < $1.date }
+    }
+
+    var body: some View {
+        let points = attempts
+        if points.count >= 2 {
+            chart(points)
         } else {
             Text("Log at least two sessions to see progression.")
                 .font(.subheadline).foregroundStyle(.secondary)
         }
+    }
+
+    private func chart(_ points: [Attempt]) -> some View {
+        let best = points.max { $0.plotted < $1.plotted }          // up is better for every kind
+        let yTicks = ticks(points.map(\.plotted))
+        let mixed = points.contains { $0.rx == false } && points.contains { $0.rx != false }
+        return VStack(alignment: .leading, spacing: 6) {
+            Chart {
+                ForEach(points) { a in
+                    LineMark(x: .value("Date", a.date), y: .value("Result", a.plotted))
+                        .foregroundStyle(StrandPalette.effortColor.opacity(0.45))
+                        .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                }
+                ForEach(points) { a in
+                    PointMark(x: .value("Date", a.date), y: .value("Result", a.plotted))
+                        .symbol { marker(a) }
+                        .annotation(position: .top, alignment: .center, spacing: 4,
+                                    overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                            if let text = pointLabel(a, bestId: best?.id) {
+                                Text(verbatim: text)
+                                    .font(StrandFont.captionNumber.weight(.semibold))
+                                    .foregroundStyle(StrandPalette.textPrimary)
+                            }
+                        }
+                }
+            }
+            .chartYScale(domain: (yTicks.first ?? 0)...(yTicks.last ?? 1))
+            .chartYAxis {
+                AxisMarks(position: .leading, values: yTicks) { value in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                        .foregroundStyle(StrandPalette.hairline)
+                    AxisValueLabel {
+                        if let v = value.as(Double.self) { Text(verbatim: axisLabel(v)) }
+                    }
+                }
+            }
+            .chartXAxis {
+                AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                        .foregroundStyle(StrandPalette.hairline)
+                    AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                }
+            }
+            .frame(height: 170)
+            .accessibilityLabel(Text("Progression"))
+
+            HStack(spacing: 10) {
+                Text("\(points.count) attempts")
+                Spacer(minLength: 6)
+                if mixed {
+                    HStack(spacing: 4) {
+                        Circle().fill(StrandPalette.effortColor).frame(width: 8, height: 8)
+                        Text(verbatim: "RX")
+                    }
+                    HStack(spacing: 4) {
+                        Circle().strokeBorder(StrandPalette.effortColor, lineWidth: 2).frame(width: 8, height: 8)
+                        Text("Scaled")
+                    }
+                }
+                if kind == .time { Text("Faster is higher") } else { Text("Higher is better") }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    /// The label over an attempt: "Best" and its result on the best one, the result on the one being
+    /// viewed, none on the others.
+    private func pointLabel(_ a: Attempt, bestId: String?) -> String? {
+        if a.id == bestId { return String(localized: "Best") + " " + a.label }
+        return a.id == currentId ? a.label : nil
+    }
+
+    /// Filled for RX (or unknown), a ring for scaled; the attempt being viewed is drawn larger.
+    @ViewBuilder private func marker(_ a: Attempt) -> some View {
+        let size: CGFloat = a.id == currentId ? 13 : 9
+        if a.rx == false {
+            Circle().strokeBorder(StrandPalette.effortColor, lineWidth: 2)
+                .background(Circle().fill(surface))
+                .frame(width: size, height: size)
+        } else {
+            Circle().fill(StrandPalette.effortColor)
+                .overlay(Circle().stroke(surface, lineWidth: 2))
+                .frame(width: size, height: size)
+        }
+    }
+
+    /// Axis values on the result's own scale: minutes and seconds for a time, whole rounds for
+    /// rounds + reps (their plotted value is rounds × 100 + reps), else kilograms or reps.
+    private func axisLabel(_ plotted: Double) -> String {
+        switch kind {
+        case .time: return WodFormat.progressionLabel(-plotted, kind: .time)
+        case .roundsReps: return String(localized: "\(Int(plotted) / 100) rounds")
+        default: return WodFormat.progressionLabel(plotted, kind: kind)
+        }
+    }
+
+    /// Three to five evenly spaced, round ticks covering every attempt, in the result's natural steps.
+    private func ticks(_ values: [Double]) -> [Double] {
+        guard let lo = values.min(), let hi = values.max() else { return [0, 1] }
+        let steps: [Double]
+        switch kind {
+        case .time: steps = [15, 30, 60, 120, 300, 600, 900, 1_800]
+        case .roundsReps: steps = [100, 200, 500, 1_000]
+        case .weight: steps = [2.5, 5, 10, 20, 25, 50]
+        default: steps = [1, 2, 5, 10, 20, 50, 100]
+        }
+        let span = max(hi - lo, steps[0])
+        let step = steps.first { span / $0 <= 4 } ?? steps[steps.count - 1]
+        let first = (lo / step).rounded(.down) * step
+        var last = (hi / step).rounded(.up) * step
+        if last == first { last = first + step }
+        return Array(stride(from: first, through: last + step / 2, by: step))
     }
 }
 
