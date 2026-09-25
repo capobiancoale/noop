@@ -458,6 +458,22 @@ the static-export importer and the live HealthKit importer converge on one schem
   NOOP is open; a background-task assertion lets the window in flight finish if the user switches app.
 
 
+### Time in heart-rate zones (`HRZones`, `HRZoneSplitView`)
+
+Every workout and every WOD shows the time it spent in each zone (Z1–Z5: 50–100 % of max heart rate in
+tenths; max heart rate is the profile's, the user's own when set in Settings, else 208 − 0.7 × age):
+
+- **During a live workout** (Workouts or Live → *Start workout*): the running time under each zone of the
+  zone rail, and the time below zone 1. The workout records a sample on every heart-rate update, stamped to
+  the whole second, so one sample per second is kept before summing.
+- **A workout's detail:** the zone bar with each zone's time and share, from WHOOP's imported split when the
+  workout has one, else from the strap's own heart rate over the workout (`Repository.workoutZoneMinutes`).
+- **A WOD's screen:** the same bar over the WOD's span (the recorded workout it matches, else the logged time
+  plus result time or time cap; `WodTimeWindow`), with the zones' bpm.
+
+Each sample counts until the next one, capped at the median spacing, so a gap in the strap's data never
+lands in one zone (`HRZones.timeInZone`).
+
 ### What NOOP writes into Apple Health (`HealthKitBridge.writeToHealth`, `HealthWritePlan`)
 
 At the start of every sync (opening the app, an observer wake, *Sync now*), before the import and independent

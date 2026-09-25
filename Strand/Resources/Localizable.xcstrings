@@ -132789,6 +132789,46 @@
           }
         }
       }
+    },
+    "Time in heart-rate zones": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo nelle zone FC"
+          }
+        }
+      }
+    },
+    "Zone 1 starts at %lld bpm and zone 5 at %lld bpm, from your max heart rate of %lld bpm (Settings).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La Zona 1 parte da %lld bpm e la Zona 5 da %lld bpm, dalla tua frequenza massima di %lld bpm (Impostazioni)."
+          }
+        }
+      }
+    },
+    "No heart rate from the strap during this WOD.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun battito dalla fascia durante questo WOD."
+          }
+        }
+      }
+    },
+    "Below zone 1: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sotto la Zona 1: %@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

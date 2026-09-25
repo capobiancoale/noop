@@ -2438,11 +2438,14 @@ final class Repository: ObservableObject {
     /// `zonesJSON` still gets a real time-in-zone split. Returns nil when the window carries no HR (so
     /// the view shows nothing rather than five empty bars). `age <= 0` falls back to a 30 y default ,
     /// the zones are approximate either way and clearly labelled as such in the UI.
-    func workoutZoneMinutes(from: Int, to: Int, age: Int) async -> [Double]? {
-        guard to > from else { return nil }
+    /// Minutes in heart-rate zones 1…5 over [from, to] from the strap's own samples, with the zones built
+    /// from `maxHR` (the profile's: the user's own when set, else from age), the same zones the live
+    /// workout shows. nil when the strap has no heart rate there.
+    func workoutZoneMinutes(from: Int, to: Int, maxHR: Int) async -> [Double]? {
+        guard to > from, maxHR > 0 else { return nil }
         let samples = await hrSamples(from: from, to: to)
         guard !samples.isEmpty else { return nil }
-        let zoneSet = HRZones.zones(age: age > 0 ? Double(age) : 30)
+        let zoneSet = HRZones.zones(maxHR: Double(maxHR))
         let tiz = HRZones.timeInZone(samples, zoneSet: zoneSet)
         let minutes = tiz.seconds.map { $0 / 60.0 }
         return minutes.contains(where: { $0 > 0 }) ? minutes : nil
