@@ -50,7 +50,8 @@ struct StrandiOSApp: App {
         _health = StateObject(wrappedValue: HealthKitBridge(
             repo: model.repo,
             appleDeviceId: model.appleDeviceId,
-            noopDeviceId: model.deviceId
+            noopDeviceId: model.deviceId,
+            hrMax: { [weak model] in model?.profile.hrMax ?? 0 }
         ))
     }
 

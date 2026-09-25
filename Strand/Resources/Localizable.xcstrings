@@ -132720,16 +132720,6 @@
         }
       }
     },
-    "From the strap: heart rate minute by minute, sleep with its stages, and each day's resting heart rate, HRV, SpO₂ and respiratory rate. Each time NOOP syncs, it adds what's new.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dalla fascia: il battito minuto per minuto, il sonno con le sue fasi e, per ogni giorno, frequenza a riposo, HRV, SpO₂ e frequenza respiratoria. A ogni sincronizzazione NOOP aggiunge quello che è nuovo."
-          }
-        }
-      }
-    },
     "Last written %@: %@.": {
       "localizations": {
         "it": {
@@ -132750,22 +132740,52 @@
         }
       }
     },
-    "Allow writing heart rate and sleep": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Consenti la scrittura di battito e sonno"
-          }
-        }
-      }
-    },
     "To check: Health app › Browse › Heart › Heart Rate › Data Sources & Access. If a kind is switched off there, NOOP can't write it.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Per controllare: app Salute › Sfoglia › Cuore › Frequenza cardiaca › Sorgenti dati e accesso. Se lì un tipo di dato è disattivato, NOOP non può scriverlo."
+          }
+        }
+      }
+    },
+    "Heart rate minute by minute, sleep with its stages, workouts and WODs (with their heart rate, energy and time in each zone), VO₂max, and each day's resting heart rate, HRV, SpO₂ and respiratory rate. Each time NOOP syncs, it adds what's new.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il battito minuto per minuto, il sonno con le sue fasi, gli allenamenti e i WOD (con battito, energia e tempo in ogni zona), il VO₂max e, per ogni giorno, frequenza a riposo, HRV, SpO₂ e frequenza respiratoria. A ogni sincronizzazione NOOP aggiunge quello che è nuovo."
+          }
+        }
+      }
+    },
+    "Allow writing heart rate, workouts and VO₂max": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti la scrittura di battito, allenamenti e VO₂max"
+          }
+        }
+      }
+    },
+    "Charge, Effort, Rest, Stress and NOOP's other scores have no place in Apple Health, so they stay in NOOP. Steps and the day's calories aren't written either: the iPhone counts them too, and Health would count them twice.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charge, Effort, Rest, Stress e gli altri punteggi di NOOP non hanno un posto in Apple Health, quindi restano in NOOP. Nemmeno i passi e le calorie della giornata vengono scritti: li conta anche l'iPhone e Salute li conterebbe due volte."
+          }
+        }
+      }
+    },
+    "workouts: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "allenamenti: %lld"
           }
         }
       }

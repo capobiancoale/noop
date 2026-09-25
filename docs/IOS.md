@@ -458,7 +458,7 @@ the static-export importer and the live HealthKit importer converge on one schem
 At the start of every sync (opening the app, an observer wake, *Sync now*), before the import and independent
 of it, so a long or paused history import never holds it up. Skipped while the iPhone is locked (Health
 can't then say what NOOP already wrote), and one run at a time. Each kind is written only if the user
-allowed it; a kind added later (heart rate) is asked for once, with the app on screen, and the Apple Health
+allowed it; kinds added later (heart rate, workouts, VO₂max, energy) are asked for once, with the app on screen, and the Apple Health
 screen keeps an *Allow* button. The screen shows when NOOP last wrote and what.
 
 - **Heart rate, minute by minute:** the strap's per-minute average (`Repository.heartRatePerMinute`, the
@@ -470,8 +470,22 @@ screen keeps an *Allow* button. The screen shows when NOOP last wrote and what.
   *in bed* only. A night is written again only when it changed (fingerprint of onset, end and stages); its
   earlier samples are deleted first.
 - **Daily values:** resting heart rate, HRV, SpO₂ and respiratory rate for the last 14 days, read from the
-  computed (`-noop`) and imported strap ids, dated at noon (or now, before noon: never in the future),
-  replaced by their deterministic external UUID.
+  computed (`-noop`) and imported strap ids, and VO₂max for the last 90 (the walk/run estimate,
+  `vo2max_exercise`, else the weekly estimate at rest, `vo2max_est`; never mixed), dated at noon (or now,
+  before noon: never in the future), replaced by their deterministic external UUID.
+- **Workouts and WODs** (`HealthWritePlan.workouts`): NOOP's own workouts of the last 14 days (strap-detected
+  bouts and sessions recorded in NOOP, 5 min or longer, ended 10 min ago or more) and the logged WODs. A WOD
+  is placed as the WOD screen places it (`WodTimeWindow.resolve`): on one of NOOP's workouts it becomes that
+  workout (Cross Training, the WOD's name as brand name, result, RX/scaled and RPE in metadata); on another
+  app's workout it adds nothing; on none, it is written over its logged time. Sessions Apple Health already
+  has from another app (half or more of the time covered) and imports from other apps (WHOOP, Hevy, files)
+  are left out. Each workout is built with `HKWorkoutBuilder`, carrying its heart rate minute by minute, its
+  energy when NOOP has it, and minutes per heart-rate zone (50–100 % of max heart rate) and Effort in its
+  metadata (`NOOPZone1Minutes`…, `NOOPEffort`: Health has no field for zones). Written again only when it
+  changes (fingerprint); one that no longer exists is removed by its external UUID.
+- **Not written:** Charge, Effort, Rest, Stress, fitness and body age (Health has no types for them); skin
+  temperature (Health's wrist temperature is Apple's own, and body temperature is a different measure);
+  steps and the day's calories (the iPhone counts them too, and Health would count them twice).
 - The import never reads NOOP's own samples back (`HealthImportReader.notNoopAuthored`).
 
 ---

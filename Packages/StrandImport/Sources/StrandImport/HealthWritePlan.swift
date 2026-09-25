@@ -134,3 +134,107 @@ public enum HealthWritePlan {
         min(noon, now - 60)
     }
 }
+
+// MARK: - Workouts and WODs
+
+extension HealthWritePlan {
+
+    /// A workout's span (Unix seconds).
+    public struct WorkoutSpan: Equatable, Sendable {
+        public let start: Double
+        public let end: Double
+        public init(start: Double, end: Double) { self.start = start; self.end = end }
+        public var duration: Double { end - start }
+    }
+
+    /// A logged WOD, as far as the plan needs it.
+    public struct WodEntry: Equatable, Sendable {
+        public let id: String
+        /// When it was logged (may be its start or its end).
+        public let loggedTs: Double
+        /// Result time, else time cap (nil: neither).
+        public let durationS: Double?
+        public init(id: String, loggedTs: Double, durationS: Double?) {
+            self.id = id; self.loggedTs = loggedTs; self.durationS = durationS
+        }
+    }
+
+    /// One workout to write into Apple Health.
+    public struct WorkoutToWrite: Equatable, Sendable {
+        public let start: Double
+        public let end: Double
+        /// The index in `own` it comes from; nil for a WOD with no recorded workout.
+        public let ownIndex: Int?
+        /// The WODs logged for it (oldest first); empty for a plain workout.
+        public let wodIds: [String]
+    }
+
+    /// Workouts are written once they ended this long ago (one still going keeps growing).
+    public static let workoutSettleSeconds = 600.0
+    /// How far back workouts are written.
+    public static let workoutDays = 14
+    /// Recorded bouts shorter than this aren't written.
+    public static let minWorkoutSeconds = 300.0
+    /// A workout of NOOP's is left out when another app's workout in Apple Health covers at least this share
+    /// of it: Health already has that session (from an Apple Watch, say).
+    public static let coveredShare = 0.5
+
+    /// What to write: NOOP's own workouts (recorded by the strap or in NOOP) that ended in the last
+    /// `workoutDays` days, and the WODs logged then, minus sessions Apple Health already has from another app
+    /// (`others`). A WOD is placed like the WOD screen places it (`WodTimeWindow.resolve`): matching one of
+    /// NOOP's workouts, it becomes that workout (one workout carrying the WOD); matching another app's, it
+    /// adds nothing; matching none, it is written over its logged time. Sorted by start.
+    public static func workouts(own: [WorkoutSpan], others: [WorkoutSpan], wods: [WodEntry],
+                                now: Double) -> [WorkoutToWrite] {
+        let oldest = now - Double(workoutDays) * 86_400
+        let settled = now - workoutSettleSeconds
+        func inWindow(_ s: WorkoutSpan) -> Bool { s.end > s.start && s.start >= oldest && s.end <= settled }
+        func covered(_ s: WorkoutSpan) -> Bool {
+            let overlap = others.reduce(0.0) { $0 + max(0, min($1.end, s.end) - max($1.start, s.start)) }
+            return overlap >= coveredShare * s.duration
+        }
+        var wodsByOwn: [Int: [String]] = [:]
+        var standalone: [WorkoutToWrite] = []
+        let candidates = own.map { (start: $0.start, end: $0.end) } + others.map { (start: $0.start, end: $0.end) }
+        for w in wods.sorted(by: { $0.loggedTs < $1.loggedTs }) {
+            let window = WodTimeWindow.resolve(loggedTs: w.loggedTs, durationS: w.durationS, workouts: candidates)
+            let span = WorkoutSpan(start: window.start, end: window.end)
+            guard inWindow(span) else { continue }
+            if window.recorded {
+                if let i = own.firstIndex(where: { $0.start == window.start && $0.end == window.end }) {
+                    wodsByOwn[i, default: []].append(w.id)
+                }
+                // Else it is another app's workout: Health has it already.
+            } else if !covered(span) {
+                standalone.append(WorkoutToWrite(start: span.start, end: span.end, ownIndex: nil, wodIds: [w.id]))
+            }
+        }
+        var out = standalone
+        for (i, s) in own.enumerated() where inWindow(s) && s.duration >= minWorkoutSeconds && !covered(s) {
+            out.append(WorkoutToWrite(start: s.start, end: s.end, ownIndex: i, wodIds: wodsByOwn[i] ?? []))
+        }
+        return out.sorted { $0.start < $1.start }
+    }
+
+    /// The five heart-rate zones' lower bounds (bpm) for a max heart rate: 50, 60, 70, 80 and 90 % of it,
+    /// the display zones NOOP uses everywhere (StrandAnalytics.HRZones.zoneEdges). Empty without a max.
+    public static func zoneFloors(maxHR: Double) -> [Double] {
+        maxHR > 0 ? [0.5, 0.6, 0.7, 0.8, 0.9].map { $0 * maxHR } : []
+    }
+
+    /// Minutes of each heart-rate zone (1…5, index 0 = below zone 1) from per-minute averages and the zone
+    /// floors in bpm (zone 1…5 lower bounds, ascending).
+    public static func zoneMinutes(bpm: [Double], zoneFloors: [Double]) -> [Int] {
+        var out = Array(repeating: 0, count: zoneFloors.count + 1)
+        for v in bpm {
+            let zone = zoneFloors.lastIndex(where: { v >= $0 }).map { $0 + 1 } ?? 0
+            out[zone] += 1
+        }
+        return out
+    }
+
+    /// A stable fingerprint of what a workout was written with, to write it again only when it changes.
+    public static func fingerprint(_ parts: [String]) -> String {
+        fnv1a(parts.joined(separator: "|"))
+    }
+}
