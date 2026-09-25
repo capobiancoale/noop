@@ -323,22 +323,38 @@ Effort         = 100 · ln(heart-rate TRIMP + added TRIMP + 1) / ln(D)
 - Duration is the result time, else the time cap; a WOD without RPE or duration adds nothing (the WOD screen
   says so). Saving, editing or deleting a WOD rescores the recent days; the WOD screen shows what it added.
 
-### Glucose around a logged WOD (`WodTimeWindow`, `WodGlucoseTimeline`)
+### Glucose and heart rate on one clock (`WodTimeWindow`, `GlucoseTrace`, `TimelineTicks`, `TimelineEvents`)
 
-The WOD screen's glucose panel (Apple Health, on-device), informational only: it never suggests carbs or insulin.
+The WOD screen and Today's "Heart & Glucose" card show glucose (Apple Health), heart rate (the strap) and carbs /
+boluses in lanes on one clock, zoomable like the Deep Timeline. Informational only: it never suggests carbs or
+insulin.
 
-- **Where the WOD sat.** The recorded workout (strap or Apple Health) overlapping most with
+- **Where a WOD sat.** The recorded workout (strap or Apple Health) overlapping most with
   `[logged − duration, logged + duration]` is the WOD, since the logged time may mark its start or its end
   (nearest within an hour if none overlaps; longer than 4 h never counts). Without one, the logged time is the
   start. Duration is the result time, else the time cap, else 20 min. The screen says which source it used.
-- **Clock.** Minutes from the WOD's start. The axis counts whole hours before the start (−2h, −1h) and after
-  the end (+1h … +4h), the window the panel's title names; the WOD's own span is shaded.
-- **Trace.** A gap of more than 15 min between readings breaks the line (never drawn across missing data).
-- **Below 70 mg/dL.** Each low reading counts until the next reading of its segment (5 min for the last one
-  before a gap). The shaded area ends where the line crosses 70, interpolated linearly between readings.
-- **Scale.** At least 50–200 mg/dL so the 70–180 band reads, widened to every reading so a low is never clipped.
-- **Carbs and boluses** sit on their own lane on the same clock (grams and units never share the glucose axis);
-  entries under 20 min apart share one marker with their amounts summed. Basal is left out.
+- **Lanes, not a second axis.** Each measure keeps its own lane and scale; one crosshair reads all of them at
+  the same moment. The old Today chart drew heart rate and glucose on one plot with two y-axes; it is gone.
+- **Zoom.** Pinch (about the fingers), − / +, or "zoom to the WOD"; drag sideways to move; double-tap to zoom
+  out. The narrowest window is one minute. Heart rate is re-read for the window on screen at about 500 points,
+  so zoomed in it is the strap's raw per-second signal (`Repository.timelineSeries`, as on the Deep Timeline).
+- **Axis.** Clock time on Today. Around a WOD, the ticks count back from its start (−1h, −30′), run as a
+  workout clock during it (0:00, 5:00) and count on from its end (+15′, +2h); ticks closer than 0.6 steps
+  where the three runs meet are dropped. The step keeps five ticks or fewer (15 s up to 6 h).
+- **Trace.** A gap of more than 15 min between readings breaks the line; each reading is drawn as a dot once
+  40 or fewer are on screen.
+- **Below 70 mg/dL** (level 1 hypoglycaemia, Battelino et al. 2019). Each low reading counts until the next
+  reading of its segment (5 min for the last one before a gap), clipped to the window on screen. The shaded
+  area ends where the line crosses 70, interpolated linearly between readings.
+- **Scale.** Glucose: at least 50–200 mg/dL and the target range, widened to every reading so a low is never
+  clipped, and fixed while zooming. Heart rate: fitted to the window on screen.
+- **Carbs and boluses.** Entries within about a 24th of the window on screen (at least a minute) of a group's
+  first entry share one marker, their amounts summed, so labels never pile up; zoomed in, each entry is its
+  own. Basal is left out.
+- **Settings** (saved on the device, shared by every timeline): which lanes show, workout / WOD shading, the
+  target range (default 70–180 mg/dL; 70 is always marked), heart-rate zones (50–100 % of max heart rate in
+  10 % steps, `HRZones`), figures for the stretch on screen, lane size, and the window around a WOD (default
+  2 h before, 4 h after; up to 3 h and 6 h). The WOD screen's figures keep their own 2 h / 4 h window.
 
 ---
 

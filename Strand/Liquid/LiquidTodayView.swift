@@ -23,7 +23,7 @@ struct LiquidTodayView: View {
     @EnvironmentObject var profile: ProfileStore
     #if os(iOS)
     // Apple Health, iOS only — the intraday glucose/carbs/insulin behind the "Heart & Glucose" chart.
-    // Absent on macOS (HealthKitBridge lives in the iOS target), where that chart draws HR-only or hides.
+    // Absent on macOS (HealthKitBridge lives in the iOS target), where that chart never shows.
     @EnvironmentObject var health: HealthKitBridge
     #endif
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -43,9 +43,12 @@ struct LiquidTodayView: View {
     @State private var recStrain: [DayScore] = []         // Recovery vs Strain, last 30 days
     // "Heart & Glucose" intraday cross chart. HR + workout bands come from the store (cross-platform);
     // glucose/carbs/bolus come from Apple Health (iOS only) and stay empty on macOS ⇒ the section hides.
-    @State private var crossHR: [CrossHRPoint] = []
-    @State private var crossWorkouts: [WorkoutBand] = []
+    @State private var crossWorkouts: [TimelineBand] = []
     @State private var crossGlucose: [GlucoseReading] = []
+    @State private var crossTrace = GlucoseTrace(readings: [])
+    /// The selected day's window (midnight to now for today) and the chart's zoom inside it.
+    @State private var crossBounds: ClosedRange<Date> = Date()...Date().addingTimeInterval(3_600)
+    @State private var crossZoom: ClosedRange<Date>?
     @State private var crossCarbs: [CarbEntry] = []
     @State private var crossBolus: [InsulinEntry] = []
     // Consensus hypoglycaemia events overnight (00:00–05:59 or during the main sleep ending on the selected
@@ -876,19 +879,27 @@ struct LiquidTodayView: View {
             sectionHead("HEART & GLUCOSE", trailing: crossTrailing)
             card {
                 VStack(alignment: .leading, spacing: 10) {
-                    TodayCrossChart(hr: crossHR, glucose: crossGlucose, carbs: crossCarbs,
-                                    boluses: crossBolus, workouts: crossWorkouts)
-                    HStack(spacing: 14) {
-                        if crossHR.count >= 2 { legendDot(StrandPalette.metricRose, "Heart") }
-                        legendDot(StrandPalette.accent, "Glucose")
-                        if !crossCarbs.isEmpty { legendDot(StrandPalette.metricAmber, "Carbs") }
-                        if !crossBolus.isEmpty { legendDot(StrandPalette.metricPurple, "Bolus") }
-                    }
+                    #if os(iOS)
+                    // Glucose, heart rate and carbs / boluses in lanes on the day's clock, zoomable down to
+                    // single minutes (heart rate re-read at the zoom's resolution, as on the Deep Timeline).
+                    GlucoseHeartTimeline(glucose: crossTrace, carbs: crossCarbs, boluses: crossBolus,
+                                         bands: crossWorkouts, bounds: crossBounds, axis: .clock,
+                                         hrMax: profile.hrMax > 0 ? Double(profile.hrMax) : nil,
+                                         loadHeart: { await crossHeart($0) }, zoom: $crossZoom,
+                                         surface: StrandPalette.surfaceRaised)
+                    #endif
                     Text("Informational only, not medical advice. Carb and insulin choices stay with you and your care team / Loop.")
                         .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
                 }
             }
         }
+    }
+
+    /// The strap's heart rate for the chart's window, at the resolution its zoom needs.
+    private func crossHeart(_ window: ClosedRange<Date>) async -> HeartTrace {
+        let s = await repo.timelineSeries(metric: .hr, from: Int(window.lowerBound.timeIntervalSince1970),
+                                          to: Int(window.upperBound.timeIntervalSince1970), targetPoints: 500)
+        return HeartTrace(points: s.points, isRaw: s.isRaw, bucketSeconds: s.bucketSeconds)
     }
 
     /// The section overline's right-hand tag: "today" / "yesterday" / a short date for older days.
@@ -1139,18 +1150,21 @@ struct LiquidTodayView: View {
         hrValues = hrBucketsDay.map { $0.bpm }
         workouts = await wkA
 
-        // "Heart & Glucose" intraday chart for the selected day. HR keeps its timestamps here (the
-        // sparkline above only needs the bare values); workout bands are the day's sessions clipped to
-        // the window. Glucose/carbs/bolus are read live from Apple Health on iOS (empty on macOS).
-        crossHR = hrBucketsDay.map { CrossHRPoint(date: Date(timeIntervalSince1970: TimeInterval($0.ts)), bpm: $0.bpm) }
+        // "Heart & Glucose" timeline for the selected day: workout bands are the day's sessions clipped to
+        // the window; the chart reads heart rate itself at its zoom's resolution. Glucose/carbs/bolus are
+        // read live from Apple Health on iOS (empty on macOS, where the section never shows).
         crossWorkouts = workouts
             .filter { $0.endTs >= from && $0.startTs <= to }
-            .map { WorkoutBand(start: Date(timeIntervalSince1970: TimeInterval($0.startTs)),
-                               end: Date(timeIntervalSince1970: TimeInterval($0.endTs))) }
+            .map { TimelineBand(start: Date(timeIntervalSince1970: TimeInterval($0.startTs)),
+                                end: Date(timeIntervalSince1970: TimeInterval($0.endTs)), label: nil) }
         #if os(iOS)
         let winStart = Date(timeIntervalSince1970: TimeInterval(from))
         let winEnd = Date(timeIntervalSince1970: TimeInterval(to))
         crossGlucose = await health.glucoseWindow(start: winStart, end: winEnd)
+        crossTrace = GlucoseTrace(readings: crossGlucose)
+        // A new day opens un-zoomed; a refresh of the same day keeps the zoom.
+        if crossBounds.lowerBound != winStart { crossZoom = nil }
+        crossBounds = winStart...max(winEnd, winStart.addingTimeInterval(3_600))
         crossCarbs = await health.carbsWindow(start: winStart, end: winEnd)
         crossBolus = (await health.insulinWindow(start: winStart, end: winEnd)).filter { $0.bolus }
         // Night-time lows for the note under the scores: consensus events (Battelino 2023) that began

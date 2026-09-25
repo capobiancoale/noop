@@ -28,7 +28,15 @@ struct WodDetailView: View {
     @State private var showEdit = false
 
     // Glucose + carbs + insulin around the WOD (Apple Health, queried live).
-    @State private var timeline: WodGlucoseTimeline?
+    @State private var wodWindow: WodTimeWindow?
+    /// Glucose, carbs and boluses read for the chart (up to its longest window, 3 h before to 6 h after).
+    @State private var trace = GlucoseTrace(readings: [])
+    @State private var chartCarbs: [CarbEntry] = []
+    @State private var chartBoluses: [InsulinEntry] = []
+    @State private var chartZoom: ClosedRange<Date>?
+    @State private var minutesBelowLow = 0.0
+    @AppStorage(TimelinePrefs.wodBeforeMinutes) private var chartBefore = TimelinePrefs.defaultWodBefore
+    @AppStorage(TimelinePrefs.wodAfterMinutes) private var chartAfter = TimelinePrefs.defaultWodAfter
     @State private var glucoseResp: WodGlucoseResponse?
     @State private var carbsPre = 0.0
     @State private var carbsPost = 0.0
@@ -196,54 +204,80 @@ struct WodDetailView: View {
                     ProgressView()
                     Text("Reading from Apple Health…").foregroundStyle(.secondary).font(.subheadline)
                 }
-            } else if let r = glucoseResp {
-                HStack {
-                    stat("Before", "\(Int(r.startMgdl.rounded()))")
-                    Spacer()
-                    stat("After", "\(Int(r.endMgdl.rounded()))")
-                    Spacer()
-                    stat("Lowest", "\(Int(r.minMgdl.rounded()))")
+            } else {
+                if let r = glucoseResp {
+                    HStack {
+                        stat("Before", "\(Int(r.startMgdl.rounded()))")
+                        Spacer()
+                        stat("After", "\(Int(r.endMgdl.rounded()))")
+                        Spacer()
+                        stat("Lowest", "\(Int(r.minMgdl.rounded()))")
+                    }
                 }
-                if let tl = timeline, !tl.readings.isEmpty {
-                    Text(windowCaption(tl.window)).font(.caption).foregroundStyle(.secondary)
-                    WodGlucoseChart(timeline: tl)
+                if let w = wodWindow {
+                    Text(windowCaption(w)).font(.caption).foregroundStyle(.secondary)
+                    timelineChart(w)
                         .padding(.vertical, 4)
                 }
-                HStack {
-                    stat("Carbs −2h", "\(Int(carbsPre.rounded())) g")
-                    Spacer()
-                    stat("Carbs +4h", "\(Int(carbsPost.rounded())) g")
-                }
-                if bolusPre > 0 || bolusPost > 0 {
-                    HStack {
-                        stat("Bolus −2h", trimU(bolusPre))
-                        Spacer()
-                        stat("Bolus +4h", trimU(bolusPost))
-                    }
-                }
-                Text(deltaText(r)).font(.caption).foregroundStyle(.secondary)
-                if let t = trendPerHour { Text(trendText(t)).font(.caption).foregroundStyle(.secondary) }
-                if r.anyLow {
-                    if let below = timeline?.minutesBelowLow, below > 0 {
-                        Label(String(localized: "Below 70 mg/dL for about \(Int(below.rounded())) min in this window"),
-                              systemImage: "exclamationmark.triangle.fill")
-                            .font(.caption).foregroundStyle(.orange)
-                    } else {
-                        Label("Went below 70 mg/dL in this window", systemImage: "exclamationmark.triangle.fill")
-                            .font(.caption).foregroundStyle(.orange)
-                    }
-                }
-                if let note = tendencyNote() { Text(note).font(.caption).foregroundStyle(.secondary) }
-                Text("Informational only, not medical advice. Carb and insulin choices stay with you and your care team / Loop.")
-                    .font(.caption2).foregroundStyle(.tertiary)
-            } else if glucoseLoaded {
-                Text("No glucose readings in Apple Health for this window.")
-                    .foregroundStyle(.secondary).font(.subheadline)
-            } else {
-                EmptyView()
+                glucoseDetails
             }
         } header: {
-            Text("Glucose & carbs · 2h before → 4h after")
+            Text("Glucose, heart & carbs around the WOD")
+        }
+    }
+
+    /// Glucose, heart rate and carbs / boluses around the WOD, zoomable down to single minutes.
+    private func timelineChart(_ w: WodTimeWindow) -> some View {
+        let start = Date(timeIntervalSince1970: w.start)
+        let end = Date(timeIntervalSince1970: w.end)
+        let bounds = start.addingTimeInterval(-Double(chartBefore) * 60)...end.addingTimeInterval(Double(chartAfter) * 60)
+        return GlucoseHeartTimeline(glucose: trace, carbs: chartCarbs, boluses: chartBoluses,
+                                    bands: [TimelineBand(start: start, end: end, label: "WOD")],
+                                    bounds: bounds, axis: .wod(start: start, end: end),
+                                    hrMax: profile.hrMax > 0 ? Double(profile.hrMax) : nil,
+                                    loadHeart: { await heartTrace($0) }, zoom: $chartZoom)
+    }
+
+    /// The strap's heart rate for a window, at the resolution the zoom needs (per second when close in).
+    private func heartTrace(_ window: ClosedRange<Date>) async -> HeartTrace {
+        let s = await repo.timelineSeries(metric: .hr, from: Int(window.lowerBound.timeIntervalSince1970),
+                                          to: Int(window.upperBound.timeIntervalSince1970), targetPoints: 500)
+        return HeartTrace(points: s.points, isRaw: s.isRaw, bucketSeconds: s.bucketSeconds)
+    }
+
+    /// The figures under the chart, for the fixed window 2 h before to 4 h after the WOD.
+    @ViewBuilder private var glucoseDetails: some View {
+        if let r = glucoseResp {
+            HStack {
+                stat("Carbs −2h", "\(Int(carbsPre.rounded())) g")
+                Spacer()
+                stat("Carbs +4h", "\(Int(carbsPost.rounded())) g")
+            }
+            if bolusPre > 0 || bolusPost > 0 {
+                HStack {
+                    stat("Bolus −2h", trimU(bolusPre))
+                    Spacer()
+                    stat("Bolus +4h", trimU(bolusPost))
+                }
+            }
+            Text(deltaText(r)).font(.caption).foregroundStyle(.secondary)
+            if let t = trendPerHour { Text(trendText(t)).font(.caption).foregroundStyle(.secondary) }
+            if r.anyLow {
+                if minutesBelowLow > 0 {
+                    Label(String(localized: "Below 70 mg/dL for about \(Int(minutesBelowLow.rounded())) min in this window"),
+                          systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption).foregroundStyle(.orange)
+                } else {
+                    Label("Went below 70 mg/dL in this window", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption).foregroundStyle(.orange)
+                }
+            }
+            if let note = tendencyNote() { Text(note).font(.caption).foregroundStyle(.secondary) }
+            Text("Informational only, not medical advice. Carb and insulin choices stay with you and your care team / Loop.")
+                .font(.caption2).foregroundStyle(.tertiary)
+        } else if glucoseLoaded {
+            Text("No glucose readings in Apple Health for this window.")
+                .foregroundStyle(.secondary).font(.subheadline)
         }
     }
 
@@ -293,14 +327,22 @@ struct WodDetailView: View {
                                            workouts: await recordedWorkouts(around: logged))
         let workoutStart = window.start
         let workoutEnd = window.end
-        let preStart = workoutStart - WodGlucoseTimeline.hoursBefore * 3600
-        let postEnd = workoutEnd + WodGlucoseTimeline.hoursAfter * 3600
-        let start = Date(timeIntervalSince1970: preStart)
-        let end = Date(timeIntervalSince1970: postEnd)
-        let readings = await health.glucoseWindow(start: start, end: end)
+        // The figures use a fixed window, 2 h before to 4 h after; the chart can show up to 3 h before and
+        // 6 h after (its settings), so read that much once.
+        let preStart = workoutStart - Self.statsHoursBefore * 3600
+        let postEnd = workoutEnd + Self.statsHoursAfter * 3600
+        let start = Date(timeIntervalSince1970: workoutStart - Double(TimelinePrefs.maxWodBefore) * 60)
+        let end = Date(timeIntervalSince1970: workoutEnd + Double(TimelinePrefs.maxWodAfter) * 60)
+        let allReadings = await health.glucoseWindow(start: start, end: end)
         let carbs = await health.carbsWindow(start: start, end: end)
         let insulin = await health.insulinWindow(start: start, end: end)
-        timeline = WodGlucoseTimeline(window: window, readings: readings, carbs: carbs, insulin: insulin)
+        let readings = allReadings.filter { $0.ts >= preStart && $0.ts <= postEnd }
+        wodWindow = window
+        trace = GlucoseTrace(readings: allReadings)
+        chartCarbs = carbs
+        chartBoluses = insulin.filter(\.bolus)
+        chartZoom = nil
+        minutesBelowLow = trace.secondsBelow(from: preStart, to: postEnd) / 60
         glucoseResp = DiabetesMetrics.wodGlucoseResponse(readings: readings,
                                                          workoutStart: workoutStart, workoutEnd: workoutEnd)
         carbsPre = DiabetesMetrics.carbsIn(carbs, from: preStart, to: workoutStart)
@@ -311,6 +353,10 @@ struct WodDetailView: View {
         glucoseLoading = false
         glucoseLoaded = true
     }
+
+    /// The window of the figures above and below the chart (the chart's own window is in its settings).
+    private static let statsHoursBefore = 2.0
+    private static let statsHoursAfter = 4.0
 
     /// Workouts the strap or Apple Health recorded within half a day of `ts`, as candidate spans of the WOD.
     private func recordedWorkouts(around ts: TimeInterval) async -> [(start: Double, end: Double)] {
