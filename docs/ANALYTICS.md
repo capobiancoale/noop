@@ -323,6 +323,23 @@ Effort         = 100 · ln(heart-rate TRIMP + added TRIMP + 1) / ln(D)
 - Duration is the result time, else the time cap; a WOD without RPE or duration adds nothing (the WOD screen
   says so). Saving, editing or deleting a WOD rescores the recent days; the WOD screen shows what it added.
 
+### Glucose around a logged WOD (`WodTimeWindow`, `WodGlucoseTimeline`)
+
+The WOD screen's glucose panel (Apple Health, on-device), informational only: it never suggests carbs or insulin.
+
+- **Where the WOD sat.** The recorded workout (strap or Apple Health) overlapping most with
+  `[logged − duration, logged + duration]` is the WOD, since the logged time may mark its start or its end
+  (nearest within an hour if none overlaps; longer than 4 h never counts). Without one, the logged time is the
+  start. Duration is the result time, else the time cap, else 20 min. The screen says which source it used.
+- **Clock.** Minutes from the WOD's start. The axis counts whole hours before the start (−2h, −1h) and after
+  the end (+1h … +4h), the window the panel's title names; the WOD's own span is shaded.
+- **Trace.** A gap of more than 15 min between readings breaks the line (never drawn across missing data).
+- **Below 70 mg/dL.** Each low reading counts until the next reading of its segment (5 min for the last one
+  before a gap). The shaded area ends where the line crosses 70, interpolated linearly between readings.
+- **Scale.** At least 50–200 mg/dL so the 70–180 band reads, widened to every reading so a low is never clipped.
+- **Carbs and boluses** sit on their own lane on the same clock (grams and units never share the glucose axis);
+  entries under 20 min apart share one marker with their amounts summed. Basal is left out.
+
 ---
 
 ## `SleepStager` — sleep/wake detection + approximate 4-class staging (feeds **Rest**)

@@ -228,6 +228,15 @@ public enum StrandPalette {
     public static var metricAmber:  Color { isClassic ? Color(light: "#CFA528", dark: "#F2C53D") : Color(light: "#B8791E", dark: "#FFB547") }
     public static var metricRose:   Color { isClassic ? Color(light: "#CB3A2F", dark: "#E5483B") : Color(light: "#C8354A", dark: "#FF6B84") }
 
+    // MARK: Glucose-around-a-workout chart — the CGM trace and the carb / bolus event markers.
+    // The metric accents above, stepped only in lightness and chroma so the three read as distinct series:
+    // each light and dark triple passes the dataviz palette checks (OKLCH lightness band, chroma ≥ 0.10,
+    // colour-blind ΔE ≥ 11 on every pair, ≥ 3:1 against the card, white / #1C1C1E). metricRose is not used for
+    // the trace because on light it is the same red as statusCritical, which marks the lows.
+    public static let chartGlucose = Color(light: "#00839F", dark: "#00A7B8")
+    public static let chartCarbs   = Color(light: "#B8791E", dark: "#C68407")
+    public static let chartBolus   = Color(light: "#6A4FC0", dark: "#9072EF")
+
     // MARK: - Titanium & Gold domain "colour worlds" (NEW)
     //
     // Each daily score owns a two-stop accent gradient (deep → bright) plus a glow.
