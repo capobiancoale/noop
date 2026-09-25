@@ -1434,6 +1434,19 @@ final class Repository: ObservableObject {
     /// , at day scale `hrBuckets` averages PPG into its buckets, and zoomed-in `hrSamples` returns the raw
     /// PPG-derived seconds; neither is empty for a PPG-only night. Other metrics read their raw sample
     /// tables (low frequency, no 86k risk) and bin to the same bucket grid when zoomed out.
+    /// The strap's heart rate as one average per whole minute over [from, to] (Unix seconds), oldest first,
+    /// for writing into Apple Health. Reads the same strap ids as the dashboard (the active strap and the
+    /// canonical one; the active strap wins a minute both have).
+    func heartRatePerMinute(from: Int, to: Int) async -> [HRBucket] {
+        guard to > from, let store = await ensureStore() else { return [] }
+        var byStart: [Int: HRBucket] = [:]
+        for id in importedReadIds {
+            for b in (try? await store.hrBuckets(deviceId: id, from: from, to: to, bucketSeconds: 60)) ?? []
+            where byStart[b.ts] == nil { byStart[b.ts] = b }
+        }
+        return byStart.values.sorted { $0.ts < $1.ts }
+    }
+
     func timelineSeries(metric: TimelineMetric, from: Int, to: Int,
                         targetPoints: Int = 600, source: String? = nil) async -> TimelineSeries {
         guard to > from, let store = await ensureStore() else { return .empty }
