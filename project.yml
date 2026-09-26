@@ -470,8 +470,11 @@ schemes:
     build:
       targets:
         NOOPiOS: all
+    # Xcode's Run (⌘R) installs the optimized build, the same code as TestFlight: a Debug build runs NOOP's
+    # own Swift (the analysis, the charts' data, Apple Health's samples) several times slower. To debug, pick
+    # Debug in Product → Scheme → Edit Scheme → Run (Tools/setup-xcode.sh puts Release back).
     run:
-      config: Debug
+      config: Release
   # `xcodebuild -scheme NOOPWatch …` compile-verifies the watchOS app + its embedded complication
   # extension (M3). Name matches the app-build CI matrix entry the verify script adds.
   NOOPWatch:

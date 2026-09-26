@@ -250,6 +250,11 @@ Or open the generated project and run the `NOOPiOS` scheme from Xcode:
 open Strand.xcodeproj
 ```
 
+The scheme's Run action uses the **Release** configuration (`project.yml`), so ⌘R installs the optimized build
+TestFlight ships: in Debug, NOOP's own Swift (the analysis, the charts' data, Apple Health's samples) runs several
+times slower. Switch Run to Debug in *Product → Scheme → Edit Scheme…* to use the debugger; regenerating the
+project puts Release back. The Xcode 26 CI job compiles this configuration.
+
 To sign it under your own Apple Developer team, run `Tools/setup-xcode.sh <TEAMID>` instead of
 `xcodegen generate`. It writes the git-ignored `Config/Local.xcconfig` (your `DEVELOPMENT_TEAM` and
 `NOOP_BUNDLE_PREFIX = com.<TEAMID>.noopapp`, read by the four iOS/watchOS targets through

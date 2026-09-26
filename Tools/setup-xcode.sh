@@ -112,6 +112,7 @@ fi
 xcodegen generate
 echo
 echo "Done. In Xcode: pick the NOOPiOS scheme and your iPhone at the top, then Product → Run (⌘R)."
+echo "Xcode installs the optimized (Release) build, like TestFlight: the first build takes a few minutes."
 echo "To update later: Tools/update-noop.sh, then ⌘R. Never delete NOOP from the iPhone to update it:"
 echo "that deletes its data."
 open Strand.xcodeproj

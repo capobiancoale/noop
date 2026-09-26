@@ -162,6 +162,10 @@ tuo iPhone), lo **stesso account Apple Developer** di TestFlight e [Homebrew](ht
    sicurezza → Modalità sviluppatore** → attiva (l'iPhone si riavvia).
 4. **Xcode:** in alto scegli lo schema **NOOPiOS** e il tuo iPhone → **▶︎** (⌘R). La firma è automatica:
    Xcode crea da solo i profili di sviluppo e, se non esistono ancora, anche gli identificativi e l'App Group.
+   Xcode installa la versione **ottimizzata (Release)**, lo stesso codice di TestFlight: la prima compilazione
+   richiede qualche minuto. Una versione Debug fa girare le analisi, i grafici e la lettura di Apple Health
+   diverse volte più lentamente; serve solo per il debugger (**Product → Scheme → Edit Scheme… → Run → Build
+   Configuration: Debug**; `Tools/setup-xcode.sh` rimette Release).
 
 ### Aggiornare senza perdere i dati
 

@@ -1,6 +1,7 @@
 # Compile check with Xcode 26: the compiler of the TestFlight build (noop_build.yml) and of a current Mac.
 # app-build.yml compiles with Xcode 16.4, whose type checker accepts some expressions Xcode 26 gives up on,
-# so this job builds the iPhone app (with its embedded Watch app) for a real device, unsigned, with Xcode 26.
+# so this job builds the iPhone app (with its embedded Watch app) for a real device, unsigned, with Xcode 26,
+# in Release: the optimized build TestFlight ships and Xcode's Run installs (project.yml, NOOPiOS scheme).
 # No secrets, no signing, no artifacts: it only checks that it builds.
 name: App build (Xcode 26)
 
@@ -53,9 +54,9 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Build NOOPiOS for iPhone (with the Watch app)
+      - name: Build NOOPiOS for iPhone (with the Watch app), optimized
         run: >-
-          xcodebuild -project Strand.xcodeproj -scheme NOOPiOS -configuration Debug
+          xcodebuild -project Strand.xcodeproj -scheme NOOPiOS -configuration Release
           -destination 'generic/platform=iOS'
           CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
           build
