@@ -4,33 +4,62 @@ import Foundation
 //
 // NOOP writes the strap's data into Apple Health so other apps can see it: the daily resting heart rate,
 // HRV, SpO₂ and respiratory rate, the heart rate minute by minute, and each night's sleep with its stages.
-// This file is the pure part (no HealthKit), so it is tested on its own: which minutes of heart rate a run
-// still has to write, how a night's stages become sleep samples, when a night must be written again, and
-// dates that are never in the future. The HealthKit side is StrandiOS/Health/HealthKitBridge.swift.
+// This file is the pure part (no HealthKit), so it is tested on its own: how often a write runs, which
+// minutes of heart rate a run still has to write, which daily values changed, how a night's stages become
+// sleep samples, when a night must be written again, and dates that are never in the future. The HealthKit
+// side is StrandiOS/Health/HealthKitBridge.swift.
 
 public enum HealthWritePlan {
+
+    // MARK: When to write
+
+    /// Automatic writes (NOOP coming to the foreground, a background wake) run at most this often; a tap
+    /// on the Apple Health screen writes at once. Each write reads the strap's data back from the database,
+    /// which the screen on show is reading too.
+    public static let writeInterval = 15.0 * 60
+
+    /// Whether an automatic write is due: none has run yet (`lastWrite` nil), or the last one started
+    /// `writeInterval` ago or more (one in the future counts as none).
+    public static func writeDue(now: Double, lastWrite: Double?) -> Bool {
+        guard let last = lastWrite, last <= now else { return true }
+        return now - last >= writeInterval
+    }
 
     // MARK: Heart rate, minute by minute
 
     /// How far back the first run writes heart rate.
     public static let heartRateBackfillDays = 14
-    /// Each later run also looks this far behind the newest minute already written, so readings the strap
+    /// A deep run also looks this far behind the newest minute already written, so readings the strap
     /// offloads late (hours or a couple of days after it recorded them) still get in.
     public static let heartRateLookBack = 72.0 * 3_600
+    /// Other runs look only this far behind it: enough for the strap's regular offloads, a fraction of the
+    /// reading.
+    public static let heartRateRecentLookBack = 2.0 * 3_600
+    /// How often a run is a deep one.
+    public static let heartRateDeepInterval = 6.0 * 3_600
     /// Only minutes that ended at least this long ago: the strap's latest seconds may still be arriving.
     public static let settleSeconds = 120.0
     /// Averages outside this range are artefacts, never written.
     public static let plausibleBpm: ClosedRange<Double> = 25...250
 
+    /// Whether this run should be a deep one: none has been yet (`lastDeep` nil), or the last one was
+    /// `heartRateDeepInterval` ago or more (one in the future counts as none).
+    public static func deepHeartRateRunDue(now: Double, lastDeep: Double?) -> Bool {
+        guard let last = lastDeep, last <= now else { return true }
+        return now - last >= heartRateDeepInterval
+    }
+
     /// The whole minutes [from, to) this run looks at: back to the newest minute already written minus
-    /// `heartRateLookBack` (the first time, `heartRateBackfillDays`), never further than that backfill, up
-    /// to the last minute that has settled. Nil when there is nothing to look at.
-    public static func heartRateWindow(now: Double, newestWritten: Double?) -> (from: Double, to: Double)? {
+    /// `heartRateLookBack` on a deep run, else `heartRateRecentLookBack` (the first time,
+    /// `heartRateBackfillDays`), never further than that backfill, up to the last minute that has settled.
+    /// Nil when there is nothing to look at.
+    public static func heartRateWindow(now: Double, newestWritten: Double?, deep: Bool = true) -> (from: Double, to: Double)? {
         let to = ((now - settleSeconds) / 60).rounded(.down) * 60
         let earliest = to - Double(heartRateBackfillDays) * 86_400
         var from = earliest
         if let newest = newestWritten {
-            from = max(earliest, ((newest - heartRateLookBack) / 60).rounded(.down) * 60)
+            let lookBack = deep ? heartRateLookBack : heartRateRecentLookBack
+            from = max(earliest, ((newest - lookBack) / 60).rounded(.down) * 60)
         }
         return to > from ? (from, to) : nil
     }
@@ -132,6 +161,33 @@ public enum HealthWritePlan {
     /// samples from the future.
     public static func sampleDate(noon: Double, now: Double) -> Double {
         min(noon, now - 60)
+    }
+
+    /// Written daily values are remembered this many days (the longest a value is written back for is
+    /// VO₂max's 90 days).
+    public static let dailyWrittenDays = 120
+
+    /// The keys of the daily values to write: the ones Apple Health doesn't have from NOOP yet, or whose value
+    /// changed since it was written (`written`: key → value written). Unchanged values are left alone, so
+    /// a run doesn't delete and rewrite a hundred samples to write a couple.
+    public static func changedDailyValues(_ candidates: [(key: String, value: Double)],
+                                          written: [String: Double]) -> Set<String> {
+        var out = Set<String>()
+        for c in candidates {
+            if let old = written[c.key], abs(old - c.value) <= 1e-9 * max(1, abs(c.value)) { continue }
+            out.insert(c.key)
+        }
+        return out
+    }
+
+    /// `written` without the values of days before `oldestDay` (`yyyy-MM-dd`, the part of each key after its
+    /// last colon; a key without one is dropped), so the record doesn't grow forever.
+    public static func prunedDailyWritten(_ written: [String: Double], oldestDay: String) -> [String: Double] {
+        written.filter { entry in
+            guard let day = entry.key.split(separator: ":").last, day.count == 10,
+                  day.first?.isNumber == true else { return false }
+            return String(day) >= oldestDay
+        }
     }
 }
 

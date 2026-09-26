@@ -24,7 +24,7 @@ struct HeartTrace {
 }
 
 /// A span shaded across every lane: the WOD, or a recorded workout.
-struct TimelineBand: Identifiable {
+struct TimelineBand: Identifiable, Equatable {
     let start: Date
     let end: Date
     /// Written at the top of the span ("WOD"); nil for none.
@@ -94,6 +94,15 @@ enum TimelineSize: String, CaseIterable, Identifiable {
 
 #if os(iOS)
 
+/// The timeline's lanes. Each reports where its plot sits (`LaneFramesKey`), for the gestures, the tick labels
+/// and the reading under the finger.
+private enum TimelineLane: Hashable { case glucose, heart, events }
+
+/// The coordinate space of a timeline's lanes.
+private let timelineSpace = "glucoseHeartTimeline"
+/// Width of every lane's y-axis labels, so the lanes' plots line up.
+private let timelineAxisWidth: CGFloat = 34
+
 struct GlucoseHeartTimeline: View {
 
     /// What the time axis counts: clock time, or hours and minutes from a WOD.
@@ -144,7 +153,11 @@ struct GlucoseHeartTimeline: View {
     @State private var pinching = false
     @State private var gestureBase: ClosedRange<Date>?
     @State private var panDirection: PanDirection = .undecided
-    @State private var plotFrame: CGRect = .zero
+    @State private var laneFrames: [TimelineLane: CGRect] = [:]
+    /// The window while a pinch or a sideways drag is under way. It stays here and goes to `zoom` when the
+    /// gesture ends, so the screen around the chart isn't redrawn on every frame of the gesture.
+    @State private var liveZoom: ClosedRange<Date>?
+    @State private var liveZoomActive = false
     @State private var showSettings = false
     @State private var showFullScreen = false
 
@@ -161,16 +174,16 @@ struct GlucoseHeartTimeline: View {
 
     private enum PanDirection { case undecided, horizontal, vertical }
 
-    private static let space = "glucoseHeartTimeline"
-    /// Width of every lane's y-axis labels, so the lanes' plots line up.
-    private static let axisWidth: CGFloat = 34
     private static let low = GlucoseTrace.lowThreshold
 
     // MARK: Window
 
+    /// The zoom in force: the gesture's while one is under way, else the screen's.
+    private var currentZoom: ClosedRange<Date>? { liveZoomActive ? liveZoom : zoom }
+
     /// The window on screen: the zoom, when it lies inside the bounds, else the whole window.
     private var visible: ClosedRange<Date> {
-        if let z = zoom, z.upperBound > z.lowerBound,
+        if let z = currentZoom, z.upperBound > z.lowerBound,
            z.lowerBound >= bounds.lowerBound, z.upperBound <= bounds.upperBound { return z }
         return bounds
     }
@@ -178,6 +191,9 @@ struct GlucoseHeartTimeline: View {
     private var lo: Double { visible.lowerBound.timeIntervalSince1970 }
     private var hi: Double { visible.upperBound.timeIntervalSince1970 }
     private var span: Double { max(1, hi - lo) }
+
+    /// Where the lanes' plots sit (they share their left and right edges).
+    private var plotFrame: CGRect { laneFrames[.glucose] ?? laneFrames[.heart] ?? laneFrames[.events] ?? .zero }
 
     private var size: TimelineSize { TimelineSize(rawValue: sizeRaw) ?? .standard }
     private var glucoseHeight: CGFloat { fullScreen ? 280 : size.glucoseHeight }
@@ -252,20 +268,32 @@ struct GlucoseHeartTimeline: View {
         .accessibilityLabel(Text(label))
     }
 
+    /// The lanes, each chart drawn from plain values (`GlucoseLaneChart`, `HeartLaneChart`, `EventLaneChart`,
+    /// all `.equatable()`), so a chart redraws only when what it shows changes. The reading under the finger
+    /// is drawn over them (`readingMarks`): sliding a finger along redraws that layer and the figures, not
+    /// the charts.
     private var lanes: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if showGlucose { glucoseLane }
-            if showHeart { heartLane }
-            if showEvents && hasEvents { eventLane }
-            axisLabels
+        let tickMarks = ticks
+        let tickDates = tickMarks.map { date($0.ts) }
+        let bandsShown = shownBands
+        let gRange = glucose.displayRange(targetLow: targetLow, targetHigh: targetHigh)
+        let heartPoints = visibleHeart
+        let hRange = heartRange(heartPoints)
+        return VStack(alignment: .leading, spacing: 10) {
+            if showGlucose { glucoseLane(range: gRange, tickDates: tickDates, bands: bandsShown) }
+            if showHeart { heartLane(points: heartPoints, range: hRange, tickDates: tickDates, bands: bandsShown) }
+            if showEvents && hasEvents { eventLane(tickDates: tickDates, bands: bandsShown) }
+            axisLabels(tickMarks)
         }
-        .coordinateSpace(.named(Self.space))
-        .onPreferenceChange(PlotFrameKey.self) { plotFrame = $0 }
+        .coordinateSpace(.named(timelineSpace))
+        .onPreferenceChange(LaneFramesKey.self) { laneFrames = $0 }
+        .overlay { readingMarks(glucoseRange: gRange, heartRange: hRange) }
         .contentShape(Rectangle())
         .gesture(scrubGesture)
         .simultaneousGesture(panGesture)
         .simultaneousGesture(magnifyGesture)
         .simultaneousGesture(TapGesture(count: 2).onEnded { resetZoom() })
+        .onDisappear { commitLiveZoom() }
     }
 
     private var fullScreenView: some View {
@@ -289,86 +317,22 @@ struct GlucoseHeartTimeline: View {
 
     // MARK: Glucose lane
 
-    private var glucoseLane: some View {
-        let range = glucose.displayRange(targetLow: targetLow, targetHigh: targetHigh)
+    private func glucoseLane(range: ClosedRange<Double>, tickDates: [Date], bands: [TimelineBand]) -> some View {
         let shown = glucose.visible(from: lo, to: hi)
-        let area = lowArea(shown)
-        let showDots = glucose.inside(from: lo, to: hi).count <= 40
-        let marks = scrubDate == nil ? glucose.extremes(from: lo, to: hi) : nil
+        let extremes = scrubDate == nil
+            ? glucose.extremes(from: lo, to: hi).map { GlucoseLaneChart.Extremes(low: $0.low, high: $0.high) }
+            : nil
+        let detail = glucoseDetail
         return VStack(alignment: .leading, spacing: 4) {
-            laneHeader("Glucose", unit: "mg/dL", detail: glucoseDetail)
-            Chart {
-                if showTarget {
-                    RectangleMark(yStart: .value("Target low", targetLow), yEnd: .value("Target high", targetHigh))
-                        .foregroundStyle(StrandPalette.statusPositive.opacity(0.09))
-                }
-                RuleMark(y: .value("Low", Self.low))
-                    .foregroundStyle(StrandPalette.statusCritical.opacity(0.45))
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                bandMarks(labelled: true)
-                tickRules
-                ForEach(area) { p in
-                    AreaMark(x: .value("Time", date(p.ts)),
-                             yStart: .value("Glucose", p.mgdl),
-                             yEnd: .value("Low", Self.low),
-                             series: .value("Segment", p.segment))
-                        .foregroundStyle(StrandPalette.statusCritical.opacity(0.28))
-                        .interpolationMethod(.linear)
-                }
-                ForEach(shown) { p in
-                    LineMark(x: .value("Time", date(p.ts)), y: .value("Glucose", p.mgdl),
-                             series: .value("Segment", p.segment))
-                        .foregroundStyle(StrandPalette.chartGlucose)
-                        .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-                        .interpolationMethod(.linear)
-                }
-                if showDots {
-                    ForEach(shown) { p in
-                        PointMark(x: .value("Time", date(p.ts)), y: .value("Glucose", p.mgdl))
-                            .symbolSize(16)
-                            .foregroundStyle(StrandPalette.chartGlucose)
-                    }
-                }
-                if let m = marks {
-                    PointMark(x: .value("Time", date(m.low.ts)), y: .value("Glucose", m.low.mgdl))
-                        .symbol { dot(m.low.mgdl < Self.low ? StrandPalette.statusCritical : StrandPalette.chartGlucose) }
-                        .annotation(position: labelSide(m.low.ts), alignment: .center, spacing: 4) {
-                            valueLabel(Int(m.low.mgdl.rounded()))
-                        }
-                    if m.high.mgdl > targetHigh {
-                        PointMark(x: .value("Time", date(m.high.ts)), y: .value("Glucose", m.high.mgdl))
-                            .symbol { dot(StrandPalette.chartGlucose) }
-                            .annotation(position: labelSide(m.high.ts), alignment: .center, spacing: 4) {
-                                valueLabel(Int(m.high.mgdl.rounded()))
-                            }
-                    }
-                }
-                if let s = scrubDate {
-                    RuleMark(x: .value("Selected", s))
-                        .foregroundStyle(StrandPalette.textSecondary.opacity(0.7))
-                        .lineStyle(StrokeStyle(lineWidth: 1))
-                    if let g = scrubGlucose {
-                        PointMark(x: .value("Time", date(g.ts)), y: .value("Glucose", g.mgdl))
-                            .symbol { dot(StrandPalette.chartGlucose) }
-                    }
-                }
-            }
-            .chartXScale(domain: visible)
-            .chartYScale(domain: range)
-            .chartXAxis(.hidden)
-            .chartYAxis { yAxis(glucoseTicks(range)) }
-            .chartPlotStyle { plot in plot.clipped() }
-            .chartOverlay { proxy in plotFrameReporter(proxy) }
-            .frame(height: glucoseHeight)
-            .overlay {
-                if shown.isEmpty {
-                    Text("No glucose readings in this stretch")
-                        .font(StrandFont.footnote)
-                        .foregroundStyle(StrandPalette.textTertiary)
-                }
-            }
-            .accessibilityLabel(Text("Glucose"))
-            .accessibilityValue(Text(verbatim: glucoseDetail ?? ""))
+            laneHeader("Glucose", unit: "mg/dL", detail: detail)
+            GlucoseLaneChart(shown: shown, area: lowArea(shown), range: range, visible: visible,
+                             yTicks: glucoseTicks(range), tickDates: tickDates, bands: bands,
+                             showTarget: showTarget, targetLow: targetLow, targetHigh: targetHigh,
+                             showDots: glucose.inside(from: lo, to: hi).count <= 40, extremes: extremes,
+                             surface: surface, height: glucoseHeight)
+                .equatable()
+                .accessibilityLabel(Text("Glucose"))
+                .accessibilityValue(Text(verbatim: detail ?? ""))
         }
     }
 
@@ -410,25 +374,18 @@ struct GlucoseHeartTimeline: View {
 
     // MARK: Heart-rate lane
 
-    private struct HeartPoint: Identifiable {
-        let date: Date
-        let bpm: Double
-        let segment: Int
-        var id: Date { date }
-    }
-
     /// The heart rate on screen (plus a point past each edge), split where the strap sent nothing.
-    private var visibleHeart: [HeartPoint] {
+    private var visibleHeart: [HeartLaneChart.Point] {
         let pad = Double(max(heart.bucketSeconds, 1))
         let gap = max(Double(heart.bucketSeconds) * 3, 60)
-        var out: [HeartPoint] = []
+        var out: [HeartLaneChart.Point] = []
         var segment = 0
         var previous: Double?
         for p in heart.points {
             let t = p.date.timeIntervalSince1970
             guard t >= lo - pad, t <= hi + pad else { continue }
             if let prev = previous, t - prev > gap { segment += 1 }
-            out.append(HeartPoint(date: p.date, bpm: p.value, segment: segment))
+            out.append(HeartLaneChart.Point(date: p.date, bpm: p.value, segment: segment))
             previous = t
         }
         return out
@@ -439,68 +396,20 @@ struct GlucoseHeartTimeline: View {
         return HRZones.zones(maxHR: m)
     }
 
-    private var heartLane: some View {
-        let points = visibleHeart
-        let range = heartRange(points)
+    private func heartLane(points: [HeartLaneChart.Point], range: ClosedRange<Double>, tickDates: [Date],
+                           bands: [TimelineBand]) -> some View {
         let zones = (zoneSet?.zones ?? []).filter { $0.upper > range.lowerBound && $0.lower < range.upperBound }
         let peak = scrubDate == nil ? heartPeak(points) : nil
+        let detail = heartDetail
         return VStack(alignment: .leading, spacing: 4) {
-            laneHeader("Heart rate", unit: heartUnit, detail: heartDetail)
+            laneHeader("Heart rate", unit: heartUnit, detail: detail)
             ZStack {
-                Chart {
-                    ForEach(zones, id: \.number) { z in
-                        RectangleMark(yStart: .value("Zone low", max(z.lower, range.lowerBound)),
-                                      yEnd: .value("Zone high", min(z.upper, range.upperBound)))
-                            .foregroundStyle(StrandPalette.hrZoneColor(z.number).opacity(0.10))
-                            .annotation(position: .overlay, alignment: .trailing) {
-                                Text(verbatim: "Z\(z.number)")
-                                    .font(StrandFont.footnote)
-                                    .foregroundStyle(StrandPalette.textTertiary)
-                                    .padding(.trailing, 4)
-                            }
-                    }
-                    bandMarks(labelled: !showGlucose)
-                    tickRules
-                    ForEach(points) { p in
-                        AreaMark(x: .value("Time", p.date),
-                                 yStart: .value("Floor", range.lowerBound),
-                                 yEnd: .value("Heart rate", p.bpm),
-                                 series: .value("Segment", p.segment))
-                            .foregroundStyle(StrandPalette.metricRose.opacity(0.12))
-                            .interpolationMethod(.linear)
-                    }
-                    ForEach(points) { p in
-                        LineMark(x: .value("Time", p.date), y: .value("Heart rate", p.bpm),
-                                 series: .value("Segment", p.segment))
-                            .foregroundStyle(StrandPalette.metricRose)
-                            .lineStyle(StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
-                            .interpolationMethod(.linear)
-                    }
-                    if let p = peak {
-                        PointMark(x: .value("Time", p.date), y: .value("Heart rate", p.bpm))
-                            .symbol { dot(StrandPalette.metricRose) }
-                            .annotation(position: labelSide(p.date.timeIntervalSince1970), alignment: .center, spacing: 4) {
-                                valueLabel(Int(p.bpm.rounded()))
-                            }
-                    }
-                    if let s = scrubDate {
-                        RuleMark(x: .value("Selected", s))
-                            .foregroundStyle(StrandPalette.textSecondary.opacity(0.7))
-                            .lineStyle(StrokeStyle(lineWidth: 1))
-                        if let h = scrubHeart {
-                            PointMark(x: .value("Time", h.date), y: .value("Heart rate", h.value))
-                                .symbol { dot(StrandPalette.metricRose) }
-                        }
-                    }
-                }
-                .chartXScale(domain: visible)
-                .chartYScale(domain: range)
-                .chartXAxis(.hidden)
-                .chartYAxis { yAxis(heartTicks(range)) }
-                .chartPlotStyle { plot in plot.clipped() }
-                .chartOverlay { proxy in plotFrameReporter(proxy) }
-                .accessibilityLabel(Text("Heart rate"))
-                .accessibilityValue(Text(verbatim: heartDetail ?? ""))
+                HeartLaneChart(points: points, range: range, visible: visible, yTicks: heartTicks(range),
+                               tickDates: tickDates, bands: bands, labelBands: !showGlucose, zones: zones,
+                               peak: peak, surface: surface)
+                    .equatable()
+                    .accessibilityLabel(Text("Heart rate"))
+                    .accessibilityValue(Text(verbatim: detail ?? ""))
                 if points.isEmpty {
                     Group {
                         if heartLoaded {
@@ -518,11 +427,11 @@ struct GlucoseHeartTimeline: View {
     }
 
     /// The highest heart rate inside the window on screen.
-    private func heartPeak(_ points: [HeartPoint]) -> HeartPoint? {
+    private func heartPeak(_ points: [HeartLaneChart.Point]) -> HeartLaneChart.Point? {
         points.filter { $0.date >= visible.lowerBound && $0.date <= visible.upperBound }.max { $0.bpm < $1.bpm }
     }
 
-    private func heartRange(_ points: [HeartPoint]) -> ClosedRange<Double> {
+    private func heartRange(_ points: [HeartLaneChart.Point]) -> ClosedRange<Double> {
         guard let lowest = points.map(\.bpm).min(), let highest = points.map(\.bpm).max() else { return 50...150 }
         let lower = max(0, ((lowest - 5) / 10).rounded(.down) * 10)
         var upper = ((highest + 8) / 10).rounded(.up) * 10
@@ -599,59 +508,20 @@ struct GlucoseHeartTimeline: View {
 
     private var hasEvents: Bool { !carbs.isEmpty || !boluses.isEmpty }
 
-    private var eventLane: some View {
+    private func eventLane(tickDates: [Date], bands: [TimelineBand]) -> some View {
         let within = TimelineEvents.mergeDistance(span: span)
         let carbEvents = TimelineEvents.merged(carbs.filter { $0.ts >= lo - within && $0.ts <= hi }
             .map { (ts: $0.ts, amount: $0.grams) }, within: within)
         let bolusEvents = TimelineEvents.merged(boluses.filter { $0.ts >= lo - within && $0.ts <= hi }
             .map { (ts: $0.ts, amount: $0.units) }, within: within)
+        let detail = eventsDetail
         return VStack(alignment: .leading, spacing: 4) {
-            laneHeader("Carbs & bolus", unit: "g · U", detail: eventsDetail)
-            Chart {
-                bandMarks(labelled: !showGlucose && !showHeart)
-                tickRules
-                ForEach(carbEvents) { e in
-                    PointMark(x: .value("Time", date(e.ts)), y: .value("Kind", "carbs"))
-                        .symbol(.circle)
-                        .symbolSize(60)
-                        .foregroundStyle(StrandPalette.chartCarbs)
-                        .annotation(position: .trailing, alignment: .center, spacing: 3) {
-                            eventLabel("\(Int(e.amount.rounded())) g")
-                        }
-                }
-                ForEach(bolusEvents) { e in
-                    PointMark(x: .value("Time", date(e.ts)), y: .value("Kind", "bolus"))
-                        .symbol(.diamond)
-                        .symbolSize(60)
-                        .foregroundStyle(StrandPalette.chartBolus)
-                        .annotation(position: .trailing, alignment: .center, spacing: 3) {
-                            eventLabel(units(e.amount))
-                        }
-                }
-                if let s = scrubDate {
-                    RuleMark(x: .value("Selected", s))
-                        .foregroundStyle(StrandPalette.textSecondary.opacity(0.7))
-                        .lineStyle(StrokeStyle(lineWidth: 1))
-                }
-            }
-            .chartXScale(domain: visible)
-            .chartYScale(domain: ["carbs", "bolus"])
-            .chartXAxis(.hidden)
-            .chartYAxis {
-                AxisMarks(position: .leading, values: ["carbs", "bolus"]) { value in
-                    AxisValueLabel {
-                        Image(systemName: value.as(String.self) == "carbs" ? "fork.knife" : "syringe.fill")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(StrandPalette.textTertiary)
-                            .frame(width: Self.axisWidth, alignment: .trailing)
-                    }
-                }
-            }
-            .chartPlotStyle { plot in plot.clipped() }
-            .chartOverlay { proxy in plotFrameReporter(proxy) }
-            .frame(height: eventsHeight)
-            .accessibilityLabel(Text("Carbs and bolus insulin"))
-            .accessibilityValue(Text(verbatim: eventsDetail ?? ""))
+            laneHeader("Carbs & bolus", unit: "g · U", detail: detail)
+            EventLaneChart(carbs: carbEvents, boluses: bolusEvents, visible: visible, tickDates: tickDates,
+                           bands: bands, labelBands: !showGlucose && !showHeart, height: eventsHeight)
+                .equatable()
+                .accessibilityLabel(Text("Carbs and bolus insulin"))
+                .accessibilityValue(Text(verbatim: detail ?? ""))
         }
     }
 
@@ -669,83 +539,16 @@ struct GlucoseHeartTimeline: View {
         guard grams > 0 || units > 0 else { return scrubDate == nil ? nil : "—" }
         var parts: [String] = []
         if grams > 0 { parts.append("\(Int(grams.rounded())) g") }
-        if units > 0 { parts.append(self.units(units)) }
+        if units > 0 { parts.append(TimelineMarks.units(units)) }
         return parts.joined(separator: " · ")
     }
 
-    private func units(_ u: Double) -> String {
-        (u == u.rounded() ? String(Int(u)) : String(format: "%.1f", u)) + " U"
-    }
+    // MARK: Shared
 
-    private func eventLabel(_ text: String) -> some View {
-        Text(verbatim: text)
-            .font(StrandFont.footnote)
-            .foregroundStyle(StrandPalette.textSecondary)
-    }
-
-    // MARK: Shared marks
-
-    /// The WOD or workouts, shaded, clamped to the window so a label stays in view.
-    @ChartContentBuilder private func bandMarks(labelled: Bool) -> some ChartContent {
-        ForEach(shownBands) { b in
-            RectangleMark(xStart: .value("Start", max(b.start, visible.lowerBound)),
-                          xEnd: .value("End", min(b.end, visible.upperBound)))
-                .foregroundStyle(StrandPalette.textTertiary.opacity(0.16))
-                .annotation(position: .overlay, alignment: .top) {
-                    if labelled, let label = b.label {
-                        Text(verbatim: label)
-                            .font(StrandFont.footnote.weight(.semibold))
-                            .foregroundStyle(StrandPalette.textSecondary)
-                            .padding(.top, 2)
-                    }
-                }
-        }
-    }
-
+    /// The WOD or workouts inside the window on screen.
     private var shownBands: [TimelineBand] {
         guard showBands else { return [] }
         return bands.filter { $0.end > visible.lowerBound && $0.start < visible.upperBound }
-    }
-
-    /// The axis ticks as faint vertical lines in every lane.
-    private var tickRules: some ChartContent {
-        ForEach(ticks) { t in
-            RuleMark(x: .value("Tick", date(t.ts)))
-                .foregroundStyle(StrandPalette.hairline)
-                .lineStyle(StrokeStyle(lineWidth: 0.5))
-        }
-    }
-
-    private func yAxis(_ values: [Double]) -> some AxisContent {
-        AxisMarks(position: .leading, values: values) { value in
-            AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                .foregroundStyle(StrandPalette.hairline)
-            AxisValueLabel {
-                if let v = value.as(Double.self) {
-                    Text(verbatim: "\(Int(v))")
-                        .font(StrandFont.footnote)
-                        .frame(width: Self.axisWidth, alignment: .trailing)
-                }
-            }
-        }
-    }
-
-    /// A data marker: filled, with a ring in the card's colour so it stays legible on the line.
-    private func dot(_ color: Color) -> some View {
-        Circle().fill(color)
-            .overlay(Circle().stroke(surface, lineWidth: 2))
-            .frame(width: 10, height: 10)
-    }
-
-    private func valueLabel(_ value: Int) -> some View {
-        Text(verbatim: "\(value)")
-            .font(StrandFont.captionNumber.weight(.semibold))
-            .foregroundStyle(StrandPalette.textPrimary)
-    }
-
-    /// A label goes on the side of its point with more room: right in the window's first half, else left.
-    private func labelSide(_ ts: Double) -> AnnotationPosition {
-        ts < lo + span / 2 ? .trailing : .leading
     }
 
     private func laneHeader(_ title: LocalizedStringKey, unit: String, detail: String?) -> some View {
@@ -768,6 +571,56 @@ struct GlucoseHeartTimeline: View {
         }
     }
 
+    // MARK: The reading under the finger
+
+    /// What the reading draws: a line down each lane's plot at the finger, and a marker on the glucose and
+    /// heart-rate values it reads. Empty when no finger is on the chart.
+    private struct ReadingGeometry {
+        var lines: [(x: CGFloat, top: CGFloat, bottom: CGFloat)] = []
+        var dots: [(point: CGPoint, color: Color)] = []
+    }
+
+    private func readingGeometry(glucoseRange: ClosedRange<Double>, heartRange: ClosedRange<Double>) -> ReadingGeometry {
+        var out = ReadingGeometry()
+        guard let s = scrubDate else { return out }
+        let t = s.timeIntervalSince1970
+        for f in laneFrames.values where f.width > 0 && f.height > 0 {
+            out.lines.append((x: xPosition(t, in: f), top: f.minY, bottom: f.maxY))
+        }
+        if showGlucose, let g = scrubGlucose, let f = laneFrames[.glucose] {
+            out.dots.append((point: CGPoint(x: xPosition(g.ts, in: f), y: yPosition(g.mgdl, in: glucoseRange, frame: f)),
+                             color: StrandPalette.chartGlucose))
+        }
+        if showHeart, let h = scrubHeart, let f = laneFrames[.heart] {
+            out.dots.append((point: CGPoint(x: xPosition(h.date.timeIntervalSince1970, in: f),
+                                            y: yPosition(h.value, in: heartRange, frame: f)),
+                             color: StrandPalette.metricRose))
+        }
+        return out
+    }
+
+    /// Drawn over the lanes, in their coordinate space (the overlay has the lanes' frame and origin).
+    private func readingMarks(glucoseRange: ClosedRange<Double>, heartRange: ClosedRange<Double>) -> some View {
+        let geometry = readingGeometry(glucoseRange: glucoseRange, heartRange: heartRange)
+        let ring = surface
+        let lineColor = StrandPalette.textSecondary.opacity(0.7)
+        return Canvas { context, _ in
+            for l in geometry.lines {
+                var path = Path()
+                path.move(to: CGPoint(x: l.x, y: l.top))
+                path.addLine(to: CGPoint(x: l.x, y: l.bottom))
+                context.stroke(path, with: .color(lineColor), lineWidth: 1)
+            }
+            for d in geometry.dots {
+                let circle = Path(ellipseIn: CGRect(x: d.point.x - 5, y: d.point.y - 5, width: 10, height: 10))
+                context.fill(circle, with: .color(d.color))
+                context.stroke(circle, with: .color(ring), lineWidth: 2)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
     // MARK: Time axis
 
     private var tickStep: Double { TimelineTicks.step(span: span, maxTicks: fullScreen ? 6 : 5) }
@@ -788,11 +641,10 @@ struct GlucoseHeartTimeline: View {
     }
 
     /// The tick labels, under the last lane, at the same x as the lanes' tick lines.
-    private var axisLabels: some View {
-        let shown = ticks
+    private func axisLabels(_ shown: [TimelineTick]) -> some View {
         let frame = plotFrame
         return GeometryReader { geo in
-            let originX = geo.frame(in: .named(Self.space)).minX
+            let originX = geo.frame(in: .named(timelineSpace)).minX
             ZStack(alignment: .topLeading) {
                 ForEach(shown) { t in
                     Text(verbatim: tickLabel(t))
@@ -811,12 +663,11 @@ struct GlucoseHeartTimeline: View {
         frame.minX + CGFloat((ts - lo) / span) * frame.width
     }
 
-    private func plotFrameReporter(_ proxy: ChartProxy) -> some View {
-        GeometryReader { geo in
-            let local = proxy.plotRectCompat(in: geo)
-            let origin = geo.frame(in: .named(Self.space)).origin
-            Color.clear.preference(key: PlotFrameKey.self, value: local.offsetBy(dx: origin.x, dy: origin.y))
-        }
+    /// A value's height in a lane's plot whose y scale runs over `range` (as the lane's chart draws it).
+    private func yPosition(_ value: Double, in range: ClosedRange<Double>, frame: CGRect) -> CGFloat {
+        let width = max(range.upperBound - range.lowerBound, 1e-9)
+        let f = min(max((value - range.lowerBound) / width, 0), 1)
+        return frame.maxY - CGFloat(f) * frame.height
     }
 
     // MARK: Readout text
@@ -869,7 +720,7 @@ struct GlucoseHeartTimeline: View {
     /// Hold still for a moment, then slide: every lane reads the moment under the finger.
     private var scrubGesture: some Gesture {
         LongPressGesture(minimumDuration: 0.25, maximumDistance: 8)
-            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.space)))
+            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(timelineSpace)))
             .onChanged { value in
                 guard case .second(true, let drag) = value else { return }
                 if !scrubEngaged {
@@ -896,7 +747,7 @@ struct GlucoseHeartTimeline: View {
 
     /// A sideways drag moves the zoomed window along; a mostly vertical one is left to the page's scroll.
     private var panGesture: some Gesture {
-        DragGesture(minimumDistance: 8, coordinateSpace: .named(Self.space))
+        DragGesture(minimumDistance: 8, coordinateSpace: .named(timelineSpace))
             .onChanged { value in
                 guard !scrubEngaged, !pinching, isZoomed, plotFrame.width > 0 else { return }
                 if panDirection == .undecided {
@@ -907,11 +758,11 @@ struct GlucoseHeartTimeline: View {
                 if gestureBase == nil { gestureBase = base }
                 let baseSpan = base.upperBound.timeIntervalSince(base.lowerBound)
                 let seconds = -Double(value.translation.width) * baseSpan / Double(plotFrame.width)
-                setZoom(OverviewHRChart.panned(base, deltaSeconds: seconds, bounds: bounds))
+                setLiveZoom(OverviewHRChart.panned(base, deltaSeconds: seconds, bounds: bounds))
             }
             .onEnded { _ in
-                gestureBase = nil
                 panDirection = .undecided
+                commitLiveZoom()
             }
     }
 
@@ -924,18 +775,38 @@ struct GlucoseHeartTimeline: View {
                 if gestureBase == nil { gestureBase = base }
                 let anchor = plotFrame.width > 0
                     ? Double((value.startLocation.x - plotFrame.minX) / plotFrame.width) : 0.5
-                setZoom(OverviewHRChart.zoomed(base, scale: Double(value.magnification),
-                                               anchorFraction: anchor, bounds: bounds))
+                setLiveZoom(OverviewHRChart.zoomed(base, scale: Double(value.magnification),
+                                                   anchorFraction: anchor, bounds: bounds))
             }
             .onEnded { _ in
                 pinching = false
-                gestureBase = nil
+                commitLiveZoom()
             }
     }
 
-    /// A window covering the whole bounds is no zoom at all.
+    /// Nil for a window covering the whole bounds (no zoom at all).
+    private func zoomWindow(_ window: ClosedRange<Date>) -> ClosedRange<Date>? {
+        (window.lowerBound <= bounds.lowerBound && window.upperBound >= bounds.upperBound) ? nil : window
+    }
+
+    /// A gesture's window, kept here until the gesture ends.
+    private func setLiveZoom(_ window: ClosedRange<Date>) {
+        liveZoom = zoomWindow(window)
+        liveZoomActive = true
+    }
+
+    /// The gesture has ended: its window becomes the screen's zoom (one redraw of the screen per gesture).
+    private func commitLiveZoom() {
+        gestureBase = nil
+        guard liveZoomActive else { return }
+        zoom = liveZoom
+        liveZoomActive = false
+    }
+
+    /// A button's window, straight to the screen's zoom.
     private func setZoom(_ window: ClosedRange<Date>) {
-        zoom = (window.lowerBound <= bounds.lowerBound && window.upperBound >= bounds.upperBound) ? nil : window
+        liveZoomActive = false
+        zoom = zoomWindow(window)
     }
 
     private func zoomBy(_ scale: Double) {
@@ -946,7 +817,10 @@ struct GlucoseHeartTimeline: View {
 
     private func resetZoom() {
         guard isZoomed else { return }
-        withAnimation(StrandMotion.interactive) { zoom = nil }
+        withAnimation(StrandMotion.interactive) {
+            liveZoomActive = false
+            zoom = nil
+        }
     }
 
     /// Zoom onto the WOD with a few minutes either side.
@@ -960,12 +834,323 @@ struct GlucoseHeartTimeline: View {
     }
 }
 
-/// Where the lanes' plot sits in the timeline, so gestures and the tick labels map x to time.
-private struct PlotFrameKey: PreferenceKey {
-    static var defaultValue: CGRect = .zero
-    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
-        let next = nextValue()
-        if value == .zero { value = next }
+// MARK: - The lanes' charts
+
+/// Each lane's chart takes only plain values and is compared by them (`.equatable()`): a timeline redrawing its
+/// figures, or the reading under the finger, leaves the charts as they are.
+
+private struct GlucoseLaneChart: View, Equatable {
+    struct Extremes: Equatable {
+        let low: GlucoseTrace.Point
+        let high: GlucoseTrace.Point
+    }
+
+    let shown: [GlucoseTrace.Point]
+    let area: [GlucoseTrace.AreaPoint]
+    let range: ClosedRange<Double>
+    let visible: ClosedRange<Date>
+    let yTicks: [Double]
+    let tickDates: [Date]
+    let bands: [TimelineBand]
+    let showTarget: Bool
+    let targetLow: Double
+    let targetHigh: Double
+    let showDots: Bool
+    /// The lowest and highest reading on screen, labelled; nil while a finger reads the chart.
+    let extremes: Extremes?
+    let surface: Color
+    let height: CGFloat
+
+    private static let low = GlucoseTrace.lowThreshold
+
+    /// Written out rather than synthesized so it is nonisolated (a view's members are on the main actor).
+    nonisolated static func == (a: GlucoseLaneChart, b: GlucoseLaneChart) -> Bool {
+        guard a.shown == b.shown, a.area == b.area, a.range == b.range, a.visible == b.visible else { return false }
+        guard a.yTicks == b.yTicks, a.tickDates == b.tickDates, a.bands == b.bands else { return false }
+        guard a.showTarget == b.showTarget, a.targetLow == b.targetLow, a.targetHigh == b.targetHigh else { return false }
+        return a.showDots == b.showDots && a.extremes == b.extremes && a.surface == b.surface && a.height == b.height
+    }
+
+    var body: some View {
+        Chart {
+            if showTarget {
+                RectangleMark(yStart: .value("Target low", targetLow), yEnd: .value("Target high", targetHigh))
+                    .foregroundStyle(StrandPalette.statusPositive.opacity(0.09))
+            }
+            RuleMark(y: .value("Low", Self.low))
+                .foregroundStyle(StrandPalette.statusCritical.opacity(0.45))
+                .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
+            TimelineMarks.bands(bands, visible: visible, labelled: true)
+            TimelineMarks.ticks(tickDates)
+            ForEach(area) { p in
+                AreaMark(x: .value("Time", Date(timeIntervalSince1970: p.ts)),
+                         yStart: .value("Glucose", p.mgdl),
+                         yEnd: .value("Low", Self.low),
+                         series: .value("Segment", p.segment))
+                    .foregroundStyle(StrandPalette.statusCritical.opacity(0.28))
+                    .interpolationMethod(.linear)
+            }
+            ForEach(shown) { p in
+                LineMark(x: .value("Time", Date(timeIntervalSince1970: p.ts)), y: .value("Glucose", p.mgdl),
+                         series: .value("Segment", p.segment))
+                    .foregroundStyle(StrandPalette.chartGlucose)
+                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                    .interpolationMethod(.linear)
+            }
+            if showDots {
+                ForEach(shown) { p in
+                    PointMark(x: .value("Time", Date(timeIntervalSince1970: p.ts)), y: .value("Glucose", p.mgdl))
+                        .symbolSize(16)
+                        .foregroundStyle(StrandPalette.chartGlucose)
+                }
+            }
+            if let m = extremes {
+                PointMark(x: .value("Time", Date(timeIntervalSince1970: m.low.ts)), y: .value("Glucose", m.low.mgdl))
+                    .symbol {
+                        TimelineMarks.dot(m.low.mgdl < Self.low ? StrandPalette.statusCritical : StrandPalette.chartGlucose,
+                                          surface: surface)
+                    }
+                    .annotation(position: TimelineMarks.labelSide(m.low.ts, visible: visible), alignment: .center, spacing: 4) {
+                        TimelineMarks.valueLabel(Int(m.low.mgdl.rounded()))
+                    }
+                if m.high.mgdl > targetHigh {
+                    PointMark(x: .value("Time", Date(timeIntervalSince1970: m.high.ts)), y: .value("Glucose", m.high.mgdl))
+                        .symbol { TimelineMarks.dot(StrandPalette.chartGlucose, surface: surface) }
+                        .annotation(position: TimelineMarks.labelSide(m.high.ts, visible: visible), alignment: .center, spacing: 4) {
+                            TimelineMarks.valueLabel(Int(m.high.mgdl.rounded()))
+                        }
+                }
+            }
+        }
+        .chartXScale(domain: visible)
+        .chartYScale(domain: range)
+        .chartXAxis(.hidden)
+        .chartYAxis { TimelineMarks.yAxis(yTicks) }
+        .chartPlotStyle { plot in plot.clipped() }
+        .chartOverlay { proxy in TimelineMarks.frameReporter(proxy, lane: .glucose) }
+        .frame(height: height)
+        .overlay {
+            if shown.isEmpty {
+                Text("No glucose readings in this stretch")
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.textTertiary)
+            }
+        }
+    }
+}
+
+private struct HeartLaneChart: View, Equatable {
+    struct Point: Identifiable, Equatable {
+        let date: Date
+        let bpm: Double
+        let segment: Int
+        var id: Date { date }
+    }
+
+    let points: [Point]
+    let range: ClosedRange<Double>
+    let visible: ClosedRange<Date>
+    let yTicks: [Double]
+    let tickDates: [Date]
+    let bands: [TimelineBand]
+    let labelBands: Bool
+    let zones: [HRZone]
+    /// The highest heart rate on screen, labelled; nil while a finger reads the chart.
+    let peak: Point?
+    let surface: Color
+
+    nonisolated static func == (a: HeartLaneChart, b: HeartLaneChart) -> Bool {
+        guard a.points == b.points, a.range == b.range, a.visible == b.visible, a.yTicks == b.yTicks else { return false }
+        guard a.tickDates == b.tickDates, a.bands == b.bands, a.labelBands == b.labelBands else { return false }
+        return a.zones == b.zones && a.peak == b.peak && a.surface == b.surface
+    }
+
+    var body: some View {
+        Chart {
+            ForEach(zones, id: \.number) { z in
+                RectangleMark(yStart: .value("Zone low", max(z.lower, range.lowerBound)),
+                              yEnd: .value("Zone high", min(z.upper, range.upperBound)))
+                    .foregroundStyle(StrandPalette.hrZoneColor(z.number).opacity(0.10))
+                    .annotation(position: .overlay, alignment: .trailing) {
+                        Text(verbatim: "Z\(z.number)")
+                            .font(StrandFont.footnote)
+                            .foregroundStyle(StrandPalette.textTertiary)
+                            .padding(.trailing, 4)
+                    }
+            }
+            TimelineMarks.bands(bands, visible: visible, labelled: labelBands)
+            TimelineMarks.ticks(tickDates)
+            ForEach(points) { p in
+                LineMark(x: .value("Time", p.date), y: .value("Heart rate", p.bpm),
+                         series: .value("Segment", p.segment))
+                    .foregroundStyle(StrandPalette.metricRose)
+                    .lineStyle(StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+                    .interpolationMethod(.linear)
+            }
+            if let p = peak {
+                PointMark(x: .value("Time", p.date), y: .value("Heart rate", p.bpm))
+                    .symbol { TimelineMarks.dot(StrandPalette.metricRose, surface: surface) }
+                    .annotation(position: TimelineMarks.labelSide(p.date.timeIntervalSince1970, visible: visible),
+                                alignment: .center, spacing: 4) {
+                        TimelineMarks.valueLabel(Int(p.bpm.rounded()))
+                    }
+            }
+        }
+        .chartXScale(domain: visible)
+        .chartYScale(domain: range)
+        .chartXAxis(.hidden)
+        .chartYAxis { TimelineMarks.yAxis(yTicks) }
+        .chartPlotStyle { plot in plot.clipped() }
+        .chartOverlay { proxy in TimelineMarks.frameReporter(proxy, lane: .heart) }
+    }
+}
+
+private struct EventLaneChart: View, Equatable {
+    let carbs: [TimelineEvent]
+    let boluses: [TimelineEvent]
+    let visible: ClosedRange<Date>
+    let tickDates: [Date]
+    let bands: [TimelineBand]
+    let labelBands: Bool
+    let height: CGFloat
+
+    nonisolated static func == (a: EventLaneChart, b: EventLaneChart) -> Bool {
+        guard a.carbs == b.carbs, a.boluses == b.boluses, a.visible == b.visible else { return false }
+        return a.tickDates == b.tickDates && a.bands == b.bands && a.labelBands == b.labelBands && a.height == b.height
+    }
+
+    var body: some View {
+        Chart {
+            TimelineMarks.bands(bands, visible: visible, labelled: labelBands)
+            TimelineMarks.ticks(tickDates)
+            ForEach(carbs) { e in
+                PointMark(x: .value("Time", Date(timeIntervalSince1970: e.ts)), y: .value("Kind", "carbs"))
+                    .symbol(.circle)
+                    .symbolSize(60)
+                    .foregroundStyle(StrandPalette.chartCarbs)
+                    .annotation(position: .trailing, alignment: .center, spacing: 3) {
+                        Self.label("\(Int(e.amount.rounded())) g")
+                    }
+            }
+            ForEach(boluses) { e in
+                PointMark(x: .value("Time", Date(timeIntervalSince1970: e.ts)), y: .value("Kind", "bolus"))
+                    .symbol(.diamond)
+                    .symbolSize(60)
+                    .foregroundStyle(StrandPalette.chartBolus)
+                    .annotation(position: .trailing, alignment: .center, spacing: 3) {
+                        Self.label(TimelineMarks.units(e.amount))
+                    }
+            }
+        }
+        .chartXScale(domain: visible)
+        .chartYScale(domain: ["carbs", "bolus"])
+        .chartXAxis(.hidden)
+        .chartYAxis {
+            AxisMarks(position: .leading, values: ["carbs", "bolus"]) { value in
+                AxisValueLabel {
+                    Image(systemName: value.as(String.self) == "carbs" ? "fork.knife" : "syringe.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(StrandPalette.textTertiary)
+                        .frame(width: timelineAxisWidth, alignment: .trailing)
+                }
+            }
+        }
+        .chartPlotStyle { plot in plot.clipped() }
+        .chartOverlay { proxy in TimelineMarks.frameReporter(proxy, lane: .events) }
+        .frame(height: height)
+    }
+
+    private static func label(_ text: String) -> some View {
+        Text(verbatim: text)
+            .font(StrandFont.footnote)
+            .foregroundStyle(StrandPalette.textSecondary)
+    }
+}
+
+/// Pieces every lane's chart shares (on the main actor, like the views that use them).
+@MainActor
+private enum TimelineMarks {
+
+    /// The WOD or workouts, shaded, clamped to the window so a label stays in view.
+    @ChartContentBuilder
+    static func bands(_ bands: [TimelineBand], visible: ClosedRange<Date>, labelled: Bool) -> some ChartContent {
+        ForEach(bands) { b in
+            RectangleMark(xStart: .value("Start", max(b.start, visible.lowerBound)),
+                          xEnd: .value("End", min(b.end, visible.upperBound)))
+                .foregroundStyle(StrandPalette.textTertiary.opacity(0.16))
+                .annotation(position: .overlay, alignment: .top) {
+                    if labelled, let label = b.label {
+                        Text(verbatim: label)
+                            .font(StrandFont.footnote.weight(.semibold))
+                            .foregroundStyle(StrandPalette.textSecondary)
+                            .padding(.top, 2)
+                    }
+                }
+        }
+    }
+
+    /// The axis ticks as faint vertical lines in every lane.
+    static func ticks(_ dates: [Date]) -> some ChartContent {
+        ForEach(dates, id: \.self) { d in
+            RuleMark(x: .value("Tick", d))
+                .foregroundStyle(StrandPalette.hairline)
+                .lineStyle(StrokeStyle(lineWidth: 0.5))
+        }
+    }
+
+    static func yAxis(_ values: [Double]) -> some AxisContent {
+        AxisMarks(position: .leading, values: values) { value in
+            AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                .foregroundStyle(StrandPalette.hairline)
+            AxisValueLabel {
+                if let v = value.as(Double.self) {
+                    Text(verbatim: "\(Int(v))")
+                        .font(StrandFont.footnote)
+                        .frame(width: timelineAxisWidth, alignment: .trailing)
+                }
+            }
+        }
+    }
+
+    /// A data marker: filled, with a ring in the card's colour so it stays legible on the line.
+    static func dot(_ color: Color, surface: Color) -> some View {
+        Circle().fill(color)
+            .overlay(Circle().stroke(surface, lineWidth: 2))
+            .frame(width: 10, height: 10)
+    }
+
+    static func valueLabel(_ value: Int) -> some View {
+        Text(verbatim: "\(value)")
+            .font(StrandFont.captionNumber.weight(.semibold))
+            .foregroundStyle(StrandPalette.textPrimary)
+    }
+
+    /// A label goes on the side of its point with more room: right in the window's first half, else left.
+    static func labelSide(_ ts: Double, visible: ClosedRange<Date>) -> AnnotationPosition {
+        let lo = visible.lowerBound.timeIntervalSince1970
+        let span = max(1, visible.upperBound.timeIntervalSince1970 - lo)
+        return ts < lo + span / 2 ? .trailing : .leading
+    }
+
+    static func units(_ u: Double) -> String {
+        (u == u.rounded() ? String(Int(u)) : String(format: "%.1f", u)) + " U"
+    }
+
+    /// Reports where a lane's plot sits, in the timeline's coordinate space.
+    static func frameReporter(_ proxy: ChartProxy, lane: TimelineLane) -> some View {
+        GeometryReader { geo in
+            let local = proxy.plotRectCompat(in: geo)
+            let origin = geo.frame(in: .named(timelineSpace)).origin
+            Color.clear.preference(key: LaneFramesKey.self, value: [lane: local.offsetBy(dx: origin.x, dy: origin.y)])
+        }
+    }
+}
+
+/// Where each lane's plot sits in the timeline.
+private struct LaneFramesKey: PreferenceKey {
+    static let defaultValue: [TimelineLane: CGRect] = [:]
+    static func reduce(value: inout [TimelineLane: CGRect], nextValue: () -> [TimelineLane: CGRect]) {
+        value.merge(nextValue()) { _, new in new }
     }
 }
 

@@ -429,9 +429,14 @@ the static-export importer and the live HealthKit importer converge on one schem
 ### How the live import runs (`HealthKitBridge.sync`, `HealthImportReader`, `HealthImportPlan`)
 
 - **What is read.** The last **90 days** are re-read on every full refresh (when the user taps *Sync now*,
-  or automatically when the last full refresh is over 6 hours old; otherwise opening the app re-reads the
-  last 7 days). Until it is complete, a one-time **history import** then continues back to about 14 months.
-  Observer wakes in the background re-read only the days that changed and never take on the history.
+  or automatically once a day, when the last full refresh is over 24 hours old; otherwise opening the app
+  re-reads the last 7 days). Until it is complete, a one-time **history import** then continues back to
+  about 14 months. Observer wakes in the background re-read only the days that changed and never take on the
+  history.
+- **When.** NOOP becomes active many times an hour (back from another app, Control Center, a system sheet),
+  and each update competes with the screen on show for the database. So opening the app updates only when
+  the last update finished 10 minutes ago or more (`HealthImportPlan.foregroundSyncDue`), except while the
+  history import is unfinished. Today's glucose chart reads Apple Health live either way.
 - **In windows.** `HealthImportPlan` (StrandImport, unit-tested) cuts the period into day-aligned windows of
   at most 30 days, newest first. Each window's 19 daily statistics queries (average and maximum heart rate
   share one) and its glucose, insulin, sleep and workout sample reads run four at a time; the rows are built
@@ -444,7 +449,7 @@ the static-export importer and the live HealthKit importer converge on one schem
   under way at midnight belongs to the day it started; a late workout keeps its full 2-hour post-exercise
   window). `HealthImportWindowingTests` proves the windowed glucose KPIs, hypo counts, post-exercise lows
   and sleep minutes equal the whole-period computation, day by day, across a change of time.
-- **Progress.** `HealthKitBridge.progress` is published after every read: a floating banner above the tab
+- **Progress.** `HealthKitBridge.importProgress` is published after every read: a floating banner above the tab
   bar (history import or a sync the user started) and a detailed bar on the Apple Health screen, with the
   step, the days being read and a Pause button. What is saved stays saved; *Resume import* continues.
 - **Locked iPhone.** HealthKit refuses reads while the device is locked. That error now pauses the import
@@ -471,16 +476,19 @@ lands in one zone (`HRZones.timeInZone`).
 
 ### What NOOP writes into Apple Health (`HealthKitBridge.writeToHealth`, `HealthWritePlan`)
 
-At the start of every sync (opening the app, an observer wake, *Sync now*), before the import and independent
-of it, so a long or paused history import never holds it up. Skipped while the iPhone is locked (Health
+At the start of a sync (opening the app, an observer wake, *Sync now*), before the import and independent
+of it, so a long or paused history import never holds it up. Automatic runs come at most every 15 minutes
+(`HealthWritePlan.writeInterval`; *Sync now* and the Apple Health screen's buttons write at once): each run
+reads the strap's data back from the database the screens read. Skipped while the iPhone is locked (Health
 can't then say what NOOP already wrote), and one run at a time. Each kind is written only if the user
 allowed it; kinds added later (heart rate, workouts, VO₂max, energy) are asked for once, with the app on screen, and the Apple Health
 screen keeps an *Allow* button. The screen shows when NOOP last wrote and what.
 
 - **Heart rate, minute by minute:** the strap's per-minute average (`Repository.heartRatePerMinute`, the
   dashboard's strap ids), 25–250 bpm only, for minutes that ended 2 min ago or more. The first run covers
-  the last 14 days; later runs look back 72 h behind the newest minute written, so data the strap offloads
-  late still gets in. Minutes NOOP already wrote are read back from Health first and skipped.
+  the last 14 days; later runs look back 2 h behind the newest minute written, and every 6 hours 72 h, so
+  data the strap offloads late still gets in without re-reading three days each time. Minutes NOOP already
+  wrote are read back from Health first and skipped.
 - **Sleep:** each night of the last 14 days that has ended, as *in bed* from its (corrected) onset to its end
   plus its stages (light → *core*, deep, REM, awake). A night known only by totals (a WHOOP import) is
   *in bed* only. A night is written again only when it changed (fingerprint of onset, end and stages); its
@@ -488,7 +496,9 @@ screen keeps an *Allow* button. The screen shows when NOOP last wrote and what.
 - **Daily values:** resting heart rate, HRV, SpO₂ and respiratory rate for the last 14 days, read from the
   computed (`-noop`) and imported strap ids, and VO₂max for the last 90 (the walk/run estimate,
   `vo2max_exercise`, else the weekly estimate at rest, `vo2max_est`; never mixed), dated at noon (or now,
-  before noon: never in the future), replaced by their deterministic external UUID.
+  before noon: never in the future), replaced by their deterministic external UUID. Only values Health
+  doesn't have from NOOP yet, or that changed since they were written (remembered per key, 120 days), are
+  written: a run with nothing new deletes and rewrites nothing.
 - **Workouts and WODs** (`HealthWritePlan.workouts`): NOOP's own workouts of the last 14 days (strap-detected
   bouts and sessions recorded in NOOP, 5 min or longer, ended 10 min ago or more) and the logged WODs. A WOD
   is placed as the WOD screen places it (`WodTimeWindow.resolve`): on one of NOOP's workouts it becomes that

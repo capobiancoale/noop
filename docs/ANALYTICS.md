@@ -336,8 +336,12 @@ insulin.
 - **Lanes, not a second axis.** Each measure keeps its own lane and scale; one crosshair reads all of them at
   the same moment. The old Today chart drew heart rate and glucose on one plot with two y-axes; it is gone.
 - **Zoom.** Pinch (about the fingers), − / +, or "zoom to the WOD"; drag sideways to move; double-tap to zoom
-  out. The narrowest window is one minute. Heart rate is re-read for the window on screen at about 500 points,
-  so zoomed in it is the strap's raw per-second signal (`Repository.timelineSeries`, as on the Deep Timeline).
+  out. The narrowest window is one minute. Heart rate is re-read for the window on screen at about 360 points
+  (about one per point of the chart's width), so zoomed in it is the strap's raw per-second signal
+  (`Repository.timelineSeries`, as on the Deep Timeline).
+- **Drawing.** Each lane's chart is drawn from plain values and redrawn only when they change: not when the
+  screen around it redraws, and not while a finger reads the lanes (the reading is a layer drawn over them).
+  A pinch or drag moves the window inside the chart and hands it to the screen when it ends.
 - **Axis.** Clock time on Today. Around a WOD, the ticks count back from its start (−1h, −30′), run as a
   workout clock during it (0:00, 5:00) and count on from its end (+15′, +2h); ticks closer than 0.6 steps
   where the three runs meet are dropped. The step keeps five ticks or fewer (15 s up to 6 h).

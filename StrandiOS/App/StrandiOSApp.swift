@@ -66,6 +66,9 @@ struct StrandiOSApp: App {
                 .environmentObject(model.intelligence)
                 .environmentObject(model.coach)
                 .environmentObject(health)
+                // The same bridge, unobserved, for screens that only read Apple Health through it (Today's and
+                // a WOD's charts): its sync status then doesn't redraw them (HealthBridgeEnvironment.swift).
+                .environment(\.healthBridge, health)
                 .environmentObject(router)
                 .environmentObject(UpdateStore.shared)
                 // v5 L3: the shared stress check-in nudge surface, so the Breathe screen's passive
@@ -158,7 +161,8 @@ struct StrandiOSApp: App {
                     health.refreshAuthIfPreviouslyGranted()
                     // Its own task: the first Apple Health import runs for minutes (it shows its own progress
                     // and the app stays usable), and the widget + watch refresh below mustn't wait for it.
-                    Task { await health.sync() }
+                    // Skipped when the last update finished minutes ago (syncIfDue).
+                    Task { await health.syncIfDue() }
                     await WidgetSnapshot.publish(from: model)
                     // Push the wrist on the SAME refresh as the Home-screen widget so the watch, the
                     // widget and Today never disagree about which day they describe. Without this the

@@ -23,8 +23,9 @@ struct LiquidTodayView: View {
     @EnvironmentObject var profile: ProfileStore
     #if os(iOS)
     // Apple Health, iOS only — the intraday glucose/carbs/insulin behind the "Heart & Glucose" chart.
-    // Absent on macOS (HealthKitBridge lives in the iOS target), where that chart never shows.
-    @EnvironmentObject var health: HealthKitBridge
+    // Absent on macOS (HealthKitBridge lives in the iOS target), where that chart never shows. Read through,
+    // never observed: the bridge's sync status mustn't redraw Today (HealthBridgeEnvironment.swift).
+    @Environment(\.healthBridge) private var health
     #endif
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -925,10 +926,11 @@ struct LiquidTodayView: View {
         }
     }
 
-    /// The strap's heart rate for the chart's window, at the resolution its zoom needs.
+    /// The strap's heart rate for the chart's window, at the resolution its zoom needs: about one point per
+    /// point of the chart's width (more would only cost drawing time).
     private func crossHeart(_ window: ClosedRange<Date>) async -> HeartTrace {
         let s = await repo.timelineSeries(metric: .hr, from: Int(window.lowerBound.timeIntervalSince1970),
-                                          to: Int(window.upperBound.timeIntervalSince1970), targetPoints: 500)
+                                          to: Int(window.upperBound.timeIntervalSince1970), targetPoints: 360)
         return HeartTrace(points: s.points, isRaw: s.isRaw, bucketSeconds: s.bucketSeconds)
     }
 
@@ -1190,19 +1192,19 @@ struct LiquidTodayView: View {
         #if os(iOS)
         let winStart = Date(timeIntervalSince1970: TimeInterval(from))
         let winEnd = Date(timeIntervalSince1970: TimeInterval(to))
-        crossGlucose = await health.glucoseWindow(start: winStart, end: winEnd)
+        crossGlucose = (await health?.glucoseWindow(start: winStart, end: winEnd)) ?? []
         crossTrace = GlucoseTrace(readings: crossGlucose)
         // A new day opens un-zoomed; a refresh of the same day keeps the zoom.
         if crossBounds.lowerBound != winStart { crossZoom = nil }
         crossBounds = winStart...max(winEnd, winStart.addingTimeInterval(3_600))
-        crossCarbs = await health.carbsWindow(start: winStart, end: winEnd)
-        crossBolus = (await health.insulinWindow(start: winStart, end: winEnd)).filter { $0.bolus }
+        crossCarbs = (await health?.carbsWindow(start: winStart, end: winEnd)) ?? []
+        crossBolus = ((await health?.insulinWindow(start: winStart, end: winEnd)) ?? []).filter { $0.bolus }
         // Night-time lows for the note under the scores: consensus events (Battelino 2023) that began
         // 00:00–05:59 or during the main sleep ending on this day. Read from 18:00 the evening before.
         let nightFrom = from - 6 * 3_600
         let nightTo = min(from + 12 * 3_600, Int(Date().timeIntervalSince1970))
-        let nightGlucose = await health.glucoseWindow(start: Date(timeIntervalSince1970: TimeInterval(nightFrom)),
-                                                      end: Date(timeIntervalSince1970: TimeInterval(nightTo)))
+        let nightGlucose = (await health?.glucoseWindow(start: Date(timeIntervalSince1970: TimeInterval(nightFrom)),
+                                                        end: Date(timeIntervalSince1970: TimeInterval(nightTo)))) ?? []
         let mainSleep = repo.sleeps
             .filter { $0.endTs > nightFrom && $0.endTs <= from + 14 * 3_600 }
             .max { ($0.endTs - $0.startTs) < ($1.endTs - $1.startTs) }

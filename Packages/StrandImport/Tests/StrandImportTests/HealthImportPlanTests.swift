@@ -87,9 +87,24 @@ final class HealthImportPlanTests: XCTestCase {
         let now = date(2026, 9, 24, 15)
         XCTAssertEqual(HealthImportPlan.automaticRefreshDays(lastFullRefresh: nil, now: now), 90)
         XCTAssertEqual(HealthImportPlan.automaticRefreshDays(lastFullRefresh: now.addingTimeInterval(-3_600), now: now), 7)
-        XCTAssertEqual(HealthImportPlan.automaticRefreshDays(lastFullRefresh: now.addingTimeInterval(-7 * 3_600), now: now), 90)
+        // Once a day: seven hours after a full refresh is still a catch-up, a day later a full one.
+        XCTAssertEqual(HealthImportPlan.automaticRefreshDays(lastFullRefresh: now.addingTimeInterval(-7 * 3_600), now: now), 7)
+        XCTAssertEqual(HealthImportPlan.automaticRefreshDays(lastFullRefresh: now.addingTimeInterval(-25 * 3_600), now: now), 90)
         // A timestamp in the future (clock changed) doesn't suppress the full refresh.
         XCTAssertEqual(HealthImportPlan.automaticRefreshDays(lastFullRefresh: now.addingTimeInterval(3_600), now: now), 90)
+    }
+
+    func testOpeningNOOPAgainSoonAfterAnUpdateDoesNotReadAppleHealthAgain() {
+        let now = date(2026, 9, 24, 15)
+        // Nothing finished since launch: update.
+        XCTAssertTrue(HealthImportPlan.foregroundSyncDue(now: now, lastFinished: nil, historyDone: true))
+        // Two minutes after the last one: skip; ten minutes after: update.
+        XCTAssertFalse(HealthImportPlan.foregroundSyncDue(now: now, lastFinished: now.addingTimeInterval(-120), historyDone: true))
+        XCTAssertTrue(HealthImportPlan.foregroundSyncDue(now: now, lastFinished: now.addingTimeInterval(-600), historyDone: true))
+        // The history import carries on at every opening until it is complete.
+        XCTAssertTrue(HealthImportPlan.foregroundSyncDue(now: now, lastFinished: now.addingTimeInterval(-120), historyDone: false))
+        // A finish time in the future (clock changed) doesn't hold updates back.
+        XCTAssertTrue(HealthImportPlan.foregroundSyncDue(now: now, lastFinished: now.addingTimeInterval(3_600), historyDone: true))
     }
 
     func testHistoryProgressAndCompletion() {
