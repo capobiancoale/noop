@@ -560,6 +560,8 @@ A workout is a **sustained window** (≥ `minExerciseMin = 5` min) where **both*
 
 Active samples are grouped into runs (merging gaps < `mergeGapS = 150 s`), then qualified by intensity: ≥ `minIntensityZ2Plus = 0.50` of the bout in Edwards zone 2+. Per bout it reports avg/peak HR, duration, Edwards zone-time %, mean `%HRR`, strain (via `StrainScorer`), and calories.
 
+**Mixed sessions.** A CrossFit class (warm-up, strength with rests, the WOD, cool-down) keeps moving and keeps HR above the floor from start to end, so it is one long run, mostly below zone 2 as a whole: the intensity gate used to reject all of it, and such sessions were never detected. A run that fails the gate is searched for its intense cores (`intenseCores`: stretches in zone 2+, samples under `mergeGapS` apart joined), and each core of at least `minExerciseMin` that passes the same gate is a workout (the WOD). A run that passes the gate is unchanged; an easy hour with a 3-minute sprint still yields nothing (the core is too short).
+
 ### Calories (`Calories.estimateBoutCalories`)
 
 Per-second blend of **Keytel (2005)** active expenditure and **revised Harris–Benedict** BMR (resting), with sex-specific coefficients (`male` / `female` / `nonbinary`). Below a `RHR + 0.30 × HRR` threshold the resting rate is used; above it, the HR-driven active rate. Returns `(kcal, kJ)`. **Approximate** — not laboratory calorimetry.
