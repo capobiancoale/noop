@@ -527,6 +527,54 @@ final class Repository: ObservableObject {
     /// Expose the shared store handle (used by the importer to persist mapped rows).
     func storeHandle() async -> WhoopStore? { await ensureStore() }
 
+    // MARK: - WOD / strength log (user-authored, on-device)
+
+    /// Called after a WOD is saved or deleted: a WOD's session-RPE load is part of its day's Effort, so
+    /// AppModel wires this to a rescore. nil (inert) in tests.
+    var onWodsChanged: (() -> Void)?
+
+    /// Save (create or edit) one user-logged WOD.
+    func saveWod(_ r: WodLogRow) async {
+        guard let s = await ensureStore() else { return }
+        _ = try? await s.upsertWod(r)
+        onWodsChanged?()
+    }
+
+    /// All logged WODs, newest first.
+    func allWods() async -> [WodLogRow] { guard let s = await ensureStore() else { return [] }; return (try? await s.allWods()) ?? [] }
+
+    /// Every attempt at one WOD title, newest first (progress history).
+    func wodHistory(title: String) async -> [WodLogRow] { guard let s = await ensureStore() else { return [] }; return (try? await s.wods(title: title)) ?? [] }
+
+    /// Delete one logged WOD by id.
+    func deleteWod(id: String) async {
+        guard let s = await ensureStore() else { return }
+        _ = try? await s.deleteWod(id: id)
+        onWodsChanged?()
+    }
+
+    /// NOOP-vs-WHOOP benchmark: for each metric, every day that carries BOTH a WHOOP-imported value and a
+    /// NOOP-computed value over the trailing `days` (nil = all history). Reads the imported and computed
+    /// rows separately — never the merged dashboard row, where the import wins — so each side is its own
+    /// method. Metrics with no paired day are omitted.
+    func benchmarkPairs(days: Int?) async -> [BenchmarkMetric: [AgreementStats.Pair]] {
+        guard let store = await ensureStore() else { return [:] }
+        let to = Self.dayString(Date())
+        let from = days.map { Self.dayString(Date().addingTimeInterval(-Double($0) * 86_400)) } ?? "0000-01-01"
+        let imported = await unionDailyMetrics(store: store, from: from, to: to)
+        let computedRows = await unionComputedDailyMetrics(store: store, from: from, to: to)
+        let computed = Dictionary(computedRows.map { ($0.day, $0) }, uniquingKeysWith: { first, _ in first })
+        var out: [BenchmarkMetric: [AgreementStats.Pair]] = [:]
+        for ref in imported {
+            guard let noop = computed[ref.day] else { continue }
+            for metric in BenchmarkMetric.allCases {
+                guard let r = metric.value(ref), let t = metric.value(noop), r.isFinite, t.isFinite else { continue }
+                out[metric, default: []].append(AgreementStats.Pair(day: ref.day, reference: r, test: t))
+            }
+        }
+        return out
+    }
+
     /// CAPTURE-D (#797): the on-device DATA VOLUME read FRESH from the STORE (never the `@Published`
     /// dashboard caches), for the Display & Performance test mode's `dataVolume` line. dbRows is the raw
     /// decoded-stream footprint; importedDays is the count of imported daily-metric rows under the active
@@ -1386,6 +1434,19 @@ final class Repository: ObservableObject {
     /// , at day scale `hrBuckets` averages PPG into its buckets, and zoomed-in `hrSamples` returns the raw
     /// PPG-derived seconds; neither is empty for a PPG-only night. Other metrics read their raw sample
     /// tables (low frequency, no 86k risk) and bin to the same bucket grid when zoomed out.
+    /// The strap's heart rate as one average per whole minute over [from, to] (Unix seconds), oldest first,
+    /// for writing into Apple Health. Reads the same strap ids as the dashboard (the active strap and the
+    /// canonical one; the active strap wins a minute both have).
+    func heartRatePerMinute(from: Int, to: Int) async -> [HRBucket] {
+        guard to > from, let store = await ensureStore() else { return [] }
+        var byStart: [Int: HRBucket] = [:]
+        for id in importedReadIds {
+            for b in (try? await store.hrBuckets(deviceId: id, from: from, to: to, bucketSeconds: 60)) ?? []
+            where byStart[b.ts] == nil { byStart[b.ts] = b }
+        }
+        return byStart.values.sorted { $0.ts < $1.ts }
+    }
+
     func timelineSeries(metric: TimelineMetric, from: Int, to: Int,
                         targetPoints: Int = 600, source: String? = nil) async -> TimelineSeries {
         guard to > from, let store = await ensureStore() else { return .empty }
@@ -1470,7 +1531,7 @@ final class Repository: ObservableObject {
         case .hrv:
             // #803: plot a TRAILING-WINDOW rMSSD that MOVES across the session, not raw R-R ms mislabelled
             // "HRV". Read the R-R rows (low frequency, safe to load for a window) and hand them to
-            // HRVAnalyzer.rollingRmssd (the SAME range + Malik ectopic filtering the nightly path uses), so
+            // HRVAnalyzer.rollingRmssd (the SAME Lipponen–Tarvainen cleaning the nightly path uses), so
             // each point is an honest windowed rMSSD (ms). A sparse/artifact-heavy window emits nothing
             // rather than a noisy spike. The `to - from` span chooses the window width: a 2-min rMSSD for a
             // zoomed-in look, widening with the visible span so a day-scale view stays readable. The thinning
@@ -1917,7 +1978,9 @@ final class Repository: ObservableObject {
     /// are filtered HERE so every consumer (Workouts screen, Today, Coach context) agrees: the engine
     /// re-derives the detected rows each run, so a plain delete would resurrect them; the dismissed
     /// span list is the durable "not a workout" record.
-    func workoutRows(days: Int = 4000) async -> [WorkoutRow] {
+    /// `reconcileHr: false` skips the display-only HR reconcile below (up to 300 trace reads), for callers that
+    /// read the heart rate themselves (the VO₂max estimate).
+    func workoutRows(days: Int = 4000, reconcileHr: Bool = true) async -> [WorkoutRow] {
         guard let store = await ensureStore() else { return [] }
         let now = Int(Date().timeIntervalSince1970)
         let lo = now - days * 86_400, hi = now + 86_400
@@ -1931,6 +1994,9 @@ final class Repository: ObservableObject {
         rows += (try? await store.workouts(deviceId: "apple-health", from: lo, to: hi, limit: 5000)) ?? []
         // Imported lifting sessions (Hevy / Liftosaur) live under their own "lifting" source.
         rows += (try? await store.workouts(deviceId: "lifting", from: lo, to: hi, limit: 5000)) ?? []
+        // Imported GPX / TCX / FIT activity files live under their own "activity-file" source
+        // (ActivityFileImporter.sourceId, written by DataSourcesView).
+        rows += (try? await store.workouts(deviceId: "activity-file", from: lo, to: hi, limit: 5000)) ?? []
         rows = Self.dedupWorkoutsByNaturalKey(rows)
         let spans = WorkoutSource.parseDismissedSpans(dismissedDetectedSpans)
         // #687: collapse the SAME activity tracked live under the strap AND imported from Health Connect /
@@ -1950,6 +2016,7 @@ final class Repository: ObservableObject {
             deduped = WorkoutSource.dedupCrossSource(filtered)
         }
         let visible = deduped.sorted { $0.startTs > $1.startTs }
+        guard reconcileHr else { return visible }
         return await reconcileWorkoutHrWithTrace(visible, store: store)
     }
 
@@ -2371,11 +2438,14 @@ final class Repository: ObservableObject {
     /// `zonesJSON` still gets a real time-in-zone split. Returns nil when the window carries no HR (so
     /// the view shows nothing rather than five empty bars). `age <= 0` falls back to a 30 y default ,
     /// the zones are approximate either way and clearly labelled as such in the UI.
-    func workoutZoneMinutes(from: Int, to: Int, age: Int) async -> [Double]? {
-        guard to > from else { return nil }
+    /// Minutes in heart-rate zones 1…5 over [from, to] from the strap's own samples, with the zones built
+    /// from `maxHR` (the profile's: the user's own when set, else from age), the same zones the live
+    /// workout shows. nil when the strap has no heart rate there.
+    func workoutZoneMinutes(from: Int, to: Int, maxHR: Int) async -> [Double]? {
+        guard to > from, maxHR > 0 else { return nil }
         let samples = await hrSamples(from: from, to: to)
         guard !samples.isEmpty else { return nil }
-        let zoneSet = HRZones.zones(age: age > 0 ? Double(age) : 30)
+        let zoneSet = HRZones.zones(maxHR: Double(maxHR))
         let tiz = HRZones.timeInZone(samples, zoneSet: zoneSet)
         let minutes = tiz.seconds.map { $0 / 60.0 }
         return minutes.contains(where: { $0 > 0 }) ? minutes : nil

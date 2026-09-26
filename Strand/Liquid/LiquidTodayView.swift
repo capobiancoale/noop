@@ -15,11 +15,18 @@ import SwiftUI
 import StrandDesign
 import WhoopStore
 import StrandAnalytics
+import StrandImport
 
 struct LiquidTodayView: View {
     @EnvironmentObject var repo: Repository
     @EnvironmentObject var router: NavRouter
     @EnvironmentObject var profile: ProfileStore
+    #if os(iOS)
+    // Apple Health, iOS only — the intraday glucose/carbs/insulin behind the "Heart & Glucose" chart.
+    // Absent on macOS (HealthKitBridge lives in the iOS target), where that chart never shows. Read through,
+    // never observed: the bridge's sync status mustn't redraw Today (HealthBridgeEnvironment.swift).
+    @Environment(\.healthBridge) private var health
+    #endif
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Shared with the real Today's card-customise editor so the two stay in sync.
@@ -33,6 +40,33 @@ struct LiquidTodayView: View {
     @State private var stepsEst: Double?           // steps_est, day-keyed to the selected day (fallback)
     @State private var hrValues: [Double] = []     // hrBuckets since midnight → 5-min means
     @State private var workouts: [WorkoutRow] = [] // newest-first
+    @State private var sparks: [String: [Double]] = [:]  // KEY METRICS 14-day trend series, computed once in load()
+    @State private var recStrain: [DayScore] = []         // Recovery vs Strain, last 30 days
+    // "Heart & Glucose" intraday cross chart. HR + workout bands come from the store (cross-platform);
+    // glucose/carbs/bolus come from Apple Health (iOS only) and stay empty on macOS ⇒ the section hides.
+    @State private var crossWorkouts: [TimelineBand] = []
+    @State private var crossGlucose: [GlucoseReading] = []
+    @State private var crossTrace = GlucoseTrace(readings: [])
+    /// The selected day's window (midnight to now for today) and the chart's zoom inside it.
+    @State private var crossBounds: ClosedRange<Date> = Date()...Date().addingTimeInterval(3_600)
+    @State private var crossZoom: ClosedRange<Date>?
+    @State private var crossCarbs: [CarbEntry] = []
+    @State private var crossBolus: [InsulinEntry] = []
+    // Consensus hypoglycaemia events overnight (00:00–05:59 or during the main sleep ending on the selected
+    // day), from Apple Health on iOS. Drives the night-time low note under the scores; empty ⇒ hidden.
+    @State private var nightLows: [HypoEvent] = []
+    // Diabetes recap (apple-health, day-keyed to the selected day). Nil ⇒ the row/section is hidden,
+    // never a fabricated zero. Populated from the apple-health metric series in load().
+    @State private var glucoseAvg: Double?         // glucose_avg
+    @State private var glucoseTir: Double?         // glucose_tir (%)
+    @State private var carbsToday: Double?         // carbs_g (apple-health)
+    @State private var insulinToday: Double?       // insulin_total (U)
+
+    // Week-in-review (last 7 days), computed once in load().
+    @State private var weekTir: Double?
+    @State private var weekGlucoseAvg: Double?
+    @State private var weekStrain: Double?
+    @State private var weekWods = 0
 
     // sheets / expanders
     @State private var guideSection: ScoreSection?
@@ -48,6 +82,10 @@ struct LiquidTodayView: View {
 
     // day navigation (0 = today, 1 = yesterday, …)
     @State private var selectedDayOffset = 0
+    /// Where the Heart & Glucose timeline sits, in the scroll view's space: a sideways drag that starts on
+    /// it moves, zooms or reads the chart, so it must not also change the day. A reference box, so keeping
+    /// it current while the page scrolls never re-renders the screen.
+    @State private var swipeExclusion = SwipeExclusion()
     @State private var showDayPicker = false
 
     // PERF: the body was rescanning repo.days (599 days) ~23× per pass for displayDay and ~3× for
@@ -137,8 +175,10 @@ struct LiquidTodayView: View {
     }
     /// Horizontal swipe between days (left = older, right = newer), clamped to [today, earliest].
     private var daySwipeGesture: some Gesture {
-        DragGesture(minimumDistance: 24)
+        DragGesture(minimumDistance: 24, coordinateSpace: .named(Self.pullSpace))
             .onEnded { value in
+                // A drag that starts on the Heart & Glucose timeline belongs to the chart.
+                guard !swipeExclusion.rects.contains(where: { $0.contains(value.startLocation) }) else { return }
                 let dx = value.translation.width, dy = value.translation.height
                 guard abs(dx) > abs(dy) * 1.5, abs(dx) > 50 else { return }
                 let delta = dx < 0 ? 1 : -1
@@ -189,12 +229,17 @@ struct LiquidTodayView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     scene
+                    if !nightLows.isEmpty { nightLowSection }
                     heartRateSection
                     yourCardsSection
                     synthesisSection
                     recoveryVitalsSection
                     keyMetricsSection
+                    if hasRecStrain { recoveryStrainSection }
+                    if hasTodayCross { todayCrossSection }
+                    if hasWeekData { weekSummarySection }
                     lastWorkoutsSection
+                    if hasGlucoseToday { glucoseTodaySection }
                     dataSourcesSection
                     Color.clear.frame(height: 90) // floating tab-bar clearance
                 }
@@ -210,6 +255,7 @@ struct LiquidTodayView: View {
         }
         .coordinateSpace(name: Self.pullSpace)
         .onPreferenceChange(PullOffsetKey.self) { handlePull($0) }
+        .onPreferenceChange(DaySwipeExclusionKey.self) { swipeExclusion.rects = $0 }
         // The sky is a FIXED full-bleed backdrop drawn behind the scroll content, edge-to-edge under the
         // status bar. A ScrollView background does not scroll with the content, so pulling down never
         // moves the sky (the exact behaviour the scaffold uses on the classic Today).
@@ -369,6 +415,22 @@ struct LiquidTodayView: View {
             }
             // Subtle NOOP wordmark in the sky between header and hero. Perfectly centred (a letter row has
             // no trailing tracking gap the way `Text(...).tracking()` does), with a tap easter egg.
+            if selectedDayOffset > 0 {
+                // Days back (a swipe or the calendar): one tap returns to today.
+                Button {
+                    withAnimation(StrandMotion.interactive) { selectedDayOffset = 0 }
+                } label: {
+                    Label("Back to today", systemImage: "arrow.uturn.forward")
+                        .font(StrandFont.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(.white.opacity(0.18)))
+                        .overlay(Capsule().strokeBorder(.white.opacity(0.28), lineWidth: 1))
+                }
+                .buttonStyle(LiquidPressStyle())
+                .padding(.top, 10)
+            }
             LiquidWordmark()
                 .padding(.top, 30)
             heroCard.padding(.top, 22)
@@ -669,7 +731,7 @@ struct LiquidTodayView: View {
         }
     }
 
-    private func vitalRow(_ label: String, _ value: String, _ tint: Color, _ frac: Double?) -> some View {
+    private func vitalRow(_ label: LocalizedStringKey, _ value: String, _ tint: Color, _ frac: Double?) -> some View {
         HStack(spacing: 12) {
             LiquidVessel(value: frac, tint: tint, animated: false).frame(width: 26, height: 26)
             Text(label).font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
@@ -678,7 +740,212 @@ struct LiquidTodayView: View {
         }
     }
 
+    // MARK: - Night-time low (Charge can't see it)
+
+    /// A consensus night-time hypoglycaemia event (Battelino et al., Lancet Diabetes Endocrinol 2023) flags
+    /// Charge: heart rate and HRV often stay flat through a spontaneous nocturnal hypo (Koivikko et al.,
+    /// Diabetes Care 2012), so an HRV-led recovery score can read normal after one. Lows at night are also
+    /// more likely after exercise (EASD/ISPAD position statement, Moser et al., Diabetologia 2020).
+    /// Informational only — it never suggests carbs or insulin.
+    private var nightLowSection: some View {
+        let worstLevel = nightLows.map(\.level).max() ?? 1
+        let minutes = Int(nightLows.reduce(0) { $0 + $1.durationMin }.rounded())
+        let nadir = Int((nightLows.map(\.nadir).min() ?? 0).rounded())
+        let first = nightLows.map(\.start).min() ?? 0
+        let last = nightLows.map(\.end).max() ?? 0
+        let clock = Date(timeIntervalSince1970: first).formatted(date: .omitted, time: .shortened)
+            + "–" + Date(timeIntervalSince1970: last).formatted(date: .omitted, time: .shortened)
+        let exercisedBefore = workouts.contains { Double($0.endTs) <= first && Double($0.endTs) >= first - 18 * 3_600 }
+        return card {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "moon.zzz.fill").foregroundStyle(StrandPalette.statusWarning)
+                    Text("NIGHT-TIME LOW").font(StrandFont.overline).tracking(1.6)
+                        .foregroundStyle(StrandPalette.textSecondary)
+                    Spacer()
+                    Text(worstLevel >= 2 ? String(localized: "Level 2") : String(localized: "Level 1"))
+                        .font(StrandFont.caption.weight(.semibold))
+                        .foregroundStyle(worstLevel >= 2 ? StrandPalette.statusCritical : StrandPalette.statusWarning)
+                }
+                Text(nightLows.count == 1
+                     ? String(localized: "Below 70 mg/dL for \(minutes) min, lowest \(nadir) mg/dL, \(clock).")
+                     : String(localized: "\(nightLows.count) lows, \(minutes) min below 70 mg/dL in total, lowest \(nadir) mg/dL, \(clock)."))
+                    .font(StrandFont.body).foregroundStyle(StrandPalette.textPrimary)
+                if nightLows.contains(where: \.extended) {
+                    Text("It lasted more than 2 hours.").font(StrandFont.subhead).foregroundStyle(StrandPalette.statusWarning)
+                }
+                Text("Heart rate and HRV often stay flat through a night-time low, so Charge can read normal after one. Weigh how you actually feel today.")
+                    .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+                if exercisedBefore {
+                    Text("Night-time lows are more likely after exercise, especially in the afternoon or evening.")
+                        .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+                }
+                Text("From your CGM in Apple Health. Informational only, not medical advice.")
+                    .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+            }
+        }
+    }
+
+    // MARK: - Glucose recap (apple-health)
+
+    /// True when the selected day carries any diabetes data — gates the whole recap card so users
+    /// without glucose/insulin/carbs in Apple Health never see it.
+    private var hasGlucoseToday: Bool { glucoseAvg != nil || carbsToday != nil || insulinToday != nil }
+
+    /// Diabetes recap on Today: glucose average, time-in-range, carbs and insulin for the selected day,
+    /// read from Apple Health (an AID app such as Loop). READ-ONLY / informational — Health lags the
+    /// CGM/pump, so this is never a treatment surface. Each row shows only when its value is present.
+    private var glucoseTodaySection: some View {
+        card {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("GLUCOSE & INSULIN").font(StrandFont.overline).tracking(1.6)
+                        .foregroundStyle(StrandPalette.textSecondary)
+                    Spacer()
+                    Text("Apple Health").font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                }
+                if glucoseAvg != nil {
+                    vitalRow("Glucose (avg)", unitText(glucoseAvg, "mg/dL"),
+                             StrandPalette.metricRose, fracOver(glucoseAvg, 250))
+                }
+                if glucoseTir != nil {
+                    vitalRow("Time in range", unitText(glucoseTir, "%"),
+                             StrandPalette.metricCyan, glucoseTir.map { max(0, min(1, $0 / 100)) })
+                }
+                if carbsToday != nil {
+                    vitalRow("Carbs", unitText(carbsToday, "g"),
+                             StrandPalette.metricAmber, fracOver(carbsToday, 300))
+                }
+                if insulinToday != nil {
+                    vitalRow("Insulin", unitText(insulinToday, "U", decimals: 1),
+                             StrandPalette.accent, fracOver(insulinToday, 60))
+                }
+            }
+        }
+    }
+
     // MARK: - Key metrics grid
+
+    private var hasWeekData: Bool { weekTir != nil || weekGlucoseAvg != nil || weekStrain != nil || weekWods > 0 }
+
+    /// Week-in-review card: last-7-day Time-in-Range, average glucose, logged WODs and mean strain — a
+    /// quick dashboard read. Each stat shows "—" when its data is absent (never a fabricated zero).
+    private var weekSummarySection: some View {
+        card {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("THIS WEEK").font(StrandFont.overline).tracking(1.6)
+                        .foregroundStyle(StrandPalette.textSecondary)
+                    Spacer()
+                    Text("7 days").font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                }
+                LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading),
+                                    GridItem(.flexible(), alignment: .leading)], spacing: 14) {
+                    weekStat("Time in range", weekTir.map { "\(Int($0.rounded()))%" }, StrandPalette.metricCyan)
+                    weekStat("Avg glucose", weekGlucoseAvg.map { "\(Int($0.rounded())) mg/dL" }, StrandPalette.metricRose)
+                    weekStat("WODs", weekWods > 0 ? "\(weekWods)" : nil, StrandPalette.effortColor)
+                    weekStat("Avg strain", weekStrain.map { "\(Int($0.rounded()))" }, StrandPalette.chargeColor)
+                }
+            }
+        }
+    }
+
+    private func weekStat(_ label: LocalizedStringKey, _ value: String?, _ tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label).font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+            Text(value ?? "—").font(StrandFont.number(18))
+                .foregroundStyle(value == nil ? StrandPalette.textTertiary : tint)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Mean of the last ≤7 values of a daily series; nil when empty.
+    private static func mean7(_ series: [(day: String, value: Double)]) -> Double? {
+        let vals = series.suffix(7).map(\.value)
+        return vals.isEmpty ? nil : vals.reduce(0, +) / Double(vals.count)
+    }
+
+    // MARK: - Recovery vs Strain (30-day trend)
+
+    private var hasRecStrain: Bool { recStrain.filter { $0.recovery != nil || $0.strain != nil }.count >= 2 }
+
+    private var recoveryStrainSection: some View {
+        VStack(spacing: 8) {
+            sectionHead("RECOVERY vs STRAIN", trailing: "30 days")
+            card {
+                VStack(alignment: .leading, spacing: 10) {
+                    RecoveryStrainChart(points: recStrain)
+                    HStack(spacing: 16) {
+                        legendDot(StrandPalette.chargeColor, "Recovery")
+                        legendDot(StrandPalette.effortColor, "Strain")
+                    }
+                }
+            }
+        }
+    }
+
+    private func legendDot(_ c: Color, _ label: LocalizedStringKey) -> some View {
+        HStack(spacing: 6) {
+            Circle().fill(c).frame(width: 8, height: 8)
+            Text(label).font(StrandFont.caption).foregroundStyle(StrandPalette.textSecondary)
+        }
+    }
+
+    // MARK: Heart & Glucose (intraday cross)
+
+    /// Show only when there's a real intraday glucose trace (≥2 readings) — that's the series this chart
+    /// exists for and the one the top heart-rate section doesn't already cover. Always false on macOS
+    /// (no Apple Health), so the section is iOS-only in practice without needing a compile guard here.
+    private var hasTodayCross: Bool { crossGlucose.count >= 2 }
+
+    private var todayCrossSection: some View {
+        VStack(spacing: 8) {
+            sectionHead("HEART & GLUCOSE", trailing: crossTrailing)
+            card {
+                VStack(alignment: .leading, spacing: 10) {
+                    #if os(iOS)
+                    // Glucose, heart rate and carbs / boluses in lanes on the day's clock, zoomable down to
+                    // single minutes (heart rate re-read at the zoom's resolution, as on the Deep Timeline).
+                    GlucoseHeartTimeline(glucose: crossTrace, carbs: crossCarbs, boluses: crossBolus,
+                                         bands: crossWorkouts, bounds: crossBounds, axis: .clock,
+                                         hrMax: profile.hrMax > 0 ? Double(profile.hrMax) : nil,
+                                         loadHeart: { await crossHeart($0) }, zoom: $crossZoom,
+                                         surface: StrandPalette.surfaceRaised)
+                    #endif
+                    Text("Informational only, not medical advice. Carb and insulin choices stay with you and your care team / Loop.")
+                        .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                }
+            }
+            .background {
+                // The chart's own drags (move, zoom, read) must not also swipe the day.
+                GeometryReader { g in
+                    Color.clear.preference(key: DaySwipeExclusionKey.self,
+                                           value: [g.frame(in: .named(Self.pullSpace))])
+                }
+            }
+        }
+    }
+
+    /// The strap's heart rate for the chart's window, at the resolution its zoom needs: about one point per
+    /// point of the chart's width (more would only cost drawing time).
+    private func crossHeart(_ window: ClosedRange<Date>) async -> HeartTrace {
+        let s = await repo.timelineSeries(metric: .hr, from: Int(window.lowerBound.timeIntervalSince1970),
+                                          to: Int(window.upperBound.timeIntervalSince1970), targetPoints: 360)
+        return HeartTrace(points: s.points, isRaw: s.isRaw, bucketSeconds: s.bucketSeconds)
+    }
+
+    /// The section overline's right-hand tag: "today" / "yesterday" / a short date for older days.
+    private var crossTrailing: String {
+        switch selectedDayOffset {
+        case 0: return "today"
+        case 1: return "yesterday"
+        default: return Self.crossDayFormatter.string(from: selectedLogicalDay)
+        }
+    }
+
+    private static let crossDayFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "d MMM"; return f
+    }()
 
     private var keyMetricsSection: some View {
         // HRV / Rest HR tiles share the recovery vitals' per-field today-first carry so they don't blank at
@@ -688,12 +955,12 @@ struct LiquidTodayView: View {
         return VStack(spacing: 8) {
             sectionHead("KEY METRICS", trailing: "14-day trend")
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                ktile("Recovery", intText(displayDay?.recovery), "%", StrandPalette.chargeColor, frac(displayDay?.recovery))
-                ktile("Strain", intText(displayDay?.strain), "%", StrandPalette.effortColor, frac(displayDay?.strain))
-                ktile("Sleep", sleepText, "", StrandPalette.restColor, fracOver(displayDay?.totalSleepMin, 480))
-                ktile("HRV", intText(hrv), "ms", StrandPalette.metricCyan, fracOver(hrv, 120))
-                ktile("Rest HR", intText(rhr), "bpm", StrandPalette.metricRose, fracOver(rhr, 100))
-                ktile("Steps", stepsText, "", StrandPalette.chargeColor, fracOver(stepCount, 10000))
+                ktile("Recovery", intText(displayDay?.recovery), "%", StrandPalette.chargeColor, frac(displayDay?.recovery), spark: sparks["recovery"] ?? [])
+                ktile("Strain", intText(displayDay?.strain), "%", StrandPalette.effortColor, frac(displayDay?.strain), spark: sparks["strain"] ?? [])
+                ktile("Sleep", sleepText, "", StrandPalette.restColor, fracOver(displayDay?.totalSleepMin, 480), spark: sparks["sleep"] ?? [])
+                ktile("HRV", intText(hrv), "ms", StrandPalette.metricCyan, fracOver(hrv, 120), spark: sparks["hrv"] ?? [])
+                ktile("Rest HR", intText(rhr), "bpm", StrandPalette.metricRose, fracOver(rhr, 100), spark: sparks["rhr"] ?? [])
+                ktile("Steps", stepsText, "", StrandPalette.chargeColor, fracOver(stepCount, 10000), spark: sparks["steps"] ?? [])
             }
             NavigationLink { MetricExplorerView() } label: {
                 Text("Show all metrics").font(StrandFont.subhead).foregroundStyle(StrandPalette.accent)
@@ -703,16 +970,32 @@ struct LiquidTodayView: View {
         }
     }
 
-    private func ktile(_ label: String, _ value: String, _ unit: String, _ tint: Color, _ frac: Double?) -> some View {
+    /// Last ≤14 present values of a daily field, oldest→newest, for a KEY METRIC sparkline.
+    private static func spark14(_ days: [DailyMetric], _ pick: (DailyMetric) -> Double?) -> [Double] {
+        Array(days.compactMap(pick).suffix(14))
+    }
+
+    private func ktile(_ label: LocalizedStringKey, _ value: String, _ unit: String, _ tint: Color,
+                       _ frac: Double?, spark: [Double] = []) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label.uppercased()).font(StrandFont.overlineScaled(9)).tracking(1.2)
+            Text(label).font(StrandFont.overlineScaled(9)).tracking(1.2)
+                .textCase(.uppercase)
                 .foregroundStyle(StrandPalette.textTertiary)
             (Text(value).font(StrandFont.number(17))
                 + Text(unit.isEmpty ? "" : " \(unit)").font(StrandFont.caption))
                 .foregroundStyle(StrandPalette.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            LiquidTube(frac: frac ?? 0, tint: tint, height: 8, animated: false)
+            // A 14-day sparkline when there's enough history (the "14-day trend" the header promises),
+            // else the single-value tube for metrics without a series yet.
+            if spark.count >= 2 {
+                Sparkline(values: spark,
+                          gradient: Gradient(colors: [tint.opacity(0.55), tint]),
+                          showsHead: false, showsHover: false)
+                    .frame(height: 22)
+            } else {
+                LiquidTube(frac: frac ?? 0, tint: tint, height: 8, animated: false)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 11)
@@ -823,7 +1106,29 @@ struct LiquidTodayView: View {
         // Prior-day vitals carry, resolved ONCE here (never in body). Bound to today's own key so it can't
         // echo today's still-forming row; only on today (a past day's own row is the whole story).
         let tkey = cachedDisplayDay?.day ?? selectedDayKey
+        // Staleness cap for today's carry-forwards: a vital / step / glucose value older than this is NOT
+        // shown as "today" — otherwise a days-old reading (e.g. an HR from when the strap was last worn)
+        // reads as a current one when the user hasn't recorded today. 2 days keeps the legitimate
+        // overnight-rollover carry (yesterday's vitals before tonight scores) while dropping anything
+        // older to an honest "—". Same spirit as the `freshRestScore` gate already applied to Rest.
+        let freshCutoff = Repository.localDayKey(Calendar.current.date(byAdding: .day, value: -2, to: Date()) ?? Date())
         cachedVitalsDay = (selectedDayOffset == 0) ? Repository.lastVitalsDay(days: repo.days, todayKey: tkey) : nil
+        if let v = cachedVitalsDay, v.day < freshCutoff { cachedVitalsDay = nil }
+
+        // KEY METRICS 14-day trend series — computed ONCE here (repo.days is large; never in body).
+        sparks = [
+            "recovery": Self.spark14(repo.days) { $0.recovery },
+            "strain":   Self.spark14(repo.days) { $0.strain },
+            "sleep":    Self.spark14(repo.days) { $0.totalSleepMin },
+            "hrv":      Self.spark14(repo.days) { $0.avgHrv },
+            "rhr":      Self.spark14(repo.days) { $0.restingHr.map(Double.init) },
+            "steps":    Self.spark14(repo.days) { $0.steps.map(Double.init) },
+        ]
+        // Recovery vs Strain, last 30 days (for the home trend chart).
+        recStrain = repo.days.suffix(30).map {
+            DayScore(id: $0.day, date: Self.dayKeyParser.date(from: $0.day) ?? Date(),
+                     recovery: $0.recovery, strain: $0.strain)
+        }
 
         let cal = Calendar.current
         let dayStart = cal.startOfDay(for: selectedLogicalDay)
@@ -840,6 +1145,12 @@ struct LiquidTodayView: View {
         async let stepsA = repo.exploreSeries(key: "steps_est", source: "my-whoop")
         async let hrA = repo.hrBuckets(from: from, to: to, bucketSeconds: 300)
         async let wkA = repo.workoutRows()
+        // Diabetes recap series (apple-health). Daily metrics, so day-keyed like steps below.
+        async let gAvgA = repo.series(key: "glucose_avg", source: "apple-health")
+        async let gTirA = repo.series(key: "glucose_tir", source: "apple-health")
+        async let carbA = repo.series(key: "carbs_g", source: "apple-health")
+        async let insA  = repo.series(key: "insulin_total", source: "apple-health")
+        async let wodsA = repo.allWods()
 
         let restSeries = await restA
         let restByDay = Dictionary(restSeries.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
@@ -866,9 +1177,67 @@ struct LiquidTodayView: View {
         // `.last` value) instead of that day's. Mirrors the classic Today's stepsEstByDay[selectedDayKey].
         let stepsSeries = await stepsA
         let stepsByDay = Dictionary(stepsSeries.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
-        stepsEst = stepsByDay[selectedDayKey] ?? (selectedDayOffset == 0 ? stepsSeries.last?.value : nil)
-        hrValues = (await hrA).map { $0.bpm }
+        stepsEst = stepsByDay[selectedDayKey] ?? (selectedDayOffset == 0 ? stepsSeries.last.flatMap { $0.day >= freshCutoff ? $0.value : nil } : nil)
+        let hrBucketsDay = await hrA
+        hrValues = hrBucketsDay.map { $0.bpm }
         workouts = await wkA
+
+        // "Heart & Glucose" timeline for the selected day: workout bands are the day's sessions clipped to
+        // the window; the chart reads heart rate itself at its zoom's resolution. Glucose/carbs/bolus are
+        // read live from Apple Health on iOS (empty on macOS, where the section never shows).
+        crossWorkouts = workouts
+            .filter { $0.endTs >= from && $0.startTs <= to }
+            .map { TimelineBand(start: Date(timeIntervalSince1970: TimeInterval($0.startTs)),
+                                end: Date(timeIntervalSince1970: TimeInterval($0.endTs)), label: nil) }
+        #if os(iOS)
+        let winStart = Date(timeIntervalSince1970: TimeInterval(from))
+        let winEnd = Date(timeIntervalSince1970: TimeInterval(to))
+        crossGlucose = (await health?.glucoseWindow(start: winStart, end: winEnd)) ?? []
+        crossTrace = GlucoseTrace(readings: crossGlucose)
+        // A new day opens un-zoomed; a refresh of the same day keeps the zoom.
+        if crossBounds.lowerBound != winStart { crossZoom = nil }
+        crossBounds = winStart...max(winEnd, winStart.addingTimeInterval(3_600))
+        crossCarbs = (await health?.carbsWindow(start: winStart, end: winEnd)) ?? []
+        crossBolus = ((await health?.insulinWindow(start: winStart, end: winEnd)) ?? []).filter { $0.bolus }
+        // Night-time lows for the note under the scores: consensus events (Battelino 2023) that began
+        // 00:00–05:59 or during the main sleep ending on this day. Read from 18:00 the evening before.
+        let nightFrom = from - 6 * 3_600
+        let nightTo = min(from + 12 * 3_600, Int(Date().timeIntervalSince1970))
+        let nightGlucose = (await health?.glucoseWindow(start: Date(timeIntervalSince1970: TimeInterval(nightFrom)),
+                                                        end: Date(timeIntervalSince1970: TimeInterval(nightTo)))) ?? []
+        let mainSleep = repo.sleeps
+            .filter { $0.endTs > nightFrom && $0.endTs <= from + 14 * 3_600 }
+            .max { ($0.endTs - $0.startTs) < ($1.endTs - $1.startTs) }
+        nightLows = DiabetesMetrics.overnightEvents(
+            DiabetesMetrics.hypoEvents(nightGlucose, tzOffsetSeconds: TimeZone.current.secondsFromGMT()),
+            sleepStart: mainSleep.map { Double($0.startTs) }, sleepEnd: mainSleep.map { Double($0.endTs) })
+        #endif
+
+        // Day-key each diabetes series to the selected day (they're daily), with a latest fallback only
+        // at offset 0 — mirrors stepsEst above. A missing day stays nil so the row simply doesn't show.
+        func dayKeyed(_ s: [(day: String, value: Double)]) -> Double? {
+            let byDay = Dictionary(s.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
+            if let v = byDay[selectedDayKey] { return v }
+            // Carry the latest reading onto today only when it's recent (freshCutoff); a days-old glucose
+            // value must not read as today's. Older ⇒ nil ⇒ the row/section hides.
+            guard selectedDayOffset == 0, let last = s.last, last.day >= freshCutoff else { return nil }
+            return last.value
+        }
+        let gAvgSeries = await gAvgA
+        let gTirSeries = await gTirA
+        glucoseAvg = dayKeyed(gAvgSeries)
+        glucoseTir = dayKeyed(gTirSeries)
+        carbsToday = dayKeyed(await carbA)
+        insulinToday = dayKeyed(await insA)
+
+        // Week-in-review (last 7 days): TIR/avg glucose from the same series, mean strain from
+        // repo.days, and the count of logged WODs in the window.
+        weekGlucoseAvg = Self.mean7(gAvgSeries)
+        weekTir = Self.mean7(gTirSeries)
+        let strain7 = repo.days.compactMap { $0.strain }.suffix(7)
+        weekStrain = strain7.isEmpty ? nil : strain7.reduce(0, +) / Double(strain7.count)
+        let sevenAgo = Int(Date().timeIntervalSince1970) - 7 * 86_400
+        weekWods = (await wodsA).filter { $0.ts >= sevenAgo }.count
 
         // First load done — bring the hero gauges + sky to life now the launch churn has settled.
         if !dataLoaded { withAnimation(.easeIn(duration: 0.4)) { dataLoaded = true } }
@@ -984,6 +1353,16 @@ struct LiquidTodayView: View {
         return TodayView.carriedCaption(priorDayKey: carried.day,
                                         todayKey: displayDay?.day ?? selectedDayKey)
     }
+}
+
+/// The frames (in the Today scroll's space) of views whose own sideways drags must not change the day.
+private final class SwipeExclusion {
+    var rects: [CGRect] = []
+}
+
+private struct DaySwipeExclusionKey: PreferenceKey {
+    static var defaultValue: [CGRect] = []
+    static func reduce(value: inout [CGRect], nextValue: () -> [CGRect]) { value += nextValue() }
 }
 
 /// Carries the Today scroll's top overscroll offset up to the view for the custom liquid pull-to-refresh.

@@ -171,6 +171,49 @@ final class WorkoutSourceTests: XCTestCase {
         XCTAssertEqual(out[1].sport, "Strength Training")
     }
 
+    /// The walk compares a row only with the kept rows of its own sport key. Same result as the pairwise walk
+    /// it replaced (every kept row), pinned on a long, mixed, deterministic history: sports that fold to one
+    /// key ("FunctionalFitness" / "Functional Fitness", "detected" / "Activity"), detected bouts, twins of a
+    /// session from other sources a little off in time, back-to-back sessions.
+    func testDedupMatchesThePairwiseWalkOnAMixedHistory() {
+        var seed: UInt64 = 0x9E37_79B9_7F4A_7C15
+        func next(_ bound: Int) -> Int {
+            seed = seed &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            return Int((seed >> 33) % UInt64(bound))
+        }
+        let sports = ["Functional Fitness", "FunctionalFitness", "Running", "Walking", "detected", "Activity",
+                      "Weightlifting", "Cycling", "HIIT", "CrossFit"]
+        let sources = ["whoop", "apple-health", "my-whoop-noop", "manual", "lifting", "health-connect"]
+        var rows: [WorkoutRow] = []
+        var t = 1_700_000_000
+        for _ in 0..<600 {
+            t += 1_800 + next(60_000)
+            let duration = 300 + next(6_000)
+            let sport = sports[next(sports.count)]
+            rows.append(row(start: t, end: t + duration, sport: sport, source: sources[next(sources.count)],
+                            avgHr: next(2) == 0 ? 140 : nil, strain: next(2) == 0 ? 12 : nil))
+            if next(3) == 0 {   // the same session from another source, a little off
+                let s = t - 600 + next(1_200)
+                let twinSport = next(2) == 0 ? sport : sports[next(sports.count)]
+                rows.append(row(start: s, end: s + duration - 300 + next(600), sport: twinSport,
+                                source: sources[next(sources.count)], strain: next(2) == 0 ? 10 : nil))
+            }
+        }
+        rows.sort { $0.startTs > $1.startTs }
+
+        var reference: [WorkoutRow] = []
+        outer: for r in WorkoutSource.dropDetectedShadows(rows) {
+            for i in reference.indices where WorkoutSource.sameActivity(reference[i], r) {
+                reference[i] = WorkoutSource.preferred(reference[i], r)
+                continue outer
+            }
+            reference.append(r)
+        }
+        XCTAssertLessThan(reference.count, rows.count)   // the history does hold duplicates
+        XCTAssertEqual(WorkoutSource.dedupCrossSource(rows), reference)
+        XCTAssertEqual(WorkoutSource.dedupCrossSourceTrace(rows).kept, reference)
+    }
+
     // MARK: - detected-vs-real overlap collapse (#975)
 
     func testDetectedShadowIsDroppedWhenItOverlapsAManualSession() {

@@ -446,6 +446,41 @@ extension WhoopStore {
                 t.primaryKey(["deviceId", "startTs"])
             }
         }
+        migrator.registerMigration("v23-wod-log") { db in
+            // User-logged strength / CrossFit workouts (WODs). Fully on-device, user-authored — distinct
+            // from the read-only `workout` rows imported from Apple Health / the strap. Movements are a
+            // JSON array so a WOD can carry any number of them without a child table. Natural key is a
+            // client-generated UUID string so edits/deletes are stable.
+            try db.create(table: "wodLog") { t in
+                t.column("id", .text).notNull().primaryKey()
+                t.column("ts", .integer).notNull()            // unix seconds — when performed
+                t.column("day", .text).notNull()              // yyyy-MM-dd local civil day
+                t.column("type", .text).notNull()             // "CrossFit" | "Weightlifting" | ...
+                t.column("title", .text).notNull()            // WOD name / free text ("Fran", "Back Squat 5x5")
+                t.column("format", .text)                     // "For Time" | "AMRAP" | "EMOM" | "Strength" | ...
+                t.column("timeCapS", .integer)                // seconds, optional
+                t.column("resultKind", .text).notNull()       // "time"|"rounds_reps"|"reps"|"weight"|"none"
+                t.column("resultSeconds", .integer)
+                t.column("resultRounds", .integer)
+                t.column("resultReps", .integer)
+                t.column("resultWeightKg", .double)
+                t.column("rpe", .double)                      // optional 1–10
+                t.column("notes", .text)
+                t.column("movementsJSON", .text)              // JSON array of movements
+                t.column("createdTs", .integer).notNull()
+            }
+            try db.create(index: "wodLog_day", on: "wodLog", columns: ["day"])
+            try db.create(index: "wodLog_title", on: "wodLog", columns: ["title"])
+        }
+
+        migrator.registerMigration("v24-wod-rx") { db in
+            // RX vs Scaled headline flag for a WOD (nil = unset). The finer per-movement prescribed vs
+            // actual loads live inside movementsJSON (rxWeightKg / weightKg), so no schema change is
+            // needed for those — only this one nullable column is added.
+            try db.alter(table: "wodLog") { t in
+                t.add(column: "rx", .boolean)
+            }
+        }
         return migrator
     }
 }

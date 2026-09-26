@@ -42946,6 +42946,12 @@
             "state": "translated",
             "value": "Jede Metrik ist eine nicht validierte Näherung. Nutze NOOP nicht, um zu diagnostizieren, zu behandeln oder Gesundheitsentscheidungen zu treffen. Ziehe immer qualifiziertes Fachpersonal hinzu."
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni metrica è un'approssimazione non validata. Non usare NOOP per diagnosticare, curare o prendere qualsiasi decisione sulla salute. Consulta sempre un professionista qualificato."
+          }
         }
       }
     },
@@ -44069,6 +44075,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Experimentell: auf eigenes Risiko"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sperimentale: a tuo rischio"
           }
         }
       }
@@ -49023,6 +49035,12 @@
     "HRV (RMSSD)": {
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HRV (RMSSD)"
+          }
+        },
+        "it": {
           "stringUnit": {
             "state": "translated",
             "value": "HRV (RMSSD)"
@@ -55459,6 +55477,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unabhängig: nicht mit WHOOP verbunden"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indipendente: non affiliato a WHOOP"
           }
         }
       }
@@ -66828,6 +66852,12 @@
             "state": "translated",
             "value": "NOOP ist ein inoffizielles Projekt: nicht mit WHOOP, Inc. verbunden, nicht von ihr unterstützt oder gesponsert. „WHOOP“ ist deren Marke und wird nur verwendet, um die Hardware zu benennen, mit der NOOP arbeitet."
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP è un progetto non ufficiale: non affiliato, approvato o sponsorizzato da WHOOP, Inc. «WHOOP» è un loro marchio, usato solo per indicare l'hardware con cui NOOP funziona."
+          }
         }
       }
     },
@@ -66896,6 +66926,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "NOOP ist kostenlos und wird „wie besehen“ bereitgestellt, ohne Gewährleistung. Die Haftung ist im maximal zulässigen Umfang des für dich geltenden Rechts begrenzt, und nichts hier nimmt dir Schutz, den dein lokales Recht uns nicht zu nehmen erlaubt."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP è gratuito e fornito «così com'è», senza alcuna garanzia. La responsabilità è limitata nella misura massima consentita dalla legge a te applicabile, e nulla qui rimuove le tutele che la tua legge locale non ci permette di rimuovere."
           }
         }
       }
@@ -67849,6 +67885,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "NOOP spricht mit der Firmware deines Straps über ein inoffizielles, unabhängig rekonstruiertes Protokoll. Es bleibt ein Restrisiko für das Gerät, seine Daten und seine Verbindung zu offiziellen Diensten. Dieses Risiko übernimmst du."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP comunica con il firmware della tua fascia tramite un protocollo non ufficiale, mappato in modo indipendente. Esiste un rischio residuo per il dispositivo, i suoi dati e la sua connessione ai servizi ufficiali. Ti assumi tu quel rischio."
           }
         }
       }
@@ -71901,6 +71943,12 @@
             "state": "translated",
             "value": "Keine Gewährleistung; Haftung begrenzt"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna garanzia; responsabilità limitata"
+          }
         }
       }
     },
@@ -72304,6 +72352,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kein Medizinprodukt, kein medizinischer Rat"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è un dispositivo medico, non è un consiglio medico"
           }
         }
       }
@@ -82324,6 +82378,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "RHR"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FC riposo"
           }
         }
       }
@@ -110348,6 +110408,12 @@
             "state": "translated",
             "value": "Nutze es nur mit einem Gerät, das dir gehört, um deine eigenen Daten zu lesen. Ob du es nutzt (und jede Auswirkung auf dein WHOOP-Konto, Abo, Gerät oder deine Garantie), ist deine Entscheidung und allein dein Risiko."
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usalo solo con un dispositivo di tua proprietà, per leggere i tuoi dati. Se usarlo (e qualsiasi effetto sul tuo account WHOOP, abbonamento, dispositivo o garanzia) è una tua decisione, e un rischio solo tuo."
+          }
         }
       }
     },
@@ -110478,6 +110544,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Nutzung von NOOP kann gegen WHOOPs Nutzungsbedingungen verstoßen"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'uso di NOOP potrebbe violare i Termini di Servizio di WHOOP"
           }
         }
       }
@@ -129194,6 +129266,3566 @@
           "stringUnit": {
             "state": "translated",
             "value": "✓"
+          }
+        }
+      }
+    },
+    "Glucose": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia"
+          }
+        }
+      }
+    },
+    "Glucose (avg)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia (media)"
+          }
+        }
+      }
+    },
+    "Glucose (low)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia (min)"
+          }
+        }
+      }
+    },
+    "Glucose (high)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia (max)"
+          }
+        }
+      }
+    },
+    "Time in Range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo nel range"
+          }
+        }
+      }
+    },
+    "Time in range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo nel range"
+          }
+        }
+      }
+    },
+    "Time Below Range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo sotto il range"
+          }
+        }
+      }
+    },
+    "Time Below": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo sotto"
+          }
+        }
+      }
+    },
+    "Time Below (severe)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo sotto (grave)"
+          }
+        }
+      }
+    },
+    "Time Above Range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo sopra il range"
+          }
+        }
+      }
+    },
+    "Time Above (high)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo sopra (alto)"
+          }
+        }
+      }
+    },
+    "Glucose Variability": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variabilità glicemica"
+          }
+        }
+      }
+    },
+    "Variability": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variabilità"
+          }
+        }
+      }
+    },
+    "Hypo Events": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Episodi ipo"
+          }
+        }
+      }
+    },
+    "Overnight Glucose": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia notturna"
+          }
+        }
+      }
+    },
+    "Overnight Low": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimo notturno"
+          }
+        }
+      }
+    },
+    "Insulin (total)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insulina (totale)"
+          }
+        }
+      }
+    },
+    "Insulin (basal)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insulina (basale)"
+          }
+        }
+      }
+    },
+    "Insulin (bolus)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insulina (bolo)"
+          }
+        }
+      }
+    },
+    "Insulin": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insulina"
+          }
+        }
+      }
+    },
+    "Insulin / day": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insulina / giorno"
+          }
+        }
+      }
+    },
+    "Post-exercise Low": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimo post-allenamento"
+          }
+        }
+      }
+    },
+    "Post-exercise Hypos": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ipo post-allenamento"
+          }
+        }
+      }
+    },
+    "Avg Glucose": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia media"
+          }
+        }
+      }
+    },
+    "GMI / est. A1c": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GMI / A1c stim."
+          }
+        }
+      }
+    },
+    "Basal : Bolus": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basale : Bolo"
+          }
+        }
+      }
+    },
+    "est. from avg glucose": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "stim. dalla glicemia media"
+          }
+        }
+      }
+    },
+    "% basal / bolus": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "% basale / bolo"
+          }
+        }
+      }
+    },
+    "Share of readings in target (70–180 mg/dL). Higher is better.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quota di letture nel target (70–180 mg/dL). Più alta è meglio."
+          }
+        }
+      }
+    },
+    "Coefficient of variation. Below 36% is considered stable.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coefficiente di variazione. Sotto il 36% è considerato stabile."
+          }
+        }
+      }
+    },
+    "Lowest glucose during and shortly after workouts.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia più bassa durante e subito dopo gli allenamenti."
+          }
+        }
+      }
+    },
+    "Glucose (daily average)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia (media giornaliera)"
+          }
+        }
+      }
+    },
+    "Insulin (total per day)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insulina (totale al giorno)"
+          }
+        }
+      }
+    },
+    "Carbs (per day)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carboidrati (al giorno)"
+          }
+        }
+      }
+    },
+    "Blood pressure (systolic)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pressione (sistolica)"
+          }
+        }
+      }
+    },
+    "Blood pressure (diastolic)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pressione (diastolica)"
+          }
+        }
+      }
+    },
+    "Blood Pressure (sys)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pressione (sist.)"
+          }
+        }
+      }
+    },
+    "Blood Pressure (dia)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pressione (diast.)"
+          }
+        }
+      }
+    },
+    "Waist": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Girovita"
+          }
+        }
+      }
+    },
+    "GLUCOSE & INSULIN": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GLICEMIA E INSULINA"
+          }
+        }
+      }
+    },
+    "Log a WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra un WOD"
+          }
+        }
+      }
+    },
+    "No WODs logged yet. Tap “Log a WOD” to record your first CrossFit session or lift — add the movements, reps and weight, and your progress builds from here.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora nessun WOD registrato. Tocca “Registra un WOD” per salvare la tua prima sessione CrossFit o alzata — aggiungi movimenti, ripetizioni e peso, e i tuoi progressi partono da qui."
+          }
+        }
+      }
+    },
+    "Bests": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record"
+          }
+        }
+      }
+    },
+    "WOD Log": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diario WOD"
+          }
+        }
+      }
+    },
+    "Type": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tipo"
+          }
+        }
+      }
+    },
+    "Name (e.g. Fran, Back Squat 5×5)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome (es. Fran, Back Squat 5×5)"
+          }
+        }
+      }
+    },
+    "Format": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Formato"
+          }
+        }
+      }
+    },
+    "Time cap (min)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo limite (min)"
+          }
+        }
+      }
+    },
+    "Movements": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Movimenti"
+          }
+        }
+      }
+    },
+    "Movement (e.g. Thruster, Pull-up)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Movimento (es. Thruster, Pull-up)"
+          }
+        }
+      }
+    },
+    "Reps": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripetizioni"
+          }
+        }
+      }
+    },
+    "Weight (kg)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Peso (kg)"
+          }
+        }
+      }
+    },
+    "Add movement": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi movimento"
+          }
+        }
+      }
+    },
+    "Result": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Risultato"
+          }
+        }
+      }
+    },
+    "Score": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Punteggio"
+          }
+        }
+      }
+    },
+    "Rounds + reps": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Round + ripetizioni"
+          }
+        }
+      }
+    },
+    "None": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuno"
+          }
+        }
+      }
+    },
+    "Delete WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina WOD"
+          }
+        }
+      }
+    },
+    "Log WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra WOD"
+          }
+        }
+      }
+    },
+    "Edit WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifica WOD"
+          }
+        }
+      }
+    },
+    "+ reps": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+ ripetizioni"
+          }
+        }
+      }
+    },
+    "Total reps": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripetizioni totali"
+          }
+        }
+      }
+    },
+    "Strain": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sforzo"
+          }
+        }
+      }
+    },
+    "Rest HR": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FC riposo"
+          }
+        }
+      }
+    },
+    "Glucose & Insulin": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia e insulina"
+          }
+        }
+      }
+    },
+    "From Apple Health": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da Apple Health"
+          }
+        }
+      }
+    },
+    "Import from text": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa da testo"
+          }
+        }
+      }
+    },
+    "Get the WOD as a photo? Have any AI turn it into text, then paste it here — movements, RX and your loads fill in automatically.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricevi il WOD come foto? Fai convertire la foto in testo da una qualsiasi AI, poi incollalo qui: movimenti, RX e i tuoi carichi si compilano da soli."
+          }
+        }
+      }
+    },
+    "Paste WOD text": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incolla il testo del WOD"
+          }
+        }
+      }
+    },
+    "One block per WOD; separate several with a line of “---”. Labels like Name, Movements, RX and Result are understood in English and Italian.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un blocco per WOD; separa più WOD con una riga “---”. Le etichette come Nome, Movimenti, RX e Risultato sono riconosciute in italiano e in inglese."
+          }
+        }
+      }
+    },
+    "Paste from clipboard": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incolla dagli appunti"
+          }
+        }
+      }
+    },
+    "Copy AI prompt (for your photo)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia il prompt per l'AI (per la tua foto)"
+          }
+        }
+      }
+    },
+    "Analyze": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analizza"
+          }
+        }
+      }
+    },
+    "Couldn't find a WOD in that text. Check the format, or tap “Copy AI prompt” and let an AI convert your photo.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun WOD riconosciuto nel testo. Controlla il formato, oppure tocca “Copia il prompt per l’AI” e fai convertire la foto a un’AI."
+          }
+        }
+      }
+    },
+    "Import WODs": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa WOD"
+          }
+        }
+      }
+    },
+    "Save all": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva tutto"
+          }
+        }
+      }
+    },
+    "As prescribed?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Come da prescrizione (RX)?"
+          }
+        }
+      }
+    },
+    "Reps / scheme": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripetizioni / schema"
+          }
+        }
+      }
+    },
+    "My kg": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kg miei"
+          }
+        }
+      }
+    },
+    "RX kg": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kg RX"
+          }
+        }
+      }
+    },
+    "Glucose around this WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia intorno al WOD"
+          }
+        }
+      }
+    },
+    "Reading from Apple Health…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lettura da Apple Health…"
+          }
+        }
+      }
+    },
+    "Before": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prima"
+          }
+        }
+      }
+    },
+    "After": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo"
+          }
+        }
+      }
+    },
+    "Lowest": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimo"
+          }
+        }
+      }
+    },
+    "Went below 70 mg/dL in this window": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sceso sotto 70 mg/dL in questa finestra"
+          }
+        }
+      }
+    },
+    "No glucose readings in Apple Health for this window.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna lettura glicemica in Apple Health per questa finestra."
+          }
+        }
+      }
+    },
+    "lowest after": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minimo dopo"
+          }
+        }
+      }
+    },
+    "Import from CSV file": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa da file CSV"
+          }
+        }
+      }
+    },
+    "Copy CSV template": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia modello CSV"
+          }
+        }
+      }
+    },
+    "Or import a spreadsheet": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oppure importa un foglio di calcolo"
+          }
+        }
+      }
+    },
+    "One row per movement; columns date, name, movement, reps, rx_kg, my_kg, result… Rows with the same date + name become one WOD.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una riga per movimento; colonne date, name, movement, reps, rx_kg, my_kg, result… Le righe con stessa data + nome diventano un unico WOD."
+          }
+        }
+      }
+    },
+    "Template copied — paste it into a spreadsheet.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modello copiato — incollalo in un foglio di calcolo."
+          }
+        }
+      }
+    },
+    "Couldn't read that file.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile leggere il file."
+          }
+        }
+      }
+    },
+    "That file is too large.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il file è troppo grande."
+          }
+        }
+      }
+    },
+    "No WODs found — check the columns (date, name, movement…).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun WOD trovato — controlla le colonne (date, name, movement…)."
+          }
+        }
+      }
+    },
+    "Imported %lld WODs · %lld rows skipped.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importati %lld WOD · %lld righe saltate."
+          }
+        }
+      }
+    },
+    "Imported %lld WODs.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importati %lld WOD."
+          }
+        }
+      }
+    },
+    "Glucose & carbs · 2h before → 4h after": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia e carboidrati · 2h prima → 4h dopo"
+          }
+        }
+      }
+    },
+    "Carbs −2h": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carbo −2h"
+          }
+        }
+      }
+    },
+    "Carbs +4h": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carbo +4h"
+          }
+        }
+      }
+    },
+    "Recent trend": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trend recente"
+          }
+        }
+      }
+    },
+    "Aerobic / metcon work tends to lower glucose — often for hours afterwards.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il lavoro aerobico / metcon tende ad abbassare la glicemia — spesso anche nelle ore successive."
+          }
+        }
+      }
+    },
+    "Heavy strength / anaerobic work can push glucose up for a while.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il lavoro di forza / anaerobico può alzare la glicemia per un po’."
+          }
+        }
+      }
+    },
+    "Mixed metcons can both raise (short, intense) and lower (longer) glucose.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I metcon misti possono sia alzarla (brevi e intensi) sia abbassarla (più lunghi)."
+          }
+        }
+      }
+    },
+    "Informational only, not medical advice. Carb and insulin choices stay with you and your care team / Loop.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo a scopo informativo, non è un consiglio medico. Le scelte su carboidrati e insulina restano a te e al tuo team di cura / Loop."
+          }
+        }
+      }
+    },
+    "Reps done": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fatte"
+          }
+        }
+      }
+    },
+    "THIS WEEK": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QUESTA SETTIMANA"
+          }
+        }
+      }
+    },
+    "Avg glucose": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia media"
+          }
+        }
+      }
+    },
+    "WODs": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WOD"
+          }
+        }
+      }
+    },
+    "Avg strain": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sforzo medio"
+          }
+        }
+      }
+    },
+    "Progression": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Progressione"
+          }
+        }
+      }
+    },
+    "%lld attempts": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld tentativi"
+          }
+        }
+      }
+    },
+    "Time cap %lld min": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo limite %lld min"
+          }
+        }
+      }
+    },
+    "Bolus −2h": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bolo −2h"
+          }
+        }
+      }
+    },
+    "Bolus +4h": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bolo +4h"
+          }
+        }
+      }
+    },
+    "Attempts": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tentativi"
+          }
+        }
+      }
+    },
+    "Log at least two sessions to see progression.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra almeno due sessioni per vedere la progressione."
+          }
+        }
+      }
+    },
+    "Heart": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herz"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corazón"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuore"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coração"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "心率"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "心率"
+          }
+        }
+      }
+    },
+    "Bolus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bolus"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bolo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bolo"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bólus"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大剂量"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大劑量"
+          }
+        }
+      }
+    },
+    "NOOP vs WHOOP": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP vs WHOOP"
+          }
+        }
+      }
+    },
+    "How closely NOOP's own numbers agree with your imported WHOOP data, day by day": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quanto i numeri calcolati da NOOP concordano con i dati WHOOP importati, giorno per giorno"
+          }
+        }
+      }
+    },
+    "No paired days yet": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora nessun giorno confrontabile"
+          }
+        }
+      }
+    },
+    "Import your WHOOP export in Data Sources. Every day that has both WHOOP's number and NOOP's own is compared here.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa l'export WHOOP in Sorgenti dati. Qui viene confrontato ogni giorno che ha sia il valore di WHOOP sia quello calcolato da NOOP."
+          }
+        }
+      }
+    },
+    "Mean difference is NOOP minus WHOOP. 95% of days fall between the two limits of agreement. The ranges in brackets are 95% confidence intervals: they widen when there are few days or when consecutive days move together, which is taken into account. Concordance (Lin) is 1 when the two agree exactly; below 0.90 is poor, 0.90–0.95 moderate, 0.95–0.99 substantial, above 0.99 almost perfect.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La differenza media è NOOP meno WHOOP. Il 95% dei giorni cade tra i due limiti di accordo. Gli intervalli tra parentesi sono intervalli di confidenza al 95%: si allargano quando i giorni sono pochi o quando giorni consecutivi si muovono insieme, cosa di cui si tiene conto. La concordanza (Lin) vale 1 quando i due coincidono esattamente; sotto 0,90 è scarsa, 0,90–0,95 moderata, 0,95–0,99 sostanziale, sopra 0,99 quasi perfetta."
+          }
+        }
+      }
+    },
+    "WHOOP is the benchmark here, not the truth: good agreement means NOOP behaves like WHOOP, not that either is exact.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qui WHOOP è il riferimento, non la verità: un buon accordo significa che NOOP si comporta come WHOOP, non che uno dei due sia esatto."
+          }
+        }
+      }
+    },
+    "Methods: INTERLIVE (Mühlen 2021), Bland & Altman 1986 and 1999, Zou 2013 (confidence of the limits), Zięba 2010 (correlated days), Lin 1989 and McBride 2005 (concordance).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metodi: INTERLIVE (Mühlen 2021), Bland & Altman 1986 e 1999, Zou 2013 (confidenza dei limiti), Zięba 2010 (giorni correlati), Lin 1989 e McBride 2005 (concordanza)."
+          }
+        }
+      }
+    },
+    "Needs at least %lld paired days to compare (has %lld).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servono almeno %lld giorni appaiati per il confronto (ce ne sono %lld)."
+          }
+        }
+      }
+    },
+    "Mean difference": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Differenza media"
+          }
+        }
+      }
+    },
+    "95% of days, low values": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "95% dei giorni, valori bassi"
+          }
+        }
+      }
+    },
+    "95% of days, high values": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "95% dei giorni, valori alti"
+          }
+        }
+      }
+    },
+    "95% of days within": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "95% dei giorni entro"
+          }
+        }
+      }
+    },
+    "Concordance (Lin)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concordanza (Lin)"
+          }
+        }
+      }
+    },
+    "Typical error": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Errore tipico"
+          }
+        }
+      }
+    },
+    "%lld%% of days within ±10%%": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%% dei giorni entro ±10%%"
+          }
+        }
+      }
+    },
+    "NOOP reads progressively lower than WHOOP as the value rises, so the limits are shown for low and high values.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP legge sempre più basso di WHOOP al crescere del valore, quindi i limiti sono mostrati per valori bassi e alti."
+          }
+        }
+      }
+    },
+    "NOOP reads progressively higher than WHOOP as the value rises, so the limits are shown for low and high values.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP legge sempre più alto di WHOOP al crescere del valore, quindi i limiti sono mostrati per valori bassi e alti."
+          }
+        }
+      }
+    },
+    "The gap widens as the value rises, so the limits are shown for low and high values.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lo scarto aumenta al crescere del valore, quindi i limiti sono mostrati per valori bassi e alti."
+          }
+        }
+      }
+    },
+    "Consecutive days move together, so these %lld days count as about %lld independent ones.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I giorni consecutivi si muovono insieme, quindi questi %lld giorni valgono circa %lld giorni indipendenti."
+          }
+        }
+      }
+    },
+    "poor": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "scarsa"
+          }
+        }
+      }
+    },
+    "substantial": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sostanziale"
+          }
+        }
+      }
+    },
+    "almost perfect": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "quasi perfetta"
+          }
+        }
+      }
+    },
+    "Mean of NOOP and WHOOP": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Media di NOOP e WHOOP"
+          }
+        }
+      }
+    },
+    "NOOP − WHOOP": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP − WHOOP"
+          }
+        }
+      }
+    },
+    "Bland–Altman plot": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grafico di Bland–Altman"
+          }
+        }
+      }
+    },
+    "Difference": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Differenza"
+          }
+        }
+      }
+    },
+    "Zero": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zero"
+          }
+        }
+      }
+    },
+    "Limit": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limite"
+          }
+        }
+      }
+    },
+    "Line": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linea"
+          }
+        }
+      }
+    },
+    "Total sleep": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonno totale"
+          }
+        }
+      }
+    },
+    "Light sleep": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonno leggero"
+          }
+        }
+      }
+    },
+    "Sleep efficiency": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Efficienza del sonno"
+          }
+        }
+      }
+    },
+    "Charge vs Recovery": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carica vs Recovery"
+          }
+        }
+      }
+    },
+    "Effort vs Day Strain": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sforzo vs Day Strain"
+          }
+        }
+      }
+    },
+    "Two different recovery models on the same 0–100 axis: look at whether they move together more than at the gap.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due modelli di recupero diversi sulla stessa scala 0–100: guarda se si muovono insieme più che la distanza tra i due."
+          }
+        }
+      }
+    },
+    "WHOOP's 0–21 Day Strain is converted to NOOP's 0–100 Effort axis on import; the two scales are built differently.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il Day Strain 0–21 di WHOOP viene convertito sulla scala Sforzo 0–100 di NOOP all'importazione; le due scale sono costruite in modo diverso."
+          }
+        }
+      }
+    },
+    "Wrist devices estimate sleep stages from heart rate and motion; a gap here does not tell you which one is right.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I dispositivi da polso stimano le fasi del sonno da frequenza cardiaca e movimento; una differenza qui non dice quale dei due abbia ragione."
+          }
+        }
+      }
+    },
+    "Session load (sRPE)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carico della sessione (sRPE)"
+          }
+        }
+      }
+    },
+    "Added to the day's Effort": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiunto allo Sforzo del giorno"
+          }
+        }
+      }
+    },
+    "Your heart rate already reflects this session, so it adds nothing extra to Effort.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La frequenza cardiaca rispecchia già questa sessione, quindi non aggiunge altro allo Sforzo."
+          }
+        }
+      }
+    },
+    "No heart rate that day, so Effort could not be scored.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun dato di frequenza cardiaca quel giorno, quindi lo Sforzo non è calcolabile."
+          }
+        }
+      }
+    },
+    "Heart rate misses much of the muscular load of lifting and WODs. The session-RPE load (RPE × minutes, Foster 2001) adds to Effort only where the heart rate recorded less than a session this hard carries (Tibana 2018).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La frequenza cardiaca non vede gran parte del carico muscolare di sollevamenti e WOD. Il carico session-RPE (RPE × minuti, Foster 2001) si aggiunge allo Sforzo solo dove la frequenza cardiaca ha registrato meno di quanto pesi una sessione così dura (Tibana 2018)."
+          }
+        }
+      }
+    },
+    "Add an RPE and a time (result or time cap) to count this WOD's muscular load in Effort.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi un RPE e un tempo (risultato o time cap) per contare il carico muscolare di questo WOD nello Sforzo."
+          }
+        }
+      }
+    },
+    "Training load": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carico di allenamento"
+          }
+        }
+      }
+    },
+    "NIGHT-TIME LOW": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IPOGLICEMIA NOTTURNA"
+          }
+        }
+      }
+    },
+    "Level 1": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livello 1"
+          }
+        }
+      }
+    },
+    "Level 2": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livello 2"
+          }
+        }
+      }
+    },
+    "Below 70 mg/dL for %lld min, lowest %lld mg/dL, %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sotto 70 mg/dL per %lld min, minimo %lld mg/dL, %@."
+          }
+        }
+      }
+    },
+    "%lld lows, %lld min below 70 mg/dL in total, lowest %lld mg/dL, %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ipoglicemie, %lld min sotto 70 mg/dL in totale, minimo %lld mg/dL, %@."
+          }
+        }
+      }
+    },
+    "It lasted more than 2 hours.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "È durata più di 2 ore."
+          }
+        }
+      }
+    },
+    "Heart rate and HRV often stay flat through a night-time low, so Charge can read normal after one. Weigh how you actually feel today.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frequenza cardiaca e HRV spesso non cambiano durante un'ipoglicemia notturna, quindi la Carica può sembrare normale anche dopo. Tieni conto di come ti senti davvero oggi."
+          }
+        }
+      }
+    },
+    "Night-time lows are more likely after exercise, especially in the afternoon or evening.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le ipoglicemie notturne sono più probabili dopo l'esercizio, soprattutto se fatto di pomeriggio o di sera."
+          }
+        }
+      }
+    },
+    "From your CGM in Apple Health. Informational only, not medical advice.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dal tuo CGM in Apple Health. Solo a scopo informativo, non è un consiglio medico."
+          }
+        }
+      }
+    },
+    "Your aerobic fitness estimated from your own data, next to the values you measure": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua forma aerobica stimata dai tuoi dati, accanto ai valori che misuri"
+          }
+        }
+      }
+    },
+    "Delete this value?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminare questo valore?"
+          }
+        }
+      }
+    },
+    "From runs and walks": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da corse e camminate"
+          }
+        }
+      }
+    },
+    "At rest": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A riposo"
+          }
+        }
+      }
+    },
+    "Your latest": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo ultimo"
+          }
+        }
+      }
+    },
+    "Your entries": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I tuoi valori"
+          }
+        }
+      }
+    },
+    "Last 12 months": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultimi 12 mesi"
+          }
+        }
+      }
+    },
+    "Series": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serie"
+          }
+        }
+      }
+    },
+    "mL/kg/min": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mL/kg/min"
+          }
+        }
+      }
+    },
+    "VO₂max over the last 12 months": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VO₂max negli ultimi 12 mesi"
+          }
+        }
+      }
+    },
+    "From your runs and walks": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dalle tue corse e camminate"
+          }
+        }
+      }
+    },
+    "From 1 session in the last 90 days.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da 1 sessione negli ultimi 90 giorni."
+          }
+        }
+      }
+    },
+    "Median of %lld sessions in the last 90 days (%@–%@).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mediana di %lld sessioni negli ultimi 90 giorni (%@–%@)."
+          }
+        }
+      }
+    },
+    "With fewer than 3 sessions the number can move a lot from one run to the next.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con meno di 3 sessioni il valore può cambiare molto da una corsa all'altra."
+          }
+        }
+      }
+    },
+    "No walks or runs with a distance yet.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora nessuna camminata o corsa con una distanza."
+          }
+        }
+      }
+    },
+    "None of your recent walks or runs qualifies yet.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna delle tue camminate o corse recenti è ancora utilizzabile."
+          }
+        }
+      }
+    },
+    "Record a walk or run with GPS in NOOP, or import it from Apple Health or a GPX, TCX or FIT file, with the strap on: at least 10 minutes at a steady pace, hard enough to breathe faster than normal (50–85% of your heart-rate reserve).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra una camminata o una corsa con il GPS in NOOP, oppure importala da Apple Health o da un file GPX, TCX o FIT, indossando la fascia: almeno 10 minuti a ritmo costante, abbastanza intensi da respirare più velocemente del normale (50–85% della riserva di frequenza cardiaca)."
+          }
+        }
+      }
+    },
+    "your setting": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "la tua impostazione"
+          }
+        }
+      }
+    },
+    "from your hardest workouts": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dai tuoi allenamenti più intensi"
+          }
+        }
+      }
+    },
+    "estimated from age": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "stimata dall'età"
+          }
+        }
+      }
+    },
+    "Sessions that count": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessioni utilizzate"
+          }
+        }
+      }
+    },
+    "Show all %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra tutte (%lld)"
+          }
+        }
+      }
+    },
+    "Run": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corsa"
+          }
+        }
+      }
+    },
+    "Walk": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camminata"
+          }
+        }
+      }
+    },
+    "HRR": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FCR"
+          }
+        }
+      }
+    },
+    "Not counted (last 90 days)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non conteggiate (ultimi 90 giorni)"
+          }
+        }
+      }
+    },
+    "%lld × %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld × %@"
+          }
+        }
+      }
+    },
+    "no heart rate from the strap, or no resting heart rate yet": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nessuna frequenza cardiaca dalla fascia, o ancora nessuna frequenza a riposo"
+          }
+        }
+      }
+    },
+    "shorter than 10 minutes or 1 km": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "più brevi di 10 minuti o di 1 km"
+          }
+        }
+      }
+    },
+    "longer than 90 minutes (heart rate drifts up)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "più lunghe di 90 minuti (la frequenza cardiaca tende a salire)"
+          }
+        }
+      }
+    },
+    "pace outside the range the equations cover": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ritmo fuori dall'intervallo coperto dalle equazioni"
+          }
+        }
+      }
+    },
+    "too easy (under 50% of heart-rate reserve)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "troppo facili (sotto il 50% della riserva di frequenza cardiaca)"
+          }
+        }
+      }
+    },
+    "too hard to be steady (over 85% of heart-rate reserve)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "troppo intense per essere costanti (oltre l'85% della riserva di frequenza cardiaca)"
+          }
+        }
+      }
+    },
+    "± %@ mL/kg/min": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "± %@ mL/kg/min"
+          }
+        }
+      }
+    },
+    "%lld bpm (median of %lld nights)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld bpm (mediana di %lld notti)"
+          }
+        }
+      }
+    },
+    "Activity index (HUNT, 0–15)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indice di attività (HUNT, 0–15)"
+          }
+        }
+      }
+    },
+    "From your age, sex, waist, resting heart rate and how much you train. Estimates made at rest are the less accurate kind: expect it to be off by more than the one from your runs and walks.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da età, sesso, girovita, frequenza cardiaca a riposo e quanto ti alleni. Le stime a riposo sono le meno precise: aspettati un errore maggiore rispetto a quella da corse e camminate."
+          }
+        }
+      }
+    },
+    "Add your waist circumference to see this estimate: it is one of the model's inputs.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi la circonferenza della vita per vedere questa stima: è uno dei dati del modello."
+          }
+        }
+      }
+    },
+    "Open Settings": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri Impostazioni"
+          }
+        }
+      }
+    },
+    "Needs at least %lld nights of resting heart rate in the last week.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servono almeno %lld notti di frequenza cardiaca a riposo nell'ultima settimana."
+          }
+        }
+      }
+    },
+    "Your values": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I tuoi valori"
+          }
+        }
+      }
+    },
+    "Add a VO₂max value": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi un valore di VO₂max"
+          }
+        }
+      }
+    },
+    "Enter a VO₂max from a lab test, a field test or another device to see how the estimates compare with it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci un VO₂max da un test in laboratorio, un test sul campo o un altro dispositivo per vedere come si confrontano le stime."
+          }
+        }
+      }
+    },
+    "Delete this value": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina questo valore"
+          }
+        }
+      }
+    },
+    "From runs and walks then": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da corse e camminate, a quella data"
+          }
+        }
+      }
+    },
+    "At rest then": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A riposo, a quella data"
+          }
+        }
+      }
+    },
+    "No estimate from that time to compare with.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna stima di quel periodo con cui confrontarlo."
+          }
+        }
+      }
+    },
+    "How this is worked out": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Come viene calcolato"
+          }
+        }
+      }
+    },
+    "From runs and walks: the oxygen cost of each steady session's pace (ACSM equations, level ground) is scaled up to your maximum through your heart-rate reserve, which tracks your oxygen-uptake reserve (Swain 1997, 1998). One steady stage estimated VO₂max within about 4 mL/kg/min in a lab validation (Swain 2004). The number is the median of your latest sessions.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da corse e camminate: il costo in ossigeno del ritmo di ogni sessione costante (equazioni ACSM, terreno piano) viene riportato al tuo massimo attraverso la riserva di frequenza cardiaca, che segue la riserva di consumo di ossigeno (Swain 1997, 1998). In una validazione di laboratorio una sola fase costante ha stimato il VO₂max con un errore di circa 4 mL/kg/min (Swain 2004). Il valore è la mediana delle tue sessioni più recenti."
+          }
+        }
+      }
+    },
+    "At rest: the HUNT fitness model (Nes 2011) from age, sex, waist, resting heart rate and activity.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A riposo: il modello di forma fisica HUNT (Nes 2011) da età, sesso, girovita, frequenza cardiaca a riposo e attività."
+          }
+        }
+      }
+    },
+    "Across 14 studies, wearable estimates made during exercise had no average bias and 95% of people within about ±10 mL/kg/min; those made at rest read about 2 mL/kg/min high with a wider spread (INTERLIVE, Molina-Garcia 2022). A lab test with gas analysis stays the reference.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 14 studi, le stime dei dispositivi indossabili fatte durante l'esercizio non avevano un errore medio e il 95% delle persone era entro circa ±10 mL/kg/min; quelle a riposo risultavano circa 2 mL/kg/min più alte, con una dispersione maggiore (INTERLIVE, Molina-Garcia 2022). Il riferimento resta un test di laboratorio con analisi dei gas."
+          }
+        }
+      }
+    },
+    "Hills, heat, fatigue, a strap reading your cadence instead of your pulse, or a wrong max heart rate all push the estimate off. Set your max heart rate in Settings if you know it from a test.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salite, caldo, stanchezza, una fascia che legge la cadenza invece del battito o una frequenza massima sbagliata falsano la stima. Imposta la tua frequenza cardiaca massima nelle Impostazioni se la conosci da un test."
+          }
+        }
+      }
+    },
+    "From a lab test, a field test or another device.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da un test in laboratorio, un test sul campo o un altro dispositivo."
+          }
+        }
+      }
+    },
+    "e.g. 48.5": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "es. 48,5"
+          }
+        }
+      }
+    },
+    "Enter a value between %lld and %lld.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci un valore tra %lld e %lld."
+          }
+        }
+      }
+    },
+    "Measured on": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Misurato il"
+          }
+        }
+      }
+    },
+    "Date of the measurement": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data della misurazione"
+          }
+        }
+      }
+    },
+    "How": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Come"
+          }
+        }
+      }
+    },
+    "Lab test (gas analysis)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test in laboratorio (analisi dei gas)"
+          }
+        }
+      }
+    },
+    "Field test": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test sul campo"
+          }
+        }
+      }
+    },
+    "Another device or app": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un altro dispositivo o app"
+          }
+        }
+      }
+    },
+    "VO₂ Max (at rest)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VO₂ Max (a riposo)"
+          }
+        }
+      }
+    },
+    "VO₂ Max (from runs and walks)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VO₂ Max (da corse e camminate)"
+          }
+        }
+      }
+    },
+    "VO₂ Max (your entries)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VO₂ Max (i tuoi valori)"
+          }
+        }
+      }
+    },
+    "From your runs and walks, at rest, and your own values": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dalle tue corse e camminate, a riposo e i tuoi valori"
+          }
+        }
+      }
+    },
+    "VO₂max: from your runs and walks, at rest, and your own values": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VO₂max: dalle tue corse e camminate, a riposo e i tuoi valori"
+          }
+        }
+      }
+    },
+    "VO₂max at rest": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VO₂max a riposo"
+          }
+        }
+      }
+    },
+    "From WODs": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dai WOD"
+          }
+        }
+      }
+    },
+    "provisional": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "provvisorio"
+          }
+        }
+      }
+    },
+    "lying down": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "da sdraiato"
+          }
+        }
+      }
+    },
+    "From your WODs": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dai tuoi WOD"
+          }
+        }
+      }
+    },
+    "%lld bpm lying down, %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld bpm da sdraiato, %@"
+          }
+        }
+      }
+    },
+    "%lld bpm at night, asleep": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld bpm di notte, nel sonno"
+          }
+        }
+      }
+    },
+    "Provisional: your resting heart rate asleep is lower than the one measured awake and lying down that this method is built on, so this value reads high. Measure it lying down for the real one.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provvisorio: la frequenza a riposo nel sonno è più bassa di quella misurata sveglio e da sdraiato su cui è costruito questo metodo, quindi questo valore risulta alto. Misurala da sdraiato per avere quello vero."
+          }
+        }
+      }
+    },
+    "Your max heart rate is estimated from your age, and this value moves in proportion to it. Train hard with the strap on, or set your max heart rate in Settings if you know it from a test.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua frequenza massima è stimata dall'età, e questo valore si sposta in proporzione. Allenati forte con la fascia addosso, oppure imposta la frequenza massima in Impostazioni se la conosci da un test."
+          }
+        }
+      }
+    },
+    "Needs a max heart rate and a resting heart rate. Measure your resting heart rate lying down to see this value.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servono una frequenza massima e una frequenza a riposo. Misura la frequenza a riposo da sdraiato per vedere questo valore."
+          }
+        }
+      }
+    },
+    "Measure resting heart rate": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Misura la frequenza a riposo"
+          }
+        }
+      }
+    },
+    "A WOD has no pace or power to measure, but it takes your heart close to its maximum. The heart-rate ratio method (Uth 2004) needs only that and your resting heart rate: about 15 × max heart rate ÷ resting heart rate. Each beat of resting heart rate moves the value by about 1 mL/kg/min, so it needs the resting heart rate the method was built on: awake, lying down, after 15 minutes of rest. In independent tests it was off by about 7–8 mL/kg/min for one person (Esco 2012): no more precise than the estimate at rest, so read it as a second opinion, not a test.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un WOD non ha un passo o una potenza da misurare, ma porta il cuore vicino al suo massimo. Il metodo del rapporto tra frequenze (Uth 2004) ha bisogno solo di questo e della frequenza a riposo: circa 15 × frequenza massima ÷ frequenza a riposo. Ogni battito di frequenza a riposo sposta il valore di circa 1 mL/kg/min, quindi serve la frequenza a riposo su cui il metodo è costruito: sveglio, da sdraiato, dopo 15 minuti di riposo. Nei test indipendenti sbagliava di circa 7–8 mL/kg/min sulla singola persona (Esco 2012): non è più preciso della stima a riposo, quindi leggilo come un secondo parere, non come un test."
+          }
+        }
+      }
+    },
+    "Delete this measurement?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminare questa misurazione?"
+          }
+        }
+      }
+    },
+    "Delete this measurement": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina questa misurazione"
+          }
+        }
+      }
+    },
+    "Resting heart rate lying down": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frequenza a riposo da sdraiato"
+          }
+        }
+      }
+    },
+    "From WODs then": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dai WOD allora"
+          }
+        }
+      }
+    },
+    "Edit waist": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifica girovita"
+          }
+        }
+      }
+    },
+    "e.g. 32": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "es. 32"
+          }
+        }
+      }
+    },
+    "e.g. 82": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "es. 82"
+          }
+        }
+      }
+    },
+    "Enter a waist between 24 and 63 in.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci un girovita tra 24 e 63 in."
+          }
+        }
+      }
+    },
+    "Enter a waist between 60 and 160 cm.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci un girovita tra 60 e 160 cm."
+          }
+        }
+      }
+    },
+    "Standing relaxed, tape level at your navel. Saved to your profile (also in Settings).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In piedi e rilassato, metro orizzontale all'altezza dell'ombelico. Viene salvato nel tuo profilo (anche in Impostazioni)."
+          }
+        }
+      }
+    },
+    "Resting heart rate, lying down": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frequenza a riposo, da sdraiato"
+          }
+        }
+      }
+    },
+    "For the VO₂max from your WODs.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per il VO₂max dai tuoi WOD."
+          }
+        }
+      }
+    },
+    "Lie on your back in a quiet room, wearing the strap. Best in the morning, before coffee and training.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sdraiati sulla schiena in una stanza tranquilla, con la fascia addosso. Meglio al mattino, prima del caffè e dell'allenamento."
+          }
+        }
+      }
+    },
+    "Tap Start and stay still and relaxed for 15 minutes: no phone, no talking.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tocca Avvia e resta fermo e rilassato per 15 minuti: niente telefono, niente parlare."
+          }
+        }
+      }
+    },
+    "NOOP takes the average of the last 2 minutes.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP prende la media degli ultimi 2 minuti."
+          }
+        }
+      }
+    },
+    "Connect the strap first: the measurement reads your live heart rate.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prima collega la fascia: la misurazione legge la tua frequenza in tempo reale."
+          }
+        }
+      }
+    },
+    "%lld minutes left": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld minuti rimanenti"
+          }
+        }
+      }
+    },
+    "Stay still and relaxed. The screen stays on.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resta fermo e rilassato. Lo schermo resta acceso."
+          }
+        }
+      }
+    },
+    "The strap disconnected: the last 2 minutes need its heart rate.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La fascia si è disconnessa: negli ultimi 2 minuti serve la sua frequenza cardiaca."
+          }
+        }
+      }
+    },
+    "Your resting heart rate, lying down (average of the last 2 minutes).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua frequenza a riposo, da sdraiato (media degli ultimi 2 minuti)."
+          }
+        }
+      }
+    },
+    "The strap sent too little heart rate in the last 2 minutes, so there is no value. Try again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La fascia ha inviato troppo poca frequenza cardiaca negli ultimi 2 minuti, quindi non c'è un valore. Riprova."
+          }
+        }
+      }
+    },
+    "Or type one measured the same way": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oppure scrivine una misurata allo stesso modo"
+          }
+        }
+      }
+    },
+    "e.g. 52": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "es. 52"
+          }
+        }
+      }
+    },
+    "Importing from Apple Health": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importazione da Apple Health"
+          }
+        }
+      }
+    },
+    "Updating from Apple Health": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiornamento da Apple Health"
+          }
+        }
+      }
+    },
+    "Pause import": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metti in pausa l'importazione"
+          }
+        }
+      }
+    },
+    "You can keep using NOOP meanwhile: the import carries on while you look around.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puoi continuare a usare NOOP: l'importazione prosegue mentre navighi."
+          }
+        }
+      }
+    },
+    "The screen stays on until it's done: locking the iPhone pauses the import, and it resumes when you open NOOP again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lo schermo resta acceso fino alla fine: se blocchi l'iPhone l'importazione va in pausa e riprende quando riapri NOOP."
+          }
+        }
+      }
+    },
+    "History, last 14 months": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Storico, ultimi 14 mesi"
+          }
+        }
+      }
+    },
+    "Resume import": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riprendi l'importazione"
+          }
+        }
+      }
+    },
+    "Paused: Apple Health can't be read while iPhone is locked. The import carries on from where it stopped when you open NOOP again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In pausa: Apple Health non si può leggere mentre l'iPhone è bloccato. L'importazione riprende da dove si era fermata quando riapri NOOP."
+          }
+        }
+      }
+    },
+    "Import paused. It carries on from where it stopped next time you open NOOP, or when you tap Resume import.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importazione in pausa. Riprende da dove si era fermata la prossima volta che apri NOOP, oppure quando tocchi Riprendi l'importazione."
+          }
+        }
+      }
+    },
+    "%lld min before the WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min prima del WOD"
+          }
+        }
+      }
+    },
+    "during the WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "durante il WOD"
+          }
+        }
+      }
+    },
+    "%lld min after the WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min dopo il WOD"
+          }
+        }
+      }
+    },
+    "Carbs and bolus insulin around this WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carboidrati e boli di insulina intorno al WOD"
+          }
+        }
+      }
+    },
+    "Below 70 mg/dL for about %lld min in this window": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sotto 70 mg/dL per circa %lld min in questa finestra"
+          }
+        }
+      }
+    },
+    "WOD %@–%@ · from the recorded workout": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WOD %@–%@ · dall'allenamento registrato"
+          }
+        }
+      }
+    },
+    "WOD %@–%@ · from the time you logged (no recorded workout found)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WOD %@–%@ · dall'orario inserito (nessun allenamento registrato trovato)"
+          }
+        }
+      }
+    },
+    "Best": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Migliore"
+          }
+        }
+      }
+    },
+    "Scaled": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scaled"
+          }
+        }
+      }
+    },
+    "Faster is higher": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più in alto = più veloce"
+          }
+        }
+      }
+    },
+    "Higher is better": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più in alto = meglio"
+          }
+        }
+      }
+    },
+    "%lld rounds": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld round"
+          }
+        }
+      }
+    },
+    "Compact": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compatto"
+          }
+        }
+      }
+    },
+    "Standard": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard"
+          }
+        }
+      }
+    },
+    "Large": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grande"
+          }
+        }
+      }
+    },
+    "Every lane is off. Turn one on in the chart settings.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutte le corsie sono spente. Accendine una nelle impostazioni del grafico."
+          }
+        }
+      }
+    },
+    "Drag sideways to move · hold to read · double-tap to zoom out": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina di lato per spostarti · tieni premuto per leggere · doppio tocco per rimpicciolire"
+          }
+        }
+      }
+    },
+    "Pinch or tap + to zoom · hold and slide to read": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pizzica o tocca + per ingrandire · tieni premuto e scorri per leggere"
+          }
+        }
+      }
+    },
+    "Zoom to the WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingrandisci sul WOD"
+          }
+        }
+      }
+    },
+    "Zoom out": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimpicciolisci"
+          }
+        }
+      }
+    },
+    "Zoom in": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingrandisci"
+          }
+        }
+      }
+    },
+    "Customize chart": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personalizza il grafico"
+          }
+        }
+      }
+    },
+    "Full screen": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schermo intero"
+          }
+        }
+      }
+    },
+    "Glucose & heart": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia e battito"
+          }
+        }
+      }
+    },
+    "Carbs & bolus": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carboidrati e boli"
+          }
+        }
+      }
+    },
+    "No glucose readings in this stretch": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna glicemia in questo tratto"
+          }
+        }
+      }
+    },
+    "%lld–%lld, avg %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld–%lld, media %lld"
+          }
+        }
+      }
+    },
+    "%lld min below 70": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min sotto 70"
+          }
+        }
+      }
+    },
+    "No heart rate from the strap in this stretch": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun battito dalla fascia in questo tratto"
+          }
+        }
+      }
+    },
+    "Reading heart rate…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lettura del battito…"
+          }
+        }
+      }
+    },
+    "avg %lld · max %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "media %lld · max %lld"
+          }
+        }
+      }
+    },
+    "Carbs and bolus insulin": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carboidrati e boli di insulina"
+          }
+        }
+      }
+    },
+    "%@ into the WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "al minuto %@ del WOD"
+          }
+        }
+      }
+    },
+    "Workouts and WODs": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allenamenti e WOD"
+          }
+        }
+      }
+    },
+    "Lanes": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corsie"
+          }
+        }
+      }
+    },
+    "Target range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intervallo obiettivo"
+          }
+        }
+      }
+    },
+    "Lower limit": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limite inferiore"
+          }
+        }
+      }
+    },
+    "Upper limit": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limite superiore"
+          }
+        }
+      }
+    },
+    "Below 70 mg/dL is always shaded red: the consensus threshold for a low.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sotto 70 mg/dL è sempre colorato di rosso: la soglia di ipoglicemia del consenso internazionale."
+          }
+        }
+      }
+    },
+    "Heart-rate zones": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zone di frequenza cardiaca"
+          }
+        }
+      }
+    },
+    "Zones run from half your max heart rate up to it, in five equal steps (set your max heart rate in your profile).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le zone vanno da metà della tua frequenza massima fino al massimo, in cinque gradini uguali (la frequenza massima si imposta nel profilo)."
+          }
+        }
+      }
+    },
+    "Figures for the stretch on screen": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valori del tratto sullo schermo"
+          }
+        }
+      }
+    },
+    "Chart size": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dimensione del grafico"
+          }
+        }
+      }
+    },
+    "Display": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visualizzazione"
+          }
+        }
+      }
+    },
+    "Before the WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prima del WOD"
+          }
+        }
+      }
+    },
+    "After the WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo il WOD"
+          }
+        }
+      }
+    },
+    "Around a WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intorno a un WOD"
+          }
+        }
+      }
+    },
+    "The figures above and below the chart keep their own window: 2 h before to 4 h after.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I valori sopra e sotto il grafico mantengono la loro finestra: da 2 h prima a 4 h dopo."
+          }
+        }
+      }
+    },
+    "Restore defaults": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripristina i valori predefiniti"
+          }
+        }
+      }
+    },
+    "Glucose, heart & carbs around the WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia, battito e carboidrati intorno al WOD"
+          }
+        }
+      }
+    },
+    "Back to today": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torna a oggi"
+          }
+        }
+      }
+    },
+    "minutes of heart rate: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minuti di battito: %lld"
+          }
+        }
+      }
+    },
+    "nights of sleep: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "notti di sonno: %lld"
+          }
+        }
+      }
+    },
+    "daily values: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "valori giornalieri: %lld"
+          }
+        }
+      }
+    },
+    "Writing to Apple Health failed: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scrittura in Apple Health non riuscita: %@"
+          }
+        }
+      }
+    },
+    "Written to Apple Health": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scritto in Apple Health"
+          }
+        }
+      }
+    },
+    "Last written %@: %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultima scrittura %@: %@."
+          }
+        }
+      }
+    },
+    "Last checked %@: nothing new to write.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultimo controllo %@: niente di nuovo da scrivere."
+          }
+        }
+      }
+    },
+    "To check: Health app › Browse › Heart › Heart Rate › Data Sources & Access. If a kind is switched off there, NOOP can't write it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per controllare: app Salute › Sfoglia › Cuore › Frequenza cardiaca › Sorgenti dati e accesso. Se lì un tipo di dato è disattivato, NOOP non può scriverlo."
+          }
+        }
+      }
+    },
+    "Heart rate minute by minute, sleep with its stages, workouts and WODs (with their heart rate, energy and time in each zone), VO₂max, and each day's resting heart rate, HRV, SpO₂ and respiratory rate. Each time NOOP syncs, it adds what's new.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il battito minuto per minuto, il sonno con le sue fasi, gli allenamenti e i WOD (con battito, energia e tempo in ogni zona), il VO₂max e, per ogni giorno, frequenza a riposo, HRV, SpO₂ e frequenza respiratoria. A ogni sincronizzazione NOOP aggiunge quello che è nuovo."
+          }
+        }
+      }
+    },
+    "Allow writing heart rate, workouts and VO₂max": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti la scrittura di battito, allenamenti e VO₂max"
+          }
+        }
+      }
+    },
+    "Charge, Effort, Rest, Stress and NOOP's other scores have no place in Apple Health, so they stay in NOOP. Steps and the day's calories aren't written either: the iPhone counts them too, and Health would count them twice.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charge, Effort, Rest, Stress e gli altri punteggi di NOOP non hanno un posto in Apple Health, quindi restano in NOOP. Nemmeno i passi e le calorie della giornata vengono scritti: li conta anche l'iPhone e Salute li conterebbe due volte."
+          }
+        }
+      }
+    },
+    "workouts: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "allenamenti: %lld"
+          }
+        }
+      }
+    },
+    "Time in heart-rate zones": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo nelle zone FC"
+          }
+        }
+      }
+    },
+    "Zone 1 starts at %lld bpm and zone 5 at %lld bpm, from your max heart rate of %lld bpm (Settings).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La Zona 1 parte da %lld bpm e la Zona 5 da %lld bpm, dalla tua frequenza massima di %lld bpm (Impostazioni)."
+          }
+        }
+      }
+    },
+    "No heart rate from the strap during this WOD.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun battito dalla fascia durante questo WOD."
+          }
+        }
+      }
+    },
+    "Below zone 1: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sotto la Zona 1: %@"
           }
         }
       }

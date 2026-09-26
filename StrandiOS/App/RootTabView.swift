@@ -87,10 +87,17 @@ struct RootTabView: View {
                     }
             )
 
-            FloatingTabBar(selection: $selectedTab, onReselect: { _ in
-                // Re-tapping the active tab refreshes that page's data (2026-07-02).
-                Task { await repo.refresh() }
-            })
+            VStack(spacing: 0) {
+                // Apple Health import progress (history import / a sync the user started), floating just
+                // above the bar on every tab, so the app stays usable while the data comes in. Zero-height
+                // and gap-free when idle (its own bottom padding only exists while it shows), so the bar
+                // never moves.
+                HealthSyncBanner()
+                FloatingTabBar(selection: $selectedTab, onReselect: { _ in
+                    // Re-tapping the active tab refreshes that page's data (2026-07-02).
+                    Task { await repo.refresh() }
+                })
+            }
         }
         .task {
             await repo.refresh()
@@ -297,11 +304,14 @@ struct RootTabView: View {
                     MoreRow("Insights", "lightbulb.fill") { InsightsView() }
                     MoreRow("Explore", "square.grid.2x2.fill") { MetricExplorerView() }
                     MoreRow("Compare", "rectangle.split.2x1.fill") { CompareView() }
+                    MoreRow("NOOP vs WHOOP", "scalemass.fill") { BenchmarkView() }
                 }
                 moreSection("Body") {
                     MoreRow("Live", "waveform.path.ecg") { LiveView() }
                     MoreRow("Workouts", "figure.run") { WorkoutsView() }
+                    MoreRow("WOD Log", "figure.strengthtraining.traditional") { WodLogView() }
                     MoreRow("Health", "heart.text.square.fill") { HealthView() }
+                    MoreRow("VO₂max", "lungs.fill") { VO2maxView() }
                     MoreRow("Lab Book", "books.vertical.fill") { LabBookView() }
                     MoreRow("Stress", "bolt.heart.fill") { StressView() }
                     MoreRow("Breathe", "wind") { BreathingView() }
@@ -619,12 +629,18 @@ private struct FloatingTabBar: View {
 private extension View {
     /// Real iOS 26 Liquid Glass where available; `.ultraThinMaterial` on iOS 17–25 — a clean
     /// blended degrade so the bar stays modern on new OSes without breaking older ones.
+    /// `glassEffect` only exists in the iOS 26 SDK (Xcode 26, Swift 6.2): an older Xcode builds the
+    /// material fallback instead of failing to compile.
     @ViewBuilder func liquidGlass(in shape: some Shape) -> some View {
+        #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
             self.glassEffect(.regular, in: shape)
         } else {
             self.background(.ultraThinMaterial, in: shape)
         }
+        #else
+        self.background(.ultraThinMaterial, in: shape)
+        #endif
     }
 }
 #endif

@@ -8,7 +8,7 @@ import WhoopStore
 ///
 /// A short, deliberate seated capture: the user sits still and breathes normally while the strap's
 /// live R-R intervals (the reliable 0x2A37 stream) accumulate for ~60 s. We then run the full
-/// HRVAnalyzer cleaning pipeline (range filter → Malik ectopic rejection → ≥minBeats) and surface the
+/// HRVAnalyzer cleaning pipeline (plausibility split → Lipponen–Tarvainen correction → ≥minBeats) and surface the
 /// headline RMSSD plus SDNN, mean HR and the beats used. Saving banks the RMSSD as a single point in
 /// the generic metric series ("hrv_snapshot", source "manual-hrv") so it sits beside every other
 /// source for the explorer/trends.
@@ -413,7 +413,7 @@ struct HRVSnapshotView: View {
         ScreenIdle.keepAwake(false)
         let raw = captureBuffer.map(Double.init)
         // HRV & Autonomic test mode (Group G): when the mode is on, emit the cleaning trace (nInput /
-        // nClean / rejected fraction, the range + Malik ectopic counts, the minBeats + spot gates,
+        // nClean / rejected fraction, the dropped and Lipponen–Tarvainen-corrected counts, the minBeats + spot gates,
         // RMSSD/SDNN/meanNN) tagged `.hrv`. analyzeTrace returns the SAME HRVResult `analyze` would
         // (it reuses analyze verbatim), so the headline RMSSD is byte-identical with the trace on or off.
         // Zero cost when off: the gate is one UserDefaults bool read and analyzeTrace is never called, so

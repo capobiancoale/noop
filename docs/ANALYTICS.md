@@ -144,13 +144,55 @@ pNN50 = 100 · (count of |ΔNN| > 50 ms) / (N − 1)
 
 `rmssdRaw(_:)` and `sdnnRaw(_:)` are the raw primitives (no filtering, return `nil` for fewer than 2 values).
 
-### Cleaning pipeline (`cleanRR`)
+### Cleaning pipeline (`clean` / `cleanTimed`)
 
-1. **Range filter** — drop intervals outside `[rrMinMs, rrMaxMs] = [300, 2000]` ms (≈ 200 bpm to 30 bpm).
-2. **Ectopic rejection (Malik-style)** — drop any beat deviating more than `ectopicThreshold = 0.20` (20%) from a **local median** over a centered window of `2·ectopicWindowRadius + 1 = 5` beats. Beats with too small a neighbourhood are kept.
-3. **Sufficiency gate** — require at least `minBeats = 20` clean intervals before returning a trustworthy result; otherwise `HRVResult.empty(...)`.
+1. **Hard plausibility split** — values outside `[150, 3000]` ms are not heartbeats (dropouts, noise): they are
+   removed and split the series. With timestamps, a time gap longer than the interval (+2 s of 1-s stamp
+   slack) also splits it. Successive differences are never taken across a split.
+2. **Artefact correction — Lipponen & Tarvainen (2019)**, the automatic correction Kubios HRV applies by
+   default (`RRArtefactCorrection.swift`). Adaptive thresholds (5.2 quartile deviations over 91 beats) and a
+   decision flow classify each beat as ectopic, missed, extra or long/short; extra detections are merged,
+   missed beats split in two, ectopic and misplaced beats re-estimated with a cubic spline. Correcting
+   instead of deleting keeps every successive difference between truly adjacent beats.
+3. **Physiological range** — corrected values outside `[300, 2000]` ms (≈ 200–30 bpm) are removed and split.
+4. **Sufficiency gate** — at least `minBeats = 20` clean intervals, otherwise `HRVResult.empty(...)`.
 
-> **Honest substitution.** The reference Python pipeline ran neurokit2's Kubios / Lipponen–Tarvainen (2019) artifact classifier, which isn't available on-device. NOOP substitutes the classical **Malik et al. (1989)** 20%-local-median rule — a simpler, fully deterministic approximation of the same intent (remove physiologically impossible beat-to-beat jumps before computing HRV). It does not model the missed/extra-beat insertion that Kubios does.
+This replaces the earlier Malik (1989) 20%-of-local-median deletion. A fixed 20% rule cannot adapt to the
+person's own variability: on a real five-minute stretch of large sinus arrhythmia from PhysioNet Fantasia
+(f1y01, every beat annotated normal) it deletes 22 of 300 genuine beats and cuts RMSSD by more than a third,
+while Lipponen–Tarvainen flags none (pinned in `RRArtefactCorrectionTests`).
+
+**Validation.** `Tools/hrv-validation` reruns the paper's own evaluation on the same public database
+(Fantasia, 8 recordings, 61,437 normal intervals, 611 simulated artefacts per class):
+
+| Beats | Detected — NOOP (paper) |
+|---|---|
+| Normal, kept as normal | 99.84% (99.96%) |
+| Missed / extra | 100% / 99.2% (100% / 100%) |
+| Misaligned by 2 / 4 / 8 × RMSSD | 61% / 99.0% / 100% (54% / 99.3% / 100%) |
+
+On 48 five-minute samples, RMSSD errors of +427% (missed), +181% (extra) and +34% (misaligned, q = 4) become
+−3.0%, −2.7% and −2.8% after correction; clean samples move by −2.8%. With the same threshold reading the
+labels match NeuroKit2's open implementation on 99.9996% of 245,259 intervals.
+
+One interpretation is documented in the source: eqs. 2 and 6 print the quartile deviation of |x|, but the
+paper's own justification of α = 5.2 ("covers 99.95% of all beats if normally distributed") only holds for
+the signed series (5.2 × 0.674σ = 3.5σ). The signed reading is the one that reproduces the paper's Table 1;
+the |x| reading (NeuroKit2's) flags 1.1% of normal beats and detects 89% of the smallest displacements.
+
+### Nightly window quality (`windowQuality`)
+
+`SleepSession.avgHRV` is the mean RMSSD of the 5-min windows that pass three evidence-based gates:
+
+- **≥ 120 s of clean beats** — RMSSD from 2 minutes tracks a 5-minute reference at r = 0.986
+  (Munoz et al., PLoS One 2015, n = 3,387);
+- **≤ 5% corrected beats** — Kubios' default acceptance threshold ("the number of corrected beats should not be
+  too high (preferably <5%) not to cause significant distortion", Kubios HRV Scientific User's Guide);
+- **≤ 36% of delivered intervals lost** — RMSSD stayed within 5% with up to 36% of intervals removed
+  (Sheridan et al., Psychiatry Investig 2020).
+
+A window that needed too much repair is excluded rather than averaged in; a night with no accepted window
+has no HRV rather than an inflated one.
 
 ### API
 
@@ -159,7 +201,7 @@ HRVAnalyzer.analyze(_ rr: [RRInterval], windowStart: Int?, windowEnd: Int?) -> H
 HRVAnalyzer.analyze(rawRR: [Double]) -> HRVResult
 ```
 
-`HRVResult` carries `rmssd`, `sdnn`, `meanNN`, `pnn50`, plus `nInput` and `nClean` (counts before/after cleaning) for transparency.
+`HRVResult` carries `rmssd`, `sdnn`, `meanNN`, `pnn50`, plus `nInput`, `nClean`, `nDropped` and `nCorrected` for transparency. A spot reading can also pass `maxRejectedFraction` (default 0.35) to refuse a capture where too many beats were lost or corrected.
 
 ---
 
@@ -257,6 +299,67 @@ A long walk with little cardio still counts: when cardio TRIMP is low but step /
 
 Given `(TRIMP, reference_strain)` pairs, fits `D` via a through-origin least-squares line in log-space: `ln(D) = maxStrain · Σx² / Σ(x·strain)`, `x = ln(TRIMP+1)`, where `maxStrain` is the full-scale value (now `100`, formerly `21`). Throws on fewer than 2 usable pairs.
 
+### Logged WODs: session-RPE muscular load (`LoggedSession`)
+
+Heart rate under-reads resistance and mixed-modal training: heavy sets, short maximal efforts and the rest
+between them load the muscles far more than the pulse shows (and wrist PPG reads low during lifting). A logged
+WOD with an RPE and a time adds its **session-RPE load** — Borg CR-10 rating × minutes (Foster et al., J
+Strength Cond Res 2001; reliable in resistance training, Day et al. 2004; review Haddad et al., Front Neurosci
+2017) — where the heart rate did not already record it:
+
+```
+expected TRIMP = 0.52 × RPE × minutes                 (Tibana et al., Sports 2018: Edwards TRIMP / session-RPE
+                                                        in CrossFit WODs — Fran 0.56, Fight Gone Bad 0.48)
+added TRIMP    = max(0, expected − Edwards TRIMP the heart rate recorded for that session)
+Effort         = 100 · ln(heart-rate TRIMP + added TRIMP + 1) / ln(D)
+```
+
+- The comparison uses the classic Edwards zones (50–90 % of HRmax), the scale the 0.52 ratio was measured on.
+- "Recorded for that session" is the detected workout that best overlaps it (within an hour either side), else
+  the span the WOD could occupy whether its logged time marks the start or the end. A WOD imported with a date
+  only (anchored to local noon) is matched to the day's detected workout, or counts in full if none exists.
+- Never negative: a metcon the heart rate fully captured adds nothing, so nothing is counted twice. A day with
+  no heart rate still has no Effort; a WOD alone never makes one.
+- Duration is the result time, else the time cap; a WOD without RPE or duration adds nothing (the WOD screen
+  says so). Saving, editing or deleting a WOD rescores the recent days; the WOD screen shows what it added.
+
+### Glucose and heart rate on one clock (`WodTimeWindow`, `GlucoseTrace`, `TimelineTicks`, `TimelineEvents`)
+
+The WOD screen and Today's "Heart & Glucose" card show glucose (Apple Health), heart rate (the strap) and carbs /
+boluses in lanes on one clock, zoomable like the Deep Timeline. Informational only: it never suggests carbs or
+insulin.
+
+- **Where a WOD sat.** The recorded workout (strap or Apple Health) overlapping most with
+  `[logged − duration, logged + duration]` is the WOD, since the logged time may mark its start or its end
+  (nearest within an hour if none overlaps; longer than 4 h never counts). Without one, the logged time is the
+  start. Duration is the result time, else the time cap, else 20 min. The screen says which source it used.
+- **Lanes, not a second axis.** Each measure keeps its own lane and scale; one crosshair reads all of them at
+  the same moment. The old Today chart drew heart rate and glucose on one plot with two y-axes; it is gone.
+- **Zoom.** Pinch (about the fingers), − / +, or "zoom to the WOD"; drag sideways to move; double-tap to zoom
+  out. The narrowest window is one minute. Heart rate is re-read for the window on screen at about 360 points
+  (about one per point of the chart's width), so zoomed in it is the strap's raw per-second signal
+  (`Repository.timelineSeries`, as on the Deep Timeline).
+- **Drawing.** Each lane's chart is drawn from plain values and redrawn only when they change: not when the
+  screen around it redraws, and not while a finger reads the lanes (the reading is a layer drawn over them).
+  A pinch or drag moves the window inside the chart and hands it to the screen when it ends.
+- **Axis.** Clock time on Today. Around a WOD, the ticks count back from its start (−1h, −30′), run as a
+  workout clock during it (0:00, 5:00) and count on from its end (+15′, +2h); ticks closer than 0.6 steps
+  where the three runs meet are dropped. The step keeps five ticks or fewer (15 s up to 6 h).
+- **Trace.** A gap of more than 15 min between readings breaks the line; each reading is drawn as a dot once
+  40 or fewer are on screen.
+- **Below 70 mg/dL** (level 1 hypoglycaemia, Battelino et al. 2019). Each low reading counts until the next
+  reading of its segment (5 min for the last one before a gap), clipped to the window on screen. The shaded
+  area ends where the line crosses 70, interpolated linearly between readings.
+- **Scale.** Glucose: at least 50–200 mg/dL and the target range, widened to every reading so a low is never
+  clipped, and fixed while zooming. Heart rate: fitted to the window on screen.
+- **Carbs and boluses.** Entries within about a 24th of the window on screen (at least a minute) of a group's
+  first entry share one marker, their amounts summed, so labels never pile up; zoomed in, each entry is its
+  own. Basal is left out.
+- **Settings** (saved on the device, shared by every timeline): which lanes show, workout / WOD shading, the
+  target range (default 70–180 mg/dL; 70 is always marked), heart-rate zones (50–100 % of max heart rate in
+  10 % steps, `HRZones`), figures for the stretch on screen, lane size, and the window around a WOD (default
+  2 h before, 4 h after; up to 3 h and 6 h). The WOD screen's figures keep their own 2 h / 4 h window.
+
 ---
 
 ## `SleepStager` — sleep/wake detection + approximate 4-class staging (feeds **Rest**)
@@ -306,7 +409,7 @@ Consecutive same-stage epochs are merged into `StageSegment`s tiling `[start, en
 
 ### Outputs
 
-- `SleepSession` — `start`, `end`, `efficiency` (AASM `asleep / in-bed`, where `asleep = in-bed − wake`), `stages`, per-session `restingHR` (lowest 5-min rolling-mean HR) and `avgHRV` (mean RMSSD over 5-min tumbling windows).
+- `SleepSession` — `start`, `end`, `efficiency` (AASM `asleep / in-bed`, where `asleep = in-bed − wake`), `stages`, per-session `restingHR` (lowest 5-min rolling-mean HR) and `avgHRV` (mean RMSSD over the quality-accepted 5-min tumbling windows, see `windowQuality`).
 - `hypnogramMetrics(_:)` — AASM-style roll-up: TIB / TST / SPT / SOL / REM latency / WASO / efficiency / disturbances, plus deep/REM/light minutes and percentages.
 
 ---
@@ -377,6 +480,75 @@ The simple, maximally auditable path: plain mean and sample SD (ddof = 1) over t
 
 ---
 
+## NOOP vs WHOOP — agreement report (`AgreementStats`)
+
+Source: `AgreementStats.swift`, screen `BenchmarkView`. For every day that has both a WHOOP-imported value and
+NOOP's own (HRV, resting HR, respiratory rate, sleep and its stages, efficiency, SpO₂, Charge vs Recovery,
+Effort vs Day Strain), NOOP reports agreement the way the INTERLIVE consensus asks consumer wearables to be
+validated (Mühlen et al., Br J Sports Med 2021) and the sleep-technology framework of Menghini et al. (Sleep
+2021) implements:
+
+- **Bias** (mean NOOP − WHOOP) and **95 % limits of agreement** (Bland & Altman 1986), each with its 95 %
+  confidence interval — the limits by MOVER (Zou, Stat Methods Med Res 2013).
+- **Correlated days.** Consecutive days are not independent. An AR(1) fit to the daily differences gives the
+  effective number of days, the unbiased SD and the SE of the bias (Zięba, Metrol Meas Syst 2010, eqs. 10–12,
+  24–25), using the real gaps between days.
+- **Proportional bias and heteroscedasticity.** Differences, and then their absolute residuals, are regressed on
+  the mean of the two methods (Bland & Altman 1999 — not on one method, which is misleading when it has error of
+  its own, Bland & Altman 1995). When significant, the limits become `b0 + b1·A ± 2.46·(c0 + c1·A)`.
+- **Error and concordance:** MAE, RMSE, MAPE, share of days within ±5 / ±10 %, Pearson, Spearman and Lin's
+  concordance with its z-transform CI (Lin 1989, variance as corrected in 2000), labelled with McBride's bands
+  (< 0.90 poor, 0.90–0.95 moderate, 0.95–0.99 substantial, > 0.99 almost perfect).
+
+No universal "good enough" threshold is imposed, and WHOOP is the reference, not the truth: agreement is not
+accuracy. Every statistic is tested against values computed independently with NumPy/SciPy.
+
+## Night-time hypoglycaemia (`DiabetesMetrics.hypoEvents`)
+
+Source: `DiabetesMetrics.swift` (StrandImport), shown under the scores on Today (iOS, CGM data from Apple
+Health). Events follow the international consensus (Battelino et al., Lancet Diabetes Endocrinol 2023):
+
+- **Level 1:** ≥ 15 consecutive minutes below 70 mg/dL; the event ends only after ≥ 15 consecutive minutes at or
+  above 70 (shorter recoveries stay inside it). **Level 2:** ≥ 15 consecutive minutes below 54 mg/dL.
+  **Extended:** more than 120 consecutive minutes below 70.
+- The CGM trace is resampled to a 5-minute grid, interpolating across gaps of up to 45 minutes; a longer gap is
+  missing data and closes an open event at its last known low (the iglu implementation, Broll et al. 2021).
+- **Nocturnal** is 00:00–05:59 local (the consensus window); events during the main sleep also count.
+- The daily `glucose_hypos` metric now counts these events instead of every dip below 70.
+
+Heart rate and HRV often stay flat through a spontaneous night-time low (Koivikko et al., Diabetes Care 2012),
+so an HRV-led recovery score — WHOOP's Recovery and NOOP's Charge alike — can read normal after one. Today
+therefore flags Charge with the night's events (level, minutes, lowest value, time) and, after exercise, notes
+that night-time lows are more likely then (EASD/ISPAD position statement, Moser et al., Diabetologia 2020).
+The flag is informational: Charge itself is unchanged and nothing suggests carbs or insulin.
+
+## VO₂max (`VO2maxEngine`)
+
+Source: `VO2maxEngine.swift`, screen `VO2maxView`; full method, validation and references in
+[VO2MAX.md](VO2MAX.md). Four views side by side, never blended:
+
+- **From runs and walks.** Each steady walk or run (10–90 min, ≥ 1 km, 50–85 % of heart-rate reserve, pace
+  inside the equation's range) is a single-stage submaximal test: the ACSM oxygen cost of its pace
+  (walking 3.5 + 0.1·S, running 3.5 + 0.2·S, S in m/min, level ground), extrapolated to HRmax through
+  %HRR = %VO₂R (Swain & Leutholtz 1997; Swain et al. 1998): `VO₂max = 3.5 + (VO₂ − 3.5) / %HRR` — validated
+  from one steady stage at r 0.89, SEE 4.0 mL/kg/min, no bias (Swain et al. 2004). Heart rate is the strap's
+  per-minute mean after the first 3 minutes; resting HR the 14-night median; HRmax the user's setting, else the
+  second-highest believable workout peak of the year, else Tanaka. The number is the median of the newest
+  ≤ 5 sessions of 90 days, stored per session day as `vo2max_exercise`.
+- **At rest.** The HUNT non-exercise model (Nes et al. 2011) ± its SEE, weekly as `vo2max_est` (Fitness Age).
+  The waist it needs can be typed on the VO₂max screen.
+- **From WODs.** Heart-rate ratio `PF · HRmax / HRrest` (PF 15.3 men, Uth et al. 2004; 14.5 women, Uth 2005)
+  with the HRmax above and HRrest measured awake and supine after 15 min of rest (Castagna et al. 2022): a
+  guided 15-minute capture with the strap, mean of the final 2 min (`supineRestingHR`), stored as
+  `vo2max_rhr_supine`, valid 60 days. Without one it falls back on the nightly resting HR and is labelled
+  provisional (reads high). Independent SEE 6.9–7.9 mL/kg/min (Esco et al. 2012).
+- **Your values.** Entered by hand (`vo2max_manual`, source `manual-vo2max`), each compared with every estimate
+  at that date.
+
+`Tools/vo2max-validation` checks the assumptions on 981 laboratory treadmill tests (PhysioNet, Malaga): the
+submaximal HR–VO₂ line reaches VO₂max at HRmax with bias +0.85, SD 5.5 mL/kg/min (SD 7.0 with an age-predicted
+HRmax), and Tanaka's HRmax is unbiased there (−0.9 bpm, SD 9.1).
+
 ## `WorkoutDetector` + `Calories` — retroactive workout detection
 
 Source: `WorkoutDetector.swift`. Finds workouts in the stored 1 Hz HR + gravity streams (no manual logging).
@@ -387,6 +559,8 @@ A workout is a **sustained window** (≥ `minExerciseMin = 5` min) where **both*
 - **Sustained motion** — gravity-derived intensity (10-second trailing mean) above `motionThreshold = 0.20`.
 
 Active samples are grouped into runs (merging gaps < `mergeGapS = 150 s`), then qualified by intensity: ≥ `minIntensityZ2Plus = 0.50` of the bout in Edwards zone 2+. Per bout it reports avg/peak HR, duration, Edwards zone-time %, mean `%HRR`, strain (via `StrainScorer`), and calories.
+
+**Mixed sessions.** A CrossFit class (warm-up, strength with rests, the WOD, cool-down) keeps moving and keeps HR above the floor from start to end, so it is one long run, mostly below zone 2 as a whole: the intensity gate used to reject all of it, and such sessions were never detected. A run that fails the gate is searched for its intense cores (`intenseCores`: stretches in zone 2+, samples under `mergeGapS` apart joined), and each core of at least `minExerciseMin` that passes the same gate is a workout (the WOD). A run that passes the gate is unchanged; an easy hour with a 3-minute sprint still yields nothing (the core is too short).
 
 ### Calories (`Calories.estimateBoutCalories`)
 
@@ -499,7 +673,7 @@ Apple Health XML ──┘                                         │
 
 ## Conventions & honesty notes
 
-- **Approximate by design.** Charge, Effort, Rest (and sleep stages, workout intensity, calories) are transparent approximations of published methods — not reproductions of any proprietary algorithm. They're **independent approximations from a consumer strap, built on open science — not medical advice, and not WHOOP's official scores.** Each engine's source header states exactly where it approximates (e.g. Malik instead of Kubios; RMSSD-only parasympathetic tone; normal-approx p-values).
+- **Approximate by design.** Charge, Effort, Rest (and sleep stages, workout intensity, calories) are transparent approximations of published methods — not reproductions of any proprietary algorithm. They're **independent approximations from a consumer strap, built on open science — not medical advice, and not WHOOP's official scores.** Each engine's source header states exactly where it approximates (e.g. RMSSD-only parasympathetic tone; normal-approx p-values).
 - **One scale, honest about certainty.** All three scores are 0–100 and each rides a Solid / Building / Calibrating confidence tier; a score that can't be computed honestly shows nothing rather than a number.
 - **Deterministic.** No randomness, no wall-clock dependence inside the math, no DB/network access. Same inputs → same outputs, which makes the package unit-testable against fixed vectors.
 - **Robust statistics.** z-scores use EWMA mean-absolute-deviation (`× 1.253` to a Gaussian σ); resting HR uses 5-minute bin minima; HR display uses windowed medians — all chosen to resist single-sample outliers.
