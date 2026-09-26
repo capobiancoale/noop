@@ -24,6 +24,64 @@ final class HealthWritePlanTests: XCTestCase {
         XCTAssertEqual(old.to - old.from, 14 * 86_400)
     }
 
+    func testRunsBetweenDeepOnesLookBackTwoHoursOnly() throws {
+        let newest = now - 3_600
+        let w = try XCTUnwrap(HealthWritePlan.heartRateWindow(now: now, newestWritten: newest, deep: false))
+        XCTAssertEqual(w.from, ((newest - 2 * 3_600) / 60).rounded(.down) * 60)
+        XCTAssertEqual(w.to, try XCTUnwrap(HealthWritePlan.heartRateWindow(now: now, newestWritten: newest)).to)
+        // The first run is the two weeks' backfill either way.
+        let first = try XCTUnwrap(HealthWritePlan.heartRateWindow(now: now, newestWritten: nil, deep: false))
+        XCTAssertEqual(first.to - first.from, 14 * 86_400)
+    }
+
+    func testADeepRunComesEverySixHours() {
+        XCTAssertTrue(HealthWritePlan.deepHeartRateRunDue(now: now, lastDeep: nil))
+        XCTAssertFalse(HealthWritePlan.deepHeartRateRunDue(now: now, lastDeep: now - 3_600))
+        XCTAssertTrue(HealthWritePlan.deepHeartRateRunDue(now: now, lastDeep: now - 6 * 3_600))
+        XCTAssertTrue(HealthWritePlan.deepHeartRateRunDue(now: now, lastDeep: now + 60))        // clock moved back
+    }
+
+    // MARK: When to write
+
+    func testAutomaticWritesRunAtMostEveryQuarterOfAnHour() {
+        XCTAssertTrue(HealthWritePlan.writeDue(now: now, lastWrite: nil))
+        XCTAssertFalse(HealthWritePlan.writeDue(now: now, lastWrite: now - 60))
+        XCTAssertFalse(HealthWritePlan.writeDue(now: now, lastWrite: now - 14 * 60))
+        XCTAssertTrue(HealthWritePlan.writeDue(now: now, lastWrite: now - 15 * 60))
+        XCTAssertTrue(HealthWritePlan.writeDue(now: now, lastWrite: now + 600))              // clock moved back
+    }
+
+    // MARK: Daily values
+
+    func testOnlyNewOrChangedDailyValuesAreWrittenAgain() {
+        let candidates: [(key: String, value: Double)] = [
+            (key: "noop:my-whoop:rhr:2026-09-24", value: 52),
+            (key: "noop:my-whoop:rhr:2026-09-25", value: 51),
+            (key: "noop:my-whoop:hrv:2026-09-25", value: 61.25),
+            (key: "noop:my-whoop:hrv:2026-09-26", value: 58),
+        ]
+        let written: [String: Double] = [
+            "noop:my-whoop:rhr:2026-09-24": 52,              // same
+            "noop:my-whoop:rhr:2026-09-25": 53,              // changed
+            "noop:my-whoop:hrv:2026-09-25": 61.25 + 1e-12,   // same, to rounding
+        ]
+        XCTAssertEqual(HealthWritePlan.changedDailyValues(candidates, written: written),
+                       ["noop:my-whoop:rhr:2026-09-25", "noop:my-whoop:hrv:2026-09-26"])
+        XCTAssertEqual(HealthWritePlan.changedDailyValues(candidates, written: [:]).count, 4)
+        XCTAssertTrue(HealthWritePlan.changedDailyValues([], written: written).isEmpty)
+    }
+
+    func testTheRecordOfWrittenValuesForgetsOldDays() {
+        let written: [String: Double] = [
+            "noop:my-whoop:rhr:2026-05-01": 50,
+            "noop:my-whoop:rhr:2026-06-01": 51,
+            "noop:my-whoop:vo2:2026-09-25": 44,
+            "garbage": 1,
+        ]
+        XCTAssertEqual(Set(HealthWritePlan.prunedDailyWritten(written, oldestDay: "2026-06-01").keys),
+                       ["noop:my-whoop:rhr:2026-06-01", "noop:my-whoop:vo2:2026-09-25"])
+    }
+
     func testChunksCoverTheWindowWithoutGapsOrOverlaps() {
         let c = HealthWritePlan.chunks(from: 0, to: 2.5 * 86_400)
         XCTAssertEqual(c.count, 3)

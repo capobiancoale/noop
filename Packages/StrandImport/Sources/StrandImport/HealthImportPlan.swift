@@ -34,8 +34,13 @@ public enum HealthImportPlan {
     /// Days an automatic refresh re-reads when the last full `recentDays` refresh is under
     /// `fullRefreshInterval` old: opening the app repeatedly shouldn't re-read three months each time.
     public static let catchUpDays = 7
-    /// How old the last full refresh may be before an automatic refresh reads all `recentDays` again.
-    public static let fullRefreshInterval: TimeInterval = 6 * 3_600
+    /// How old the last full refresh may be before an automatic refresh reads all `recentDays` again. Once a
+    /// day: the days before the last week rarely change, and the 90 days stay in NOOP between refreshes.
+    public static let fullRefreshInterval: TimeInterval = 24 * 3_600
+    /// Opening NOOP again within this long of the last finished update doesn't read Apple Health again.
+    /// NOOP becomes active many times an hour (back from another app, Control Center, a system sheet),
+    /// and each update competes with the screen on show for the database.
+    public static let foregroundInterval: TimeInterval = 10 * 60
     /// Longest window, in days.
     public static let windowDays = 30
 
@@ -87,6 +92,14 @@ public enum HealthImportPlan {
             return recentDays
         }
         return catchUpDays
+    }
+
+    /// Whether NOOP coming to the foreground should update from Apple Health: always while the history
+    /// import is unfinished, else once `foregroundInterval` has passed since the last update finished
+    /// (`lastFinished`, nil when none has finished since launch; one in the future counts as none).
+    public static func foregroundSyncDue(now: Date, lastFinished: Date?, historyDone: Bool) -> Bool {
+        guard historyDone, let last = lastFinished, last <= now else { return true }
+        return now.timeIntervalSince(last) >= foregroundInterval
     }
 
     /// The local midnight the history import reaches back to.

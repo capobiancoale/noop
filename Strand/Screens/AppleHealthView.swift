@@ -540,7 +540,7 @@ struct AppleHealthView: View {
                 Button {
                     Task {
                         await health.requestAuthorization()
-                        await health.writeToHealth()
+                        await health.writeToHealth(force: true)
                     }
                 } label: {
                     Label("Allow writing heart rate, workouts and VO₂max", systemImage: "heart.text.square")

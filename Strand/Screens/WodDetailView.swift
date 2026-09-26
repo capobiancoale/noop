@@ -18,7 +18,9 @@ import StrandAnalytics
 
 struct WodDetailView: View {
     @EnvironmentObject private var repo: Repository
-    @EnvironmentObject private var health: HealthKitBridge
+    /// Apple Health, read through for the glucose around the WOD; not observed, so a sync doesn't redraw the
+    /// screen (HealthBridgeEnvironment.swift).
+    @Environment(\.healthBridge) private var health
     @EnvironmentObject private var profile: ProfileStore
     @Environment(\.dismiss) private var dismiss
 
@@ -266,10 +268,11 @@ struct WodDetailView: View {
                                     loadHeart: { await heartTrace($0) }, zoom: $chartZoom)
     }
 
-    /// The strap's heart rate for a window, at the resolution the zoom needs (per second when close in).
+    /// The strap's heart rate for a window, at the resolution the zoom needs (per second when close in), about
+    /// one point per point of the chart's width.
     private func heartTrace(_ window: ClosedRange<Date>) async -> HeartTrace {
         let s = await repo.timelineSeries(metric: .hr, from: Int(window.lowerBound.timeIntervalSince1970),
-                                          to: Int(window.upperBound.timeIntervalSince1970), targetPoints: 500)
+                                          to: Int(window.upperBound.timeIntervalSince1970), targetPoints: 360)
         return HeartTrace(points: s.points, isRaw: s.isRaw, bucketSeconds: s.bucketSeconds)
     }
 
@@ -363,9 +366,9 @@ struct WodDetailView: View {
         let postEnd = workoutEnd + Self.statsHoursAfter * 3600
         let start = Date(timeIntervalSince1970: workoutStart - Double(TimelinePrefs.maxWodBefore) * 60)
         let end = Date(timeIntervalSince1970: workoutEnd + Double(TimelinePrefs.maxWodAfter) * 60)
-        let allReadings = await health.glucoseWindow(start: start, end: end)
-        let carbs = await health.carbsWindow(start: start, end: end)
-        let insulin = await health.insulinWindow(start: start, end: end)
+        let allReadings = (await health?.glucoseWindow(start: start, end: end)) ?? []
+        let carbs = (await health?.carbsWindow(start: start, end: end)) ?? []
+        let insulin = (await health?.insulinWindow(start: start, end: end)) ?? []
         let readings = allReadings.filter { $0.ts >= preStart && $0.ts <= postEnd }
         wodWindow = window
         trace = GlucoseTrace(readings: allReadings)
