@@ -1,0 +1,67 @@
+# Exports the app's strings the way Xcode 26 extracts them (the compiler's own keys, exact formats) with their
+# Italian translations, as an artifact: the list of what an Italian iPhone still shows in English. Runs when the
+# String Catalog or this file changes, or by hand. No secrets, no signing; the artifact holds only strings that
+# are already in the source.
+name: Localization export (Xcode 26)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude-automatic-build]
+    paths:
+      - 'Strand/Resources/Localizable.xcstrings'
+      - '.github/workflows/localization-export.yml'
+
+concurrency:
+  group: localization-export-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  export:
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - name: Select Xcode 26
+        run: |
+          set -e
+          current=$(xcodebuild -version | head -1 | awk '{print $2}')
+          echo "Runner default: Xcode $current"
+          if [ "${current%%.*}" -lt 26 ]; then
+            newest=$(ruby -e 'puts Dir["/Applications/Xcode_26*.app"].max_by { |p| Gem::Version.new(p[/Xcode_([\d.]+)\.app\z/, 1] || "0") }')
+            if [ -z "$newest" ]; then
+              echo "::error::No Xcode 26 on this runner image."
+              exit 1
+            fi
+            sudo xcode-select --switch "$newest/Contents/Developer"
+          fi
+          xcodebuild -version
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Export the Italian localization
+        run: >-
+          xcodebuild -exportLocalizations -project Strand.xcodeproj
+          -localizationPath build/loc -exportLanguage it
+          CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+      - name: Keep the catalog as the export synced it
+        if: always()
+        run: |
+          mkdir -p build/loc
+          cp Strand/Resources/Localizable.xcstrings build/loc/Localizable.synced.xcstrings || true
+          git status --short | head -50
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: localization-it
+          path: build/loc
+          if-no-files-found: warn
