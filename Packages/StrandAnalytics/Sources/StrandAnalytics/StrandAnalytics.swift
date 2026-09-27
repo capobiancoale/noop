@@ -5,7 +5,7 @@ import Foundation
 ///
 /// Entry points (all pure, deterministic functions — no DB access):
 ///   - `HRZones`        — HR-max + 5 zones from age; time-in-zone from `[HRSample]`.
-///   - `HRVAnalyzer`    — RMSSD / SDNN with range + Malik ectopic filtering.
+///   - `HRVAnalyzer`    — RMSSD / SDNN with Lipponen–Tarvainen artefact correction.
 ///   - `Baselines`      — Winsorized-EWMA + trailing-window personal baselines.
 ///   - `RecoveryScorer` — resting HR + transparent 0–100 recovery composite.
 ///   - `StrainScorer`   — Edwards/Banister TRIMP → 0–21 logarithmic strain.

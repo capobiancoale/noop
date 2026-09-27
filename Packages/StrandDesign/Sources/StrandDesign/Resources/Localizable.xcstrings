@@ -14,6 +14,12 @@
             "state": "needs_review",
             "value": "há %lld dias"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld giorni fa"
+          }
         }
       }
     },
@@ -70,6 +76,12 @@
             "state": "needs_review",
             "value": "%lld minutos"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld minuti"
+          }
         }
       }
     },
@@ -85,6 +97,12 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%lld pontos, média %@, intervalo de %@ a %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld punti, media %@, intervallo da %@ a %@"
           }
         }
       }
@@ -102,6 +120,12 @@
             "state": "needs_review",
             "value": "%lld leituras"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld letture"
+          }
         }
       }
     },
@@ -118,6 +142,12 @@
             "state": "needs_review",
             "value": "%lld treinos"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld allenamenti"
+          }
         }
       }
     },
@@ -133,6 +163,12 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "há %lldd"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldg fa"
           }
         }
       }
@@ -190,6 +226,12 @@
             "state": "needs_review",
             "value": "há %lldm"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldm fa"
+          }
         }
       }
     },
@@ -246,6 +288,12 @@
             "state": "needs_review",
             "value": "1 minuto"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 minuto"
+          }
         }
       }
     },
@@ -262,6 +310,12 @@
             "state": "needs_review",
             "value": "1 treino"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 allenamento"
+          }
         }
       }
     },
@@ -277,6 +331,12 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "MÁXIMO"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MASSIMO"
           }
         }
       }
@@ -352,6 +412,12 @@
             "state": "needs_review",
             "value": "Clássico"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Classico"
+          }
         }
       }
     },
@@ -368,6 +434,12 @@
             "state": "needs_review",
             "value": "ESGOTADO"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ESAURITO"
+          }
         }
       }
     },
@@ -383,6 +455,12 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Escuro"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scuro"
           }
         }
       }
@@ -538,6 +616,12 @@
             "state": "needs_review",
             "value": "LEVE"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LEGGERO"
+          }
         }
       }
     },
@@ -652,6 +736,12 @@
             "state": "needs_review",
             "value": "MODERADO"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MODERATO"
+          }
         }
       }
     },
@@ -726,6 +816,12 @@
             "state": "needs_review",
             "value": "Sem dados de frequência cardíaca"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun dato di frequenza cardiaca"
+          }
         }
       }
     },
@@ -782,6 +878,12 @@
             "state": "needs_review",
             "value": "PREPARADO"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CARICO"
+          }
         }
       }
     },
@@ -797,6 +899,12 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Calendário de recuperação, %lld dias, média %lld, mín %lld, máx %lld"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendario recupero, %lld giorni, media %lld, minimo %lld, massimo %lld"
           }
         }
       }
@@ -814,6 +922,12 @@
             "state": "needs_review",
             "value": "Calendário de recuperação, sem dados"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendario recupero, nessun dato"
+          }
         }
       }
     },
@@ -829,6 +943,12 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "EXTENUANTE"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "INTENSO"
           }
         }
       }
@@ -846,6 +966,12 @@
             "state": "needs_review",
             "value": "Fases do sono, %@"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fasi del sonno, %@"
+          }
         }
       }
     },
@@ -862,6 +988,12 @@
             "state": "needs_review",
             "value": "Fases do sono, sem dados"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fasi del sonno, nessun dato"
+          }
         }
       }
     },
@@ -876,6 +1008,12 @@
         "pt-PT": {
           "stringUnit": {
             "state": "needs_review",
+            "value": "Sistema"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
             "value": "Sistema"
           }
         }
@@ -952,6 +1090,12 @@
             "state": "needs_review",
             "value": "Tendência, %lld pontos, mais recente %@, mín %@, máx %@"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Andamento, %lld punti, ultimo %@, minimo %@, massimo %@"
+          }
         }
       }
     },
@@ -1008,6 +1152,12 @@
             "state": "needs_review",
             "value": "a dormir %@"
           }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "addormentato %@"
+          }
         }
       }
     },
@@ -1023,6 +1173,12 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "média %@ bpm"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "media %@ bpm"
           }
         }
       }
@@ -1079,6 +1235,12 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "intervalo de %@ a %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "intervallo da %@ a %@"
           }
         }
       }

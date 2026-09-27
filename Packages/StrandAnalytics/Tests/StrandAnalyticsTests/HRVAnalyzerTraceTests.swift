@@ -30,17 +30,22 @@ final class HRVAnalyzerTraceTests: XCTestCase {
         XCTAssertTrue(lines.contains { $0.contains("result=nil") })
     }
 
-    func testTraceReportsRangeAndEctopicRejection() {
-        // 21 in-range near 800 + one 250 ms (out of range) + one wild 1600 ms (ectopic vs ~800 median).
-        var rr: [Double] = Array(repeating: 800.0, count: 21)
-        rr.insert(250.0, at: 0)       // out of range (< rrMinMs)
-        rr.insert(1600.0, at: 5)      // in range but >20% off the local median → ectopic
+    func testTraceReportsDropsAndCorrections() {
+        // 60 realistic beats with one dropout (100 ms, below the 150 ms hard bound) and one missed beat (two
+        // intervals merged into one): the dropout is dropped, the missed beat is split back.
+        var rr = RRFixtures.resting(count: 60, seed: 21)
+        rr[30] += rr[31]
+        rr.remove(at: 31)
+        rr.insert(100, at: 10)
         let (traced, lines) = HRVAnalyzer.analyzeTrace(rawRR: rr)
         XCTAssertEqual(traced, HRVAnalyzer.analyze(rawRR: rr))
-        let rejectLine = lines.first { $0.hasPrefix("hrv reject ") }
-        XCTAssertNotNil(rejectLine)
-        XCTAssertTrue(rejectLine!.contains("range=1"))
-        XCTAssertTrue(rejectLine!.contains("ectopic=1"))
+        XCTAssertEqual(traced.nClean, 60)
+        let line = lines.first { $0.hasPrefix("hrv dropped=") }
+        XCTAssertNotNil(line)
+        XCTAssertTrue(line!.contains("dropped=1 "))
+        XCTAssertTrue(line!.contains("corrected=1 "))
+        XCTAssertTrue(line!.contains("Lipponen-Tarvainen: ectopic=0 missed=1 extra=0 longShort=0"))
+        XCTAssertFalse(lines.contains { $0.contains("\u{2014}") })
     }
 
     func testSpotGateLineOnlyWhenCeilingSupplied() {

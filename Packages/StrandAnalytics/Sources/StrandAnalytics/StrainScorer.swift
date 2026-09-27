@@ -235,6 +235,14 @@ public enum StrainScorer {
 
     private static func strainUncached(_ hr: [HRSample], maxHR: Double?, restingHR: Double,
                                        method: Method, sex: String, denominator: Double) -> Double? {
+        trimp(hr, maxHR: maxHR, restingHR: restingHR, method: method, sex: sex)
+            .map { trimpToStrain($0, denominator: denominator) }
+    }
+
+    /// The heart-rate TRIMP behind `strain`, or nil under the same data gates (too little HR, or
+    /// maxHR ≤ restingHR).
+    public static func trimp(_ hr: [HRSample], maxHR: Double?, restingHR: Double = defaultRestingHR,
+                             method: Method = .edwards, sex: String = "male") -> Double? {
         let effMax = maxHR ?? Double(defaultMaxHR())
         // Enough data to trust the score: a dense stream (≥ minReadings) OR a sparse-but-sustained
         // one spanning ≥ minSpanSeconds with a sample floor (#482 — the 5/MG's ~30 s HR cadence).
@@ -252,16 +260,122 @@ public enum StrainScorer {
         let sampleDur = sampleDurationMinutes(hr)
         let hrReserve = effMax - restingHR
 
-        let trimp: Double
         switch method {
         case .banister:
             let b = sex.lowercased().hasPrefix("f") ? banisterBWomen : banisterBMen
-            trimp = banisterTRIMP(hr, restingHR: restingHR, hrReserve: hrReserve,
-                                  sampleDurationMin: sampleDur, b: b)
+            return banisterTRIMP(hr, restingHR: restingHR, hrReserve: hrReserve,
+                                 sampleDurationMin: sampleDur, b: b)
         case .edwards:
-            trimp = edwardsTRIMP(hr, restingHR: restingHR, hrReserve: hrReserve,
-                                 sampleDurationMin: sampleDur)
+            return edwardsTRIMP(hr, restingHR: restingHR, hrReserve: hrReserve,
+                                sampleDurationMin: sampleDur)
         }
-        return trimpToStrain(trimp, denominator: denominator)
+    }
+
+    // MARK: - Logged sessions (session-RPE)
+    //
+    // Heart rate under-reads resistance and mixed-modal training: short maximal efforts, heavy sets and
+    // rest between them load the muscles far more than the pulse shows, and wrist PPG reads low during
+    // lifting. The validated way to quantify such a session is its session-RPE load, the Borg CR-10
+    // rating times the duration (Foster et al., J Strength Cond Res 2001;15:109–115; reliable in resistance
+    // training, Day et al., J Strength Cond Res 2004;18:353–358; review: Haddad et al., Front Neurosci
+    // 2017;11:612). In high-intensity functional training (CrossFit-style WODs) session-RPE tracks the
+    // Edwards TRIMP closely (r = 0.83–0.87) and the two scale as TRIMP ≈ 0.52 × session-RPE (Tibana et al.,
+    // Sports 2018;6:68: Fran 19.8 / (8.7 × 4.06 min) = 0.56, Fight Gone Bad 77.7 / (9.6 × 17 min) = 0.48).
+    //
+    // A logged session therefore adds the part of 0.52 × its session-RPE load that the heart rate recorded
+    // for it does not already show. The comparison is made on the classic Edwards scale (zones at 50–90% of
+    // HRmax) that ratio was measured on. It is never negative, so a session the heart rate fully captured
+    // (a typical metcon) adds nothing and nothing is counted twice.
+
+    /// A logged training session (e.g. a WOD) with its perceived exertion.
+    public struct LoggedSession: Equatable, Sendable {
+        /// Session rating on Foster's modified Borg CR-10 scale (0–10).
+        public let rpe: Double
+        /// Duration of the rated effort, minutes.
+        public let durationMin: Double
+        /// When it was logged (unix seconds). It may mark the start or the end of the session.
+        public let ts: Int
+        /// False when only the date is known (imports anchor such entries to local noon).
+        public let timeKnown: Bool
+        public init(rpe: Double, durationMin: Double, ts: Int, timeKnown: Bool) {
+            self.rpe = rpe; self.durationMin = durationMin; self.ts = ts; self.timeKnown = timeKnown
+        }
+        /// Foster's session-RPE load (arbitrary units).
+        public var load: Double { rpe * durationMin }
+    }
+
+    /// Edwards TRIMP per session-RPE unit in functional-fitness sessions (Tibana et al. 2018).
+    public static let trimpPerSessionRPE: Double = 0.52
+
+    /// How far from its logged time a detected workout can sit and still be the logged session (seconds).
+    static let sessionMatchSlackS = 3_600
+
+    /// The heart-rate window that recorded each logged session: the detected workout (`bouts`) that best
+    /// overlaps it — within an hour either side when the time is known, anywhere in the day otherwise —
+    /// else the span the session could occupy whether its time marks the start or the end.
+    public static func sessionWindows(_ sessions: [LoggedSession], bouts: [(start: Int, end: Int)],
+                                      dayStart: Int, dayEnd: Int) -> [(expected: Double, start: Int, end: Int)] {
+        var used = Set<Int>()
+        return sessions.compactMap { s in
+            guard s.rpe > 0, s.durationMin > 0 else { return nil }
+            let expected = trimpPerSessionRPE * s.load
+            let dur = Int((s.durationMin * 60).rounded())
+            let core = s.timeKnown ? (lo: s.ts - dur, hi: s.ts + dur) : (lo: dayStart, hi: dayEnd)
+            let search = s.timeKnown ? (lo: core.lo - sessionMatchSlackS, hi: core.hi + sessionMatchSlackS) : core
+            func overlap(_ b: (start: Int, end: Int)) -> Int { max(0, min(b.end, search.hi) - max(b.start, search.lo)) }
+            let candidates = bouts.indices.filter { !used.contains($0) && overlap(bouts[$0]) > 0 }
+            if let best = candidates.max(by: { overlap(bouts[$0]) < overlap(bouts[$1]) }) {
+                used.insert(best)
+                return (expected, bouts[best].start, bouts[best].end)
+            }
+            return s.timeKnown ? (expected, max(dayStart, core.lo), min(dayEnd, core.hi)) : (expected, 0, 0)
+        }
+    }
+
+    /// Classic Edwards (1993) TRIMP: minutes at 50–60, 60–70, 70–80, 80–90 and 90–100% of HRmax weighted 1–5.
+    static func classicEdwardsTRIMP(_ hr: [HRSample], maxHR: Double, sampleDurationMin: Double) -> Double {
+        guard maxHR > 0 else { return 0 }
+        var weighted = 0
+        for s in hr {
+            let pct = Double(s.bpm) / maxHR * 100
+            if pct >= 90 { weighted += 5 } else if pct >= 80 { weighted += 4 } else if pct >= 70 { weighted += 3 }
+            else if pct >= 60 { weighted += 2 } else if pct >= 50 { weighted += 1 }
+        }
+        return Double(weighted) * sampleDurationMin
+    }
+
+    /// TRIMP the logged sessions add on top of the heart-rate TRIMP: for each window (sessions sharing one
+    /// are pooled), the expected TRIMP minus the classic Edwards TRIMP the heart rate recorded there, floored
+    /// at zero. A window with no heart rate at all (strap off during the session) contributes in full.
+    public static func sessionExcessTRIMP(_ windows: [(expected: Double, start: Int, end: Int)],
+                                          hr: [HRSample], maxHR: Double) -> Double {
+        var pooled: [(start: Int, end: Int, expected: Double)] = []
+        for w in windows.sorted(by: { $0.start < $1.start }) {
+            if let last = pooled.last, w.end > w.start, last.end > last.start, w.start < last.end {
+                pooled[pooled.count - 1] = (last.start, max(last.end, w.end), last.expected + w.expected)
+            } else {
+                pooled.append((w.start, w.end, w.expected))
+            }
+        }
+        let sampleDur = sampleDurationMinutes(hr)
+        return pooled.reduce(0) { acc, w in
+            let inWindow = w.end > w.start ? hr.filter { $0.ts >= w.start && $0.ts < w.end } : []
+            return acc + max(0, w.expected - classicEdwardsTRIMP(inWindow, maxHR: maxHR, sampleDurationMin: sampleDur))
+        }
+    }
+
+    /// Day Effort with logged sessions folded in: the heart-rate TRIMP plus `sessionExcessTRIMP`, through
+    /// the same logarithmic map. nil exactly when the heart-rate `strain` is nil — a log alone never makes
+    /// an Effort. With no sessions this is `strain(_:maxHR:restingHR:sex:)`.
+    public static func strain(_ hr: [HRSample], maxHR: Double?, restingHR: Double, sex: String,
+                              sessions: [LoggedSession], bouts: [(start: Int, end: Int)],
+                              dayStart: Int, dayEnd: Int) -> Double? {
+        guard sessions.contains(where: { $0.rpe > 0 && $0.durationMin > 0 }) else {
+            return strain(hr, maxHR: maxHR, restingHR: restingHR, sex: sex)
+        }
+        guard let base = trimp(hr, maxHR: maxHR, restingHR: restingHR, sex: sex) else { return nil }
+        let windows = sessionWindows(sessions, bouts: bouts, dayStart: dayStart, dayEnd: dayEnd)
+        let extra = sessionExcessTRIMP(windows, hr: hr, maxHR: maxHR ?? Double(defaultMaxHR()))
+        return trimpToStrain(base + extra)
     }
 }

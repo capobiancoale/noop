@@ -23,7 +23,7 @@ public func sportSymbol(_ sport: String) -> String {
     case s.contains("box"):                         return "figure.boxing"
     case s.contains("martial") || s.contains("jiu") || s.contains("judo") || s.contains("karate"):
                                                      return "figure.martial.arts"
-    case s.contains("hiit") || s.contains("functional"):
+    case s.contains("hiit") || s.contains("functional") || s.contains("crossfit") || s.contains("wod"):
                                                      return "figure.highintensity.intervaltraining"
     case s.contains("elliptical"):                  return "figure.elliptical"
     case s.contains("snowboard"):                   return "figure.snowboarding"

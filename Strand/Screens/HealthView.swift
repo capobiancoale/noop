@@ -665,7 +665,7 @@ private struct FitnessAgeSection: View {
     ///   screens aren't hosted in a per-screen NavigationStack, so a sheet is the in-app drill-down.
     /// - `.settings`: Settings (the profile card) so a required-missing input can be filled in place.
     private enum FitnessSheet: String, Identifiable {
-        case trend, settings
+        case trend, settings, vo2max
         var id: String { rawValue }
     }
     @State private var fitnessSheet: FitnessSheet?
@@ -693,6 +693,7 @@ private struct FitnessAgeSection: View {
             SectionHeader("Fitness Age", overline: "Weekly",
                           trailing: fitnessAge != nil ? String(localized: "vs age \(profile.age)") : nil)
             content
+            vo2maxLink
         }
         .sheet(item: $fitnessSheet) { which in
             NavigationStack {
@@ -701,6 +702,8 @@ private struct FitnessAgeSection: View {
                     if let m = fitnessAgeMetric { MetricDetailView(metric: m) }
                 case .settings:
                     SettingsView()
+                case .vo2max:
+                    VO2maxView()
                 }
             }
             #if os(macOS)
@@ -731,6 +734,36 @@ private struct FitnessAgeSection: View {
             // Brief read of the weekly value; honest placeholder rather than an empty gap.
             ComingSoon(what: "Reading your Fitness Age…", symbol: "figure.run")
         }
+    }
+
+    /// Opens the VO₂max screen: the estimate from runs and walks, the one at rest and the user's own values.
+    private var vo2maxLink: some View {
+        Button { fitnessSheet = .vo2max } label: {
+            HStack(spacing: NoopMetrics.space3) {
+                Image(systemName: "lungs.fill")
+                    .foregroundStyle(StrandPalette.metricCyan)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("VO₂max").font(StrandFont.subhead).foregroundStyle(StrandPalette.textPrimary)
+                    Text("From your runs and walks, at rest, and your own values")
+                        .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .accessibilityHidden(true)
+            }
+            .padding(NoopMetrics.space4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                FrostedCardSurface(tint: StrandPalette.metricCyan, cornerRadius: NoopMetrics.cardRadius)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(LiquidPressStyle())
+        .accessibilityLabel("VO₂max: from your runs and walks, at rest, and your own values")
     }
 
     /// The hero vessel's fill (0…1): younger reads FULLER. Maps a fitness age across a 20…70-year span
@@ -785,7 +818,7 @@ private struct FitnessAgeSection: View {
                     Spacer(minLength: 0)
                     if let vo2 = vo2max {
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text("VO₂max").strandOverline()
+                            Text("VO₂max at rest").strandOverline()
                             Text(String(format: "%.0f", vo2))
                                 .font(StrandFont.number(30))
                                 .foregroundStyle(StrandPalette.metricCyan)

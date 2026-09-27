@@ -72,22 +72,28 @@ public enum FitnessAgeEngine {
         return min(maxAge, max(minAge, fa))
     }
 
+    /// HUNT frequency score for the number of active days in the last 7. The HUNT PA-Q scores its answers
+    /// never / less than once a week 0, once a week 1, 2–3 times a week 2.5, almost every day 5 (Kurtze 2008;
+    /// coding as published by Nauman, Nes et al., PLoS One 2012, the HUNT resting-HR / VO₂peak study). Four
+    /// days sits nearer "2–3 times" than "almost every day", so it scores 2.5.
+    static func huntFrequencyScore(activeDaysPerWeek: Int) -> Double {
+        switch activeDaysPerWeek {
+        case ..<1:  return 0.0          // never / less than once a week
+        case 1:     return 1.0          // once a week
+        case 2...4: return 2.5          // 2–3 times a week
+        default:    return 5.0          // 5+ days ≈ "almost every day"
+        }
+    }
+
     /// Reconstruct the HUNT PA-index (0–15 = frequency×intensity×duration) from measured weekly
     /// aggregates. Bucket edges mirror the HUNT1 PA-Q response options (Kurtze 2008):
-    ///   frequency ∈ {0.0, 0.5, 1.0, 2.5, 5.0}  ← active days in the last 7
+    ///   frequency ∈ {0, 1, 2.5, 5}             ← active days in the last 7 (huntFrequencyScore)
     ///   intensity ∈ {1, 2, 3}                  ← share of active time at high intensity (HR zone 4–5)
     ///   duration  ∈ {0.10, 0.38, 0.75, 1.0}    ← average active minutes per active day
     public static func physicalActivityIndex(activeDaysPerWeek: Int,
                                              avgActiveMinutesPerDay: Double,
                                              highIntensityFraction: Double) -> Double {
-        let frequency: Double
-        switch activeDaysPerWeek {
-        case ..<1: frequency = 0.0
-        case 1:    frequency = 0.5
-        case 2:    frequency = 1.0
-        case 3...4: frequency = 2.5
-        default:   frequency = 5.0          // 5+ days ≈ "almost every day"
-        }
+        let frequency = huntFrequencyScore(activeDaysPerWeek: activeDaysPerWeek)
         let intensity: Double
         switch highIntensityFraction {
         case ..<0.15: intensity = 1.0       // easy, no real sweat
@@ -114,14 +120,7 @@ public enum FitnessAgeEngine {
     /// strain ≈60) lands near PA-index 5.
     public static func physicalActivityIndexFromStrain(activeDaysPerWeek: Int,
                                                        meanActiveStrain: Double) -> Double {
-        let frequency: Double
-        switch activeDaysPerWeek {
-        case ..<1: frequency = 0.0
-        case 1:    frequency = 0.5
-        case 2:    frequency = 1.0
-        case 3...4: frequency = 2.5
-        default:   frequency = 5.0
-        }
+        let frequency = huntFrequencyScore(activeDaysPerWeek: activeDaysPerWeek)
         if frequency == 0 { return 0 }
         let intensityDuration = min(3.0, max(0.0, meanActiveStrain / 30.0))   // strain 30→1, 60→2, 90→3
         return frequency * intensityDuration

@@ -802,20 +802,29 @@ final class SleepStagerTests: XCTestCase {
     }
 
     func testSessionAvgHRVRejectsEctopicSpikes() {
-        // A 5-min window of steady ~900 ms beats (≈67 bpm) with a +600 ms ectopic
-        // spike every 15th beat — the shape of PPG-derived 0x2A37 RR on a WHOOP 5/MG.
-        // rMSSD is built from SUCCESSIVE differences, so the spikes would inflate the
-        // session HRV if left in. cleanRR's Malik ectopic rejection drops them, so the
-        // cleaned series is steady → HRV ≈ 0. Pre-fix (rangeFilter only) this path
-        // returned ~200 ms; this guards the #262/#235 fix against regression.
-        var rr: [RRInterval] = []
+        // Five minutes of realistic resting beats (~900 ms) carrying the shape of PPG-derived 0x2A37 RR on a
+        // WHOOP 5/MG: +600 ms spikes. rMSSD is built from SUCCESSIVE differences, so spikes left in inflate
+        // the session HRV (pre-fix this path returned ~200 ms; guards the #262/#235 fix). Lipponen–Tarvainen
+        // corrects them; a window that needed more than 5% of its beats corrected (Kubios' acceptance
+        // threshold) is excluded rather than averaged in.
         let start = 1000, end = start + 300
-        for i in 0..<300 {
-            rr.append(RRInterval(ts: start + i, rrMs: (i % 15 == 0) ? 1500 : 900))
-        }
-        let hrv = SleepStager.sessionAvgHRV(start: start, end: end, rr: rr)
+        let truth = RRFixtures.resting(count: 330, seed: 31)
+        let truthHrv = SleepStager.sessionAvgHRV(start: start, end: end, rr: RRFixtures.timed(truth, start: start))
+        XCTAssertNotNil(truthHrv)
+
+        // (a) A spike every 25th beat (~4%): corrected, so the session HRV stays near the artefact-free value
+        // instead of the ~5x the raw series gives.
+        var sparse = truth
+        for i in stride(from: 12, to: sparse.count, by: 25) { sparse[i] += 600 }
+        let hrv = SleepStager.sessionAvgHRV(start: start, end: end, rr: RRFixtures.timed(sparse, start: start))
         XCTAssertNotNil(hrv)
-        XCTAssertLessThan(hrv!, 50, "ectopic spikes must be rejected before rMSSD")
+        XCTAssertEqual(hrv!, truthHrv!, accuracy: 0.15 * truthHrv!, "ectopic spikes must be corrected before rMSSD")
+        XCTAssertGreaterThan(HRVAnalyzer.rmssdRaw(sparse)!, 4 * truthHrv!)
+
+        // (b) A spike every 15th beat (~7%): too much repair, so the window is excluded, never an inflated value.
+        var dense = truth
+        for i in stride(from: 7, to: dense.count, by: 15) { dense[i] += 600 }
+        XCTAssertNil(SleepStager.sessionAvgHRV(start: start, end: end, rr: RRFixtures.timed(dense, start: start)))
     }
 
     // MARK: - Helper robustness

@@ -182,12 +182,18 @@ public enum StressOnsetDetector {
                             nextState: state)
         }
 
-        // 2) Fast RMSSD over the latest clean beats. Clean first (range + Malik), then take the tail.
-        let cleanAll = HRVAnalyzer.cleanRR(rrBuffer.map { Double($0) })
-        let fastWindow = cleanAll.count > fastWindowBeats
-            ? Array(cleanAll.suffix(fastWindowBeats))
-            : cleanAll
-        guard fastWindow.count >= minBeats, let fast = HRVAnalyzer.rmssdRaw(fastWindow), fast > 0 else {
+        // 2) Fast RMSSD over the latest clean beats. Clean first (the shared Lipponen–Tarvainen pipeline),
+        //    then take the newest `fastWindowBeats` beats run by run, so no successive difference spans a
+        //    split where an implausible interval was removed.
+        var fastWindow: [[Double]] = []
+        var needed = fastWindowBeats
+        for run in HRVAnalyzer.clean(rrBuffer.map { Double($0) }).segments.reversed() where needed > 0 {
+            let part = Array(run.suffix(needed))
+            fastWindow.insert(part, at: 0)
+            needed -= part.count
+        }
+        let fastBeats = fastWindow.reduce(0) { $0 + $1.count }
+        guard fastBeats >= minBeats, let fast = HRVAnalyzer.rmssd(segments: fastWindow), fast > 0 else {
             // Not enough signal — report, don't guess. Edge state is preserved (no crossing observed).
             return Decision(shouldNudge: false, reason: .insufficientData, buzzLoops: config.buzzLoops,
                             fastRMSSD: nil, baselineRMSSD: state.baselineRMSSD > 0 ? state.baselineRMSSD : nil,

@@ -162,7 +162,11 @@ enum WorkoutSource: Equatable {
     /// touching) keeps two genuinely back-to-back same-sport sessions distinct while still catching the
     /// small start/end drift between a live capture and its import.
     static func sameActivity(_ a: WorkoutRow, _ b: WorkoutRow) -> Bool {
-        guard sportKey(a.sport) == sportKey(b.sport) else { return false }
+        sportKey(a.sport) == sportKey(b.sport) && overlapsMostly(a, b)
+    }
+
+    /// The time half of `sameActivity`: the two windows overlap by more than half of the shorter session.
+    static func overlapsMostly(_ a: WorkoutRow, _ b: WorkoutRow) -> Bool {
         let overlap = min(a.endTs, b.endTs) - max(a.startTs, b.startTs)
         guard overlap > 0 else { return false }
         let shorter = max(1, min(a.endTs - a.startTs, b.endTs - b.startTs))
@@ -222,15 +226,25 @@ enum WorkoutSource: Equatable {
     /// the kept row swapped for the richer of the two). Single-source lists pass through unchanged.
     /// #975: a DETECTED bout that shadows a real logged session is dropped FIRST so the transient
     /// live+detected duplicate never shows and can't pollute the Effort/HR read-out.
+    ///
+    /// A row can only duplicate a kept row of its own sport (`sameActivity`), and a kept row keeps its sport
+    /// key when the richer twin replaces it, so the kept rows of each sport key are listed by their index in
+    /// `kept`, in order: the first match in that list is the first match in `kept`. The sport key (string
+    /// folding) is worked out once per row instead of twice per pair compared. Same result as comparing every
+    /// pair; on a long history (a WHOOP export plus the same workouts from Apple Health, 1,000–2,000 rows) the
+    /// pairwise walk took seconds on the main actor at every workout list read, this takes milliseconds.
     static func dedupCrossSource(_ rows: [WorkoutRow]) -> [WorkoutRow] {
         var kept: [WorkoutRow] = []
         let input = dropDetectedShadows(rows)
         kept.reserveCapacity(input.count)
+        var keptBySport: [String: [Int]] = [:]
         outer: for row in input {
-            for i in kept.indices where sameActivity(kept[i], row) {
+            let key = sportKey(row.sport)
+            for i in keptBySport[key] ?? [] where overlapsMostly(kept[i], row) {
                 kept[i] = preferred(kept[i], row)
                 continue outer
             }
+            keptBySport[key, default: []].append(kept.count)
             kept.append(row)
         }
         return kept
@@ -275,8 +289,11 @@ enum WorkoutSource: Equatable {
             input.append(row)
         }
         kept.reserveCapacity(input.count)
+        // The same walk as dedupCrossSource: each sport key's kept rows, in order.
+        var keptBySport: [String: [Int]] = [:]
         outer: for row in input {
-            for i in kept.indices where sameActivity(kept[i], row) {
+            let key = sportKey(row.sport)
+            for i in keptBySport[key] ?? [] where overlapsMostly(kept[i], row) {
                 // L8: identify kept-vs-dropped by the REAL keep decision, not by a (startTs, source) tuple
                 // that collides when row and kept[i] share both fields (e.g. a same-start same-source pair
                 // differing only in richness). preferred() returns one of the two rows; a full-row ==
@@ -292,6 +309,7 @@ enum WorkoutSource: Equatable {
                 kept[i] = winner
                 continue outer
             }
+            keptBySport[key, default: []].append(kept.count)
             kept.append(row)
         }
         return (kept, lines)

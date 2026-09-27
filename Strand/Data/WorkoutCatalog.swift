@@ -44,6 +44,7 @@ enum WorkoutCatalog {
         Sport(name: "Bodybuilding", isDistanceSport: false),
         Sport(name: "Weightlifting", isDistanceSport: false),
         Sport(name: "HIIT", isDistanceSport: false),
+        Sport(name: "CrossFit", isDistanceSport: false),
         Sport(name: "Yoga", isDistanceSport: false),
         Sport(name: "Pilates", isDistanceSport: false),
         Sport(name: "Boxing", isDistanceSport: false),

@@ -1,6 +1,7 @@
 import SwiftUI
 import StrandDesign
 import WhoopStore
+import StrandImport
 import Foundation
 
 // MARK: - Apple Health (per-source page) — locked component system
@@ -99,7 +100,15 @@ struct AppleHealthView: View {
     private static let seriesKeys = [
         "steps", "active_kcal", "vo2max",
         "resting_hr", "hrv", "spo2", "resp_rate", "asleep_min",
-        "weight", "body_fat", "lean_mass", "bmi"
+        "weight", "body_fat", "lean_mass", "bmi",
+        // Diabetes data written into Health by an AID app (e.g. Loop). Read-only, informational.
+        "glucose_avg", "glucose_min", "glucose_max",
+        "glucose_tir", "glucose_tbr", "glucose_tbr_severe", "glucose_tar", "glucose_tar_high",
+        "glucose_cv", "glucose_hypos", "glucose_overnight_avg", "glucose_overnight_min",
+        "insulin_total", "insulin_basal", "insulin_bolus", "carbs_g",
+        "glucose_postex_min", "glucose_postex_lows",
+        // Vitals/body extras for a diabetic athlete.
+        "bp_systolic", "bp_diastolic", "water", "waist"
     ]
 
     // yyyy-MM-dd → Date (en_US_POSIX / UTC), per the project's date contract.
@@ -231,6 +240,7 @@ struct AppleHealthView: View {
                     activitySection
                     bodySection
                     sleepSection
+                    if hasGlucoseData { glucoseSection }
                 }
             }
         }
@@ -418,7 +428,7 @@ struct AppleHealthView: View {
                     Button {
                         Task {
                             await health.requestAuthorization()
-                            await health.sync()
+                            await health.sync(userInitiated: true)
                             await load()
                         }
                     } label: {
@@ -434,26 +444,56 @@ struct AppleHealthView: View {
                     }
 
                 case .authorized:
-                    if let last = health.lastSync {
-                        Text("Last synced \(relativeAgo(last.timeIntervalSince1970)).")
-                            .font(StrandFont.subhead)
-                            .foregroundStyle(StrandPalette.textSecondary)
+                    if health.syncing {
+                        HealthImportProgressBlock(progress: health.importProgress, pause: { health.pauseSync() })
                     } else {
-                        Text("Connected. Reading on launch and when you return to NOOP.")
-                            .font(StrandFont.subhead)
-                            .foregroundStyle(StrandPalette.textSecondary)
-                    }
-                    Button {
-                        Task {
-                            await health.sync()
-                            await load()
+                        if let last = health.lastSync {
+                            Text("Last synced \(relativeAgo(last.timeIntervalSince1970)).")
+                                .font(StrandFont.subhead)
+                                .foregroundStyle(StrandPalette.textSecondary)
+                        } else {
+                            Text("Connected. Reading on launch and when you return to NOOP.")
+                                .font(StrandFont.subhead)
+                                .foregroundStyle(StrandPalette.textSecondary)
                         }
-                    } label: {
-                        Label("Sync now", systemImage: "arrow.triangle.2.circlepath")
+                        let history = health.historyFraction
+                        if history < 1 {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text("History, last 14 months")
+                                    Spacer()
+                                    Text(history, format: .percent.precision(.fractionLength(0)))
+                                        .font(StrandFont.captionNumber)
+                                }
+                                .font(StrandFont.caption)
+                                .foregroundStyle(StrandPalette.textSecondary)
+                                ProgressView(value: history)
+                                    .tint(StrandPalette.metricCyan)
+                            }
+                        }
+                        Button {
+                            Task {
+                                await health.sync(userInitiated: true)
+                                await load()
+                            }
+                        } label: {
+                            if history < 1 {
+                                Label("Resume import", systemImage: "arrow.down.circle")
+                            } else {
+                                Label("Sync now", systemImage: "arrow.triangle.2.circlepath")
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(StrandPalette.metricCyan)
+                        .disabled(health.syncing)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(StrandPalette.metricCyan)
-                    .disabled(health.syncing)
+                    if let note = health.statusNote {
+                        Text(note)
+                            .font(StrandFont.footnote)
+                            .foregroundStyle(StrandPalette.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    writeStatus
                 }
 
                 if let err = health.lastError {
@@ -463,6 +503,59 @@ struct AppleHealthView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+        }
+    }
+
+    /// What NOOP writes into Apple Health, when it last did and what, and a button when a kind it writes
+    /// was never offered (heart rate, added later).
+    private var writeStatus: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Divider().padding(.vertical, 2)
+            Text("Written to Apple Health")
+                .font(StrandFont.subhead.weight(.semibold))
+                .foregroundStyle(StrandPalette.textPrimary)
+            Text("Heart rate minute by minute, sleep with its stages, workouts and WODs (with their heart rate, energy and time in each zone), VO₂max, and each day's resting heart rate, HRV, SpO₂ and respiratory rate. Each time NOOP syncs, it adds what's new.")
+                .font(StrandFont.footnote)
+                .foregroundStyle(StrandPalette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let at = health.lastWrite {
+                Group {
+                    if let summary = health.lastWriteSummary {
+                        Text("Last written \(relativeAgo(at.timeIntervalSince1970)): \(summary).")
+                    } else {
+                        Text("Last checked \(relativeAgo(at.timeIntervalSince1970)): nothing new to write.")
+                    }
+                }
+                .font(StrandFont.footnote)
+                .foregroundStyle(StrandPalette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            if let err = health.writeError {
+                Text(err)
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.statusCritical)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if health.writePermissionNeeded {
+                Button {
+                    Task {
+                        await health.requestAuthorization()
+                        await health.writeToHealth(force: true)
+                    }
+                } label: {
+                    Label("Allow writing heart rate, workouts and VO₂max", systemImage: "heart.text.square")
+                }
+                .buttonStyle(.bordered)
+                .tint(StrandPalette.metricCyan)
+            }
+            Text("Charge, Effort, Rest, Stress and NOOP's other scores have no place in Apple Health, so they stay in NOOP. Steps and the day's calories aren't written either: the iPhone counts them too, and Health would count them twice.")
+                .font(StrandFont.caption)
+                .foregroundStyle(StrandPalette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("To check: Health app › Browse › Heart › Heart Rate › Data Sources & Access. If a kind is switched off there, NOOP can't write it.")
+                .font(StrandFont.caption)
+                .foregroundStyle(StrandPalette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
     #endif
@@ -601,6 +694,28 @@ struct AppleHealthView: View {
             chartCard(title: "BMI", key: "bmi",
                       gradient: purpleGradient, fallback: 16...35,
                       fmt: { String(format: "%.1f", $0) })
+            // Vitals extras (blood pressure, hydration, waist) — shown only when Apple Health actually
+            // carries them, so a user without these never sees an empty card. Read-only.
+            if !raw("bp_systolic").isEmpty {
+                chartCard(title: "Blood pressure (systolic)", key: "bp_systolic",
+                          gradient: roseGradient, fallback: 90...160,
+                          fmt: { "\(Int($0.rounded())) mmHg" })
+            }
+            if !raw("bp_diastolic").isEmpty {
+                chartCard(title: "Blood pressure (diastolic)", key: "bp_diastolic",
+                          gradient: roseGradient, fallback: 50...100,
+                          fmt: { "\(Int($0.rounded())) mmHg" })
+            }
+            if !raw("water").isEmpty {
+                chartCard(title: "Hydration", key: "water",
+                          gradient: cyanGradient, fallback: 0...4,
+                          fmt: { String(format: "%.1f L", $0) })
+            }
+            if !raw("waist").isEmpty {
+                chartCard(title: "Waist", key: "waist",
+                          gradient: amberGradient, fallback: 60...120,
+                          fmt: { String(format: "%.1f cm", $0) })
+            }
         }
     }
 
@@ -612,6 +727,103 @@ struct AppleHealthView: View {
                       gradient: purpleGradient, fallback: 240...600,
                       fmt: { durationString($0) })
         }
+    }
+
+    /// True when Apple Health actually carries diabetes data (an automated-insulin-delivery app like
+    /// Loop writing glucose/insulin/carbs). Gates the whole Glucose section so users without any of
+    /// this data never see an empty diabetes panel.
+    private var hasGlucoseData: Bool {
+        !raw("glucose_avg").isEmpty || !raw("insulin_total").isEmpty
+            || !raw("carbs_g").isEmpty || !raw("glucose_tir").isEmpty
+    }
+
+    /// Diabetes dashboard from Apple Health (an automated-insulin-delivery app such as Loop): headline
+    /// KPIs (Time-in-Range, GMI, variability, insulin, basal:bolus, overnight & post-exercise lows)
+    /// plus trend charts. READ-ONLY and informational — Apple Health lags the CGM/pump, so this is
+    /// never a treatment surface; the CGM app and Loop remain the source of truth for any dosing
+    /// decision. Every tile/chart shows "—" or "No readings recorded." when its data is absent.
+    private var glucoseSection: some View {
+        VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+            SectionHeader("Glucose & Insulin", overline: "From Apple Health",
+                          trailing: range.caption)
+            glucoseTiles
+            chartCard(title: "Glucose (daily average)", key: "glucose_avg",
+                      gradient: roseGradient, fallback: 70...180,
+                      fmt: { "\(Int($0.rounded())) mg/dL" })
+            chartCard(title: "Time in range", key: "glucose_tir",
+                      gradient: cyanGradient, fallback: 0...100,
+                      fmt: { "\(Int($0.rounded()))%" })
+            chartCard(title: "Insulin (total per day)", key: "insulin_total",
+                      gradient: accentGradient, fallback: 0...60,
+                      fmt: { String(format: "%.1f U", $0) })
+            chartCard(title: "Carbs (per day)", key: "carbs_g",
+                      gradient: amberGradient, fallback: 0...300,
+                      fmt: { "\(intString($0)) g" })
+        }
+    }
+
+    /// Headline diabetes KPIs as StatTiles. Series-backed tiles show the window mean (or "—" with no
+    /// data via `statTile`); GMI and the basal:bolus split are computed from the same windows and also
+    /// fall back to "—" when their inputs are absent — never a fabricated number.
+    private var glucoseTiles: some View {
+        LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 168), spacing: NoopMetrics.gap)],
+            alignment: .leading,
+            spacing: NoopMetrics.gap
+        ) {
+            statTile(key: "glucose_tir", label: "Time in Range",
+                     accent: StrandPalette.metricCyan, unit: "%",
+                     aggregate: .mean, fmt: { "\(Int($0.rounded()))" })
+            gmiTile
+            statTile(key: "glucose_avg", label: "Avg Glucose",
+                     accent: StrandPalette.metricRose, unit: "mg/dL",
+                     aggregate: .mean, fmt: { "\(Int($0.rounded()))" })
+            statTile(key: "glucose_cv", label: "Variability",
+                     accent: StrandPalette.metricPurple, unit: "%",
+                     aggregate: .mean, fmt: { "\(Int($0.rounded()))" })
+            statTile(key: "glucose_tbr", label: "Time Below",
+                     accent: StrandPalette.metricAmber, unit: "%",
+                     aggregate: .mean, fmt: { String(format: "%.1f", $0) })
+            statTile(key: "insulin_total", label: "Insulin / day",
+                     accent: StrandPalette.accent, unit: "U",
+                     aggregate: .mean, fmt: { String(format: "%.1f", $0) })
+            basalBolusTile
+            statTile(key: "glucose_overnight_min", label: "Overnight Low",
+                     accent: StrandPalette.metricPurple, unit: "mg/dL",
+                     aggregate: .mean, fmt: { "\(Int($0.rounded()))" })
+            statTile(key: "glucose_postex_min", label: "Post-exercise Low",
+                     accent: StrandPalette.metricCyan, unit: "mg/dL",
+                     aggregate: .mean, fmt: { "\(Int($0.rounded()))" })
+        }
+    }
+
+    /// GMI (Glucose Management Indicator / estimated A1c) from the window's mean glucose. "—" when
+    /// there is no glucose in the window.
+    private var gmiTile: some View {
+        let vals = resolvedWindow("glucose_avg").map(\.value)
+        let gmi = mean(vals).flatMap { DiabetesMetrics.gmiPercent(meanMgdl: $0) }
+        return StatTile(
+            label: "GMI / est. A1c",
+            value: gmi.map { String(format: "%.1f%%", $0) } ?? "—",
+            caption: gmi != nil ? String(localized: "est. from avg glucose") : nil,
+            accent: gmi != nil ? StrandPalette.metricPurple : StrandPalette.textTertiary
+        )
+    }
+
+    /// Basal : bolus split (percentage of total delivered insulin) over the window. "—" without any
+    /// insulin data — Loop only writes a basal/bolus reason on samples it authored.
+    private var basalBolusTile: some View {
+        let basal = resolvedWindow("insulin_basal").map(\.value).reduce(0, +)
+        let bolus = resolvedWindow("insulin_bolus").map(\.value).reduce(0, +)
+        let total = basal + bolus
+        let hasData = !resolvedWindow("insulin_basal").isEmpty || !resolvedWindow("insulin_bolus").isEmpty
+        let pctBasal = total > 0 ? Int((basal / total * 100).rounded()) : nil
+        return StatTile(
+            label: "Basal : Bolus",
+            value: (hasData && pctBasal != nil) ? "\(pctBasal!) / \(100 - pctBasal!)" : "—",
+            caption: (hasData && pctBasal != nil) ? String(localized: "% basal / bolus") : nil,
+            accent: hasData ? StrandPalette.accent : StrandPalette.textTertiary
+        )
     }
 
     /// One uniform ChartCard for a metric series: header + TrendChart body (same
@@ -888,5 +1100,55 @@ private func appleHealthPreviewData() -> AppleHealthView.PreviewData {
         .environmentObject(Repository(deviceId: "preview"))
         .frame(width: 920, height: 600)
         .preferredColorScheme(.dark)
+}
+#endif
+
+#if os(iOS)
+/// The running Apple Health import in detail, on the Apple Health card: how far, what it is reading and
+/// which days, that NOOP stays usable meanwhile, and a pause button (everything saved stays saved; it
+/// resumes from there). Observes only the import's progress object, so the chart-heavy screen around it
+/// doesn't re-render on every progress step.
+private struct HealthImportProgressBlock: View {
+    @ObservedObject var progress: HealthKitBridge.ImportProgress
+    let pause: () -> Void
+
+    var body: some View {
+        if let p = progress.current {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(p.isHistoryImport ? String(localized: "Importing from Apple Health")
+                         : String(localized: "Updating from Apple Health"))
+                        .font(StrandFont.subhead)
+                        .foregroundStyle(StrandPalette.textSecondary)
+                    Spacer()
+                    Text(p.fraction, format: .percent.precision(.fractionLength(0)))
+                        .font(StrandFont.captionNumber)
+                        .foregroundStyle(StrandPalette.textPrimary)
+                }
+                ProgressView(value: p.fraction)
+                    .tint(StrandPalette.metricCyan)
+                Text(verbatim: "\(p.step) · \(p.period)")
+                    .font(StrandFont.caption)
+                    .foregroundStyle(StrandPalette.textTertiary)
+                Text("You can keep using NOOP meanwhile: the import carries on while you look around.")
+                    .font(StrandFont.caption)
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if p.isHistoryImport {
+                    Text("The screen stays on until it's done: locking the iPhone pauses the import, and it resumes when you open NOOP again.")
+                        .font(StrandFont.caption)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Button(action: pause) {
+                    Label("Pause", systemImage: "pause.fill")
+                }
+                .buttonStyle(.bordered)
+                .tint(StrandPalette.metricCyan)
+            }
+        } else {
+            ProgressView()
+        }
+    }
 }
 #endif

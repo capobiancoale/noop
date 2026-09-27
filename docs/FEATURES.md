@@ -115,6 +115,29 @@ The home dashboard (`TodayView.swift`, titled "Control Center"). A tight, gaples
 
 ---
 
+## Today (liquid)
+
+**iPhone and Mac: the default Today (`LiquidTodayView.swift`).** Three blocks first, the rest folded:
+
+1. **Your state.** Charge, Effort and Rest as liquid vessels, and under them a one-word verdict (Push /
+   Maintain / Recover) with one sentence. Tap it for the signals behind it (HRV, resting HR, respiratory
+   rate, training load, training variety), each against your own baseline. While a score is still missing
+   today, a line says why; for Charge, how many of the 4 baseline nights are in. A night-time low from your
+   CGM sits right under this block, because Charge can't see it.
+2. **Glucose now** (only with CGM readings in Apple Health). The latest reading with a CGM-style trend arrow
+   and its age, the last three hours against the 70–180 mg/dL band, and the day's time in range, average and
+   lows. A past day shows that day's trace and figures. Informational only.
+3. **Today's workout.** The day's latest session: its Effort, time in heart-rate zones, glucose at its start
+   and end (with a note if it went below 70 during it or in the hour after) and the WOD logged for it. A
+   detected session asks what it was: rename it, or mark it as not a workout. **Log WOD** (dated when the
+   session started) and **Start session** (beta) sit here too; **All workouts** opens the full list.
+
+**Details** (folded until opened, and remembered) holds the rest: live heart rate, the Heart & Glucose
+timeline, recovery vitals, key metrics, Charge vs Effort over 30 days, the week, glucose & insulin, your
+cards and data sources.
+
+---
+
 ## Live
 
 **Sidebar: Live · needs a bonded strap for HR; the hardware-test surface.**

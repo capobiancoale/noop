@@ -220,6 +220,12 @@ final class AppModel: ObservableObject {
         // inert (one UserDefaults bool read) when the mode is off. `live` is captured strongly, as above.
         self.repo.workoutsLog = { [live] line in live.append(log: line, domain: .workouts) }
         self.gpsRecorder.workoutsLog = { [live] line in live.append(log: line, domain: .workouts) }
+        // A saved, edited or deleted WOD changes its day's Effort (its session-RPE load folds in where the
+        // heart rate under-reads it), so rescore the recent window like any other user edit.
+        let engine = self.intelligence
+        self.repo.onWodsChanged = { [weak engine] in
+            Task { @MainActor in await engine?.analyzeRecent() }
+        }
         // #961: give the read model the user's HRmax + sex so it can backfill a strap-native workout's
         // Effort on display when the stored value is nil (a live/manual session that ended with sparse HR).
         // Seed it now and keep it in step with any profile edit (objectWillChange fires just before a

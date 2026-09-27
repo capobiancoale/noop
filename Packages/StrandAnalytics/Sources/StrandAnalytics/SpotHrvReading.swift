@@ -10,8 +10,8 @@ import Foundation
 /// Why delegate to `HRVAnalyzer` (and NOT roll our own RMSSD):
 ///  - RMSSD is the textbook root-mean-square of successive R-R differences:
 ///        RMSSD = sqrt( mean( (RR[i+1] - RR[i])^2 ) )   in ms.
-///  - NOOP's nightly HRV (`avgHrv`, fed into Vitality / Fitness Age) uses `HRVAnalyzer.rmssdRaw`, which
-///    takes the Task Force (1996) SAMPLE denominator (n-1) over the cleaned NN series. To keep a spot
+///  - NOOP's nightly HRV (`avgHrv`, fed into Vitality / Fitness Age) uses `HRVAnalyzer`'s RMSSD, the mean of
+///    the (n-1) squared successive differences of the cleaned, adjacent NN beats (Task Force 1996). To keep a spot
 ///    reading COMPARABLE to the overnight number a user sees elsewhere, this path computes RMSSD the
 ///    SAME way (same cleaning pipeline, same (n-1) denominator). Using a population (n) denominator
 ///    would make the same beats read a few percent lower than the nightly figure, which is misleading.
@@ -49,8 +49,8 @@ public enum SpotHrvReading {
     }
 
     /// Compute a single spot HRV reading from the raw R-R intervals (ms) gathered during the live
-    /// capture window. Runs NOOP's canonical cleaning + RMSSD (range filter -> Malik ectopic rejection
-    /// -> (n-1) RMSSD), so the value matches the nightly HRV math. Returns `.insufficient` rather than a
+    /// capture window. Runs NOOP's canonical cleaning + RMSSD (plausibility split -> Lipponen–Tarvainen
+    /// correction -> (n-1) RMSSD over adjacent beats), so the value matches the nightly HRV math. Returns `.insufficient` rather than a
     /// number when too few clean beats survive — never a fabricated figure.
     ///
     /// - Parameters:

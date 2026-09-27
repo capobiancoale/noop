@@ -113,7 +113,7 @@ struct WorkoutDetailView: View {
             }
         }
         if minutes == nil {
-            minutes = await repo.workoutZoneMinutes(from: row.startTs, to: row.endTs, age: profile.age)
+            minutes = await repo.workoutZoneMinutes(from: row.startTs, to: row.endTs, maxHR: profile.hrMax)
         }
 
         await MainActor.run {
@@ -309,38 +309,13 @@ struct WorkoutDetailView: View {
     @ViewBuilder private var zonesCard: some View {
         if let z = zoneMinutes, z.reduce(0, +) > 0 {
             let total = z.reduce(0, +)
-            let busiest = z.indices.max(by: { z[$0] < z[$1] }) ?? 0
             VStack(alignment: .leading, spacing: NoopMetrics.gap) {
                 SectionHeader("HR Zones",
                               overline: zonesFromImport ? "Whoop import" : "From strap HR",
                               trailing: String(localized: "\(Int(total.rounded()))m in zone"))
                 NoopCard(tint: StrandPalette.effortColor) {
                     VStack(alignment: .leading, spacing: 12) {
-                        GeometryReader { geo in
-                            HStack(spacing: 2) {
-                                ForEach(0..<5, id: \.self) { i in
-                                    Rectangle()
-                                        .fill(StrandPalette.hrZoneColor(i + 1))
-                                        .frame(width: max(0, CGFloat(z[i] / total) * geo.size.width))
-                                        .overlay {
-                                            if i == busiest {
-                                                Rectangle()
-                                                    .strokeBorder(StrandPalette.textPrimary.opacity(0.85), lineWidth: 1.5)
-                                            }
-                                        }
-                                }
-                            }
-                        }
-                        .frame(height: 34)
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(String(localized: "Heart-rate zone split: \((1...5).map { String(localized: "zone \($0) \(Int((z[$0 - 1] / total * 100).rounded())) percent") }.joined(separator: ", "))"))
-                        Divider().overlay(StrandPalette.hairline)
-                        HStack(spacing: 0) {
-                            ForEach(0..<5, id: \.self) { i in
-                                zoneStat(i + 1, minutes: z[i], total: total)
-                            }
-                        }
+                        HRZoneSplitView(minutes: z)
                         Text(zonesFromImport
                              ? "WHOOP's imported per-zone split for this session."
                              : "Time in each %HRmax zone, derived from the strap's heart rate over this window (approximate).")
@@ -350,24 +325,6 @@ struct WorkoutDetailView: View {
                 }
             }
         }
-    }
-
-    private func zoneStat(_ zone: Int, minutes: Double, total: Double) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 5) {
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(StrandPalette.hrZoneColor(zone))
-                    .frame(width: 9, height: 9)
-                Text("Z\(zone)" as String).strandOverline()
-            }
-            Text("\(Int((minutes / max(total, 0.001) * 100).rounded()))%")
-                .font(StrandFont.number(15))
-                .foregroundStyle(StrandPalette.textPrimary)
-            Text(durationLabel(minutes * 60))
-                .font(StrandFont.footnote)
-                .foregroundStyle(StrandPalette.textTertiary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Effort contribution

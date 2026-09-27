@@ -738,17 +738,18 @@ struct MetricDetailView: View {
                                    windowed: windowed,
                                    windowFellBack: windowFellBack)
         return VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(MetricCatalog.categoryDisplayName(metric.category).uppercased()).strandOverline()
-                    Text(metric.title)
-                        .font(StrandFont.title2)
-                        .foregroundStyle(StrandPalette.textPrimary)
-                }
-                Spacer()
-                SegmentedPillControl(ExploreRange.allCases, selection: selectionBinding,
-                                     isEnabled: isUnlocked) { $0.label }
+            // Category + title on their OWN full-width row (like the hero header) so a title such as
+            // "Nutrition"/"Protein" is never crushed letter-per-line by the range pill beside it; the
+            // range control then gets its own full-width row beneath, which also widens the pill bar.
+            VStack(alignment: .leading, spacing: 2) {
+                Text(MetricCatalog.categoryDisplayName(metric.category).uppercased()).strandOverline()
+                Text(metric.title)
+                    .font(StrandFont.title2)
+                    .foregroundStyle(StrandPalette.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            SegmentedPillControl(ExploreRange.allCases, selection: selectionBinding,
+                                 isEnabled: isUnlocked) { $0.label }
             Text(caption)
                 .font(StrandFont.footnote)
                 .foregroundStyle(windowFellBack ? StrandPalette.statusWarning : StrandPalette.textTertiary)

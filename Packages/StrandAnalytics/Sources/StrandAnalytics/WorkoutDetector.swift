@@ -299,40 +299,86 @@ public enum WorkoutDetector {
             if Double(end - start) < minDurS - motionSmoothS { continue }
             let window = hrSeg.filter { $0.ts >= start && $0.ts <= end }
             if window.isEmpty { continue }
-            let bpms = window.map { $0.bpm }
-            let hrSamples = window.map { HRSample(ts: $0.ts, bpm: Int($0.bpm.rounded())) }
-
-            var zonePct: [Int: Double] = [:]
-            var avgHRR: Double? = nil
-            if let m = effMaxHR, m > restHR {
-                (zonePct, avgHRR) = boutIntensity(window, restingHR: restHR, maxHR: m)
+            if let session = qualifiedSession(start: start, end: end, window: window, restHR: restHR,
+                                              effMaxHR: effMaxHR, hrmaxSource: hrmaxSource, profile: profile) {
+                sessions.append(session)
+                continue
             }
-
-            // Intensity qualification: require ≥ MIN_INTENSITY_Z2PLUS in zone 2+.
-            if !zonePct.isEmpty {
-                let z2plus = (2...5).reduce(0.0) { $0 + (zonePct[$1] ?? 0.0) } / 100.0
-                if z2plus < minIntensityZ2Plus { continue }
+            // A mixed session (a CrossFit class: warm-up, strength with rests, then the WOD, cool-down) keeps
+            // moving and its HR stays above the floor from start to end, so it is one long run, mostly below
+            // zone 2 as a whole: the intensity gate rejected all of it. Its intense stretches (the WOD) are
+            // workouts in their own right: each is qualified by the same rules.
+            guard let m = effMaxHR, m > restHR else { continue }
+            for core in intenseCores(window, restingHR: restHR, maxHR: m)
+            where Double(core.end - core.start) >= minDurS - motionSmoothS {
+                let coreWindow = window.filter { $0.ts >= core.start && $0.ts <= core.end }
+                if let session = qualifiedSession(start: core.start, end: core.end, window: coreWindow,
+                                                  restHR: restHR, effMaxHR: effMaxHR,
+                                                  hrmaxSource: hrmaxSource, profile: profile) {
+                    sessions.append(session)
+                }
             }
-
-            var kcal: Double? = nil
-            var kj: Double? = nil
-            if let profile = profile {
-                let (k, j) = Calories.estimateBoutCalories(hrSamples, profile: profile,
-                                                           hrmax: effMaxHR, restingHR: restHR)
-                kcal = k; kj = j
-            }
-
-            guard !bpms.isEmpty else { continue }   // skip a degenerate bout with no HR samples
-            let avg = bpms.reduce(0, +) / Double(bpms.count)
-            let peak = Int(bpms.max()!.rounded())
-            let strain = StrainScorer.strain(hrSamples, maxHR: effMaxHR, restingHR: restHR)
-
-            sessions.append(ExerciseSession(
-                start: start, end: end, avgHR: avg, peakHR: peak, strain: strain,
-                durationS: Double(end - start), zoneTimePct: zonePct, avgHRRPct: avgHRR,
-                hrmax: effMaxHR, hrmaxSource: hrmaxSource, caloriesKcal: kcal, caloriesKJ: kj))
         }
         return sessions
+    }
+
+    /// The stretches of a run where the heart rate is in zone 2 or above (60 % of heart-rate reserve, Edwards),
+    /// samples less than `mergeGapS` apart joined into one stretch (a brief rest inside a WOD stays in it).
+    static func intenseCores(_ window: [(ts: Int, bpm: Double)], restingHR: Double,
+                             maxHR: Double) -> [(start: Int, end: Int)] {
+        let reserve = maxHR - restingHR
+        guard reserve > 0 else { return [] }
+        var cores: [(start: Int, end: Int)] = []
+        var current: (start: Int, end: Int)?
+        for s in window where StrainScorer.zoneWeight(s.bpm, restingHR: restingHR, hrReserve: reserve) >= 2 {
+            if let c = current, Double(s.ts - c.end) <= mergeGapS {
+                current = (c.start, s.ts)
+            } else {
+                if let c = current { cores.append(c) }
+                current = (s.ts, s.ts)
+            }
+        }
+        if let c = current { cores.append(c) }
+        return cores
+    }
+
+    /// A bout over [start, end] with its heart-rate samples, or nil when it fails the intensity gate (at
+    /// least `minIntensityZ2Plus` of it in zone 2+, when the zones can be worked out).
+    static func qualifiedSession(start: Int, end: Int, window: [(ts: Int, bpm: Double)], restHR: Double,
+                                 effMaxHR: Double?, hrmaxSource: String,
+                                 profile: UserProfile?) -> ExerciseSession? {
+        let bpms = window.map { $0.bpm }
+        guard !bpms.isEmpty else { return nil }   // a degenerate bout with no HR samples
+        let hrSamples = window.map { HRSample(ts: $0.ts, bpm: Int($0.bpm.rounded())) }
+
+        var zonePct: [Int: Double] = [:]
+        var avgHRR: Double? = nil
+        if let m = effMaxHR, m > restHR {
+            (zonePct, avgHRR) = boutIntensity(window, restingHR: restHR, maxHR: m)
+        }
+
+        // Intensity qualification: require ≥ MIN_INTENSITY_Z2PLUS in zone 2+.
+        if !zonePct.isEmpty {
+            let z2plus = (2...5).reduce(0.0) { $0 + (zonePct[$1] ?? 0.0) } / 100.0
+            if z2plus < minIntensityZ2Plus { return nil }
+        }
+
+        var kcal: Double? = nil
+        var kj: Double? = nil
+        if let profile = profile {
+            let (k, j) = Calories.estimateBoutCalories(hrSamples, profile: profile,
+                                                       hrmax: effMaxHR, restingHR: restHR)
+            kcal = k; kj = j
+        }
+
+        let avg = bpms.reduce(0, +) / Double(bpms.count)
+        let peak = Int(bpms.max()!.rounded())
+        let strain = StrainScorer.strain(hrSamples, maxHR: effMaxHR, restingHR: restHR)
+
+        return ExerciseSession(
+            start: start, end: end, avgHR: avg, peakHR: peak, strain: strain,
+            durationS: Double(end - start), zoneTimePct: zonePct, avgHRRPct: avgHRR,
+            hrmax: effMaxHR, hrmaxSource: hrmaxSource, caloriesKcal: kcal, caloriesKJ: kj)
     }
 }
 

@@ -70,6 +70,17 @@ final class FitnessAgeEngineTests: XCTestCase {
             activeDaysPerWeek: 3, avgActiveMinutesPerDay: 40, highIntensityFraction: 0.3), 3.75, accuracy: 1e-9)
     }
 
+    func testPAIndexFrequencyFollowsHUNTCoding() {
+        // Nauman, Nes et al. 2012: once a week 1, 2–3 times a week 2.5, almost every day 5.
+        let score = { (days: Int) in FitnessAgeEngine.huntFrequencyScore(activeDaysPerWeek: days) }
+        XCTAssertEqual([0, 1, 2, 3, 4, 5, 7].map(score), [0, 1, 2.5, 2.5, 2.5, 5, 5])
+        // 1 day × moderate (2) × ~40 min (0.75) = 1.5; 2 days: 2.5 × 2 × 0.75 = 3.75.
+        XCTAssertEqual(FitnessAgeEngine.physicalActivityIndex(
+            activeDaysPerWeek: 1, avgActiveMinutesPerDay: 40, highIntensityFraction: 0.3), 1.5, accuracy: 1e-9)
+        XCTAssertEqual(FitnessAgeEngine.physicalActivityIndexFromStrain(
+            activeDaysPerWeek: 2, meanActiveStrain: 60), 5.0, accuracy: 1e-9)
+    }
+
     func testPAIndexFromStrain() {
         XCTAssertEqual(FitnessAgeEngine.physicalActivityIndexFromStrain(
             activeDaysPerWeek: 0, meanActiveStrain: 0), 0, accuracy: 1e-9)

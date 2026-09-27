@@ -83,7 +83,9 @@ final class DecoderOracleTests: XCTestCase {
                     let gy = parsed["gravity_y"]?.doubleValue
                     let gz = parsed["gravity_z"]?.doubleValue
                     XCTAssertNotNil(gx, "\(frame.name): gravity did not decode")
-                    let mag = ((gx ?? 0) * (gx ?? 0) + (gy ?? 0) * (gy ?? 0) + (gz ?? 0) * (gz ?? 0)).squareRoot()
+                    // Unwrapped first: the one-line form is too slow to type-check for Xcode 16's compiler.
+                    let x: Double = gx ?? 0, y: Double = gy ?? 0, z: Double = gz ?? 0
+                    let mag = (x * x + y * y + z * z).squareRoot()
                     XCTAssertEqual(mag, wantMag, accuracy: 0.1, "\(frame.name): |gravity|")
                 default:
                     switch expected {

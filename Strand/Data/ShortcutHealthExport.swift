@@ -141,8 +141,8 @@ enum ShortcutHealthExport {
             update(b.ts) { $0.hr = Int(b.bpm.rounded()) }
         }
 
-        // HRV — rolling RMSSD per window via the shared analyzer (Task Force RMSSD over Malik-cleaned
-        // NN intervals). nil rmssd (< 20 clean beats in the window) leaves the field empty.
+        // HRV — rolling RMSSD per window via the shared analyzer (Task Force RMSSD over Lipponen–Tarvainen-
+        // corrected, adjacent NN intervals). nil rmssd (< 20 clean beats in the window) leaves the field empty.
         var rrByWindow: [Int: [Double]] = [:]
         for s in rr.sorted(by: { $0.ts < $1.ts }) where s.ts < end {
             rrByWindow[windowStart(s.ts), default: []].append(Double(s.rrMs))
