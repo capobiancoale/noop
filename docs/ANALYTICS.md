@@ -522,6 +522,25 @@ therefore flags Charge with the night's events (level, minutes, lowest value, ti
 that night-time lows are more likely then (EASD/ISPAD position statement, Moser et al., Diabetologia 2020).
 The flag is informational: Charge itself is unchanged and nothing suggests carbs or insulin.
 
+## Glucose now and around a workout (`GlucoseNow`, `WorkoutGlucose`)
+
+Source: `GlucoseNow.swift` (StrandImport), shown in Today's "Glucose now" and "Today's workout" blocks (iOS, CGM
+data from Apple Health). Apple Health keeps no CGM trend arrow, so it is worked out from the readings:
+
+- **Rate:** the least-squares slope of the readings in the 15 minutes up to the latest one, in mg/dL per minute
+  (a line through all of them, so one noisy reading doesn't flip the arrow). It needs at least 3 distinct
+  readings spanning at least 8 minutes; the same reading written by two apps counts once.
+- **Arrow:** steady within ±1 mg/dL per minute, then slowly (to 2), plainly (to 3) and fast (beyond 3), rising
+  or falling: the steps CGM apps use.
+- **Now:** a reading older than 15 minutes (the gap that also breaks the chart line) is shown as the last
+  reading with its time, and without an arrow. Today re-reads Apple Health every two minutes while it is open.
+- **Around a workout:** glucose at its start and at its end is the reading nearest each edge within 10 minutes;
+  the lowest is taken from the start to an hour after the end (the acute window for a post-exercise low,
+  Moser et al., Diabetologia 2020), and a value below 70 mg/dL is called out.
+
+Informational only: Apple Health can lag the CGM, the CGM app and Loop stay the source of truth, and nothing
+suggests carbs or insulin.
+
 ## VO₂max (`VO2maxEngine`)
 
 Source: `VO2maxEngine.swift`, screen `VO2maxView`; full method, validation and references in

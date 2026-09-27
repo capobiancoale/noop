@@ -18,9 +18,12 @@ struct WodEditorView: View {
     /// Called after a successful save or delete so the list can refresh.
     let onSaved: () -> Void
 
-    init(existing: WodLogRow?, onSaved: @escaping () -> Void) {
+    /// `initialDate` sets a new WOD's date (Today logs one at the time its workout started); an edit keeps
+    /// the WOD's own date.
+    init(existing: WodLogRow?, initialDate: Date? = nil, onSaved: @escaping () -> Void) {
         self.existing = existing
         self.onSaved = onSaved
+        if existing == nil, let initialDate { _date = State(initialValue: initialDate) }
     }
 
     // Editable movement row (strings for the numeric fields; parsed on save). `reps` accepts a plain

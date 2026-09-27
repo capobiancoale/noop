@@ -1,15 +1,18 @@
 //  LiquidTodayView.swift
 //  NOOP · Liquid design language — the Today screen, rebuilt in the liquid finish.
 //
-//  This is the FULL Today, re-created faithfully from the locked mockup
-//  (scratchpad/liquid-metal-home.html): sky title + record/add/battery controls,
-//  the three scores as liquid vessels with source pills, the live heart-rate
-//  thread, the five "your cards" as liquid chips, a greeting + readiness pills,
-//  Synthesis, Recovery Vitals, a Key Metrics grid (incl. steps), Last Workouts
-//  and Data Sources. Every value binds to the SAME real data the classic
-//  TodayView reads (accessors verified against TodayView.swift), and every tap
-//  routes to the same public destination. The sky is a fixed, full-bleed
-//  background (edge-to-edge under the status bar, does not scroll).
+//  Three blocks, then the rest behind "Details":
+//    1. Your state: the three scores (Charge, Effort, Rest) as liquid vessels, a one-word verdict and one
+//       sentence under them, what each flagging signal says, and why a score is still missing today.
+//    2. Glucose now (when Apple Health has CGM readings): the latest reading, its trend arrow, the last
+//       three hours and the day's time in range. Informational only.
+//    3. Today's workout: the day's latest session with its Effort, heart-rate zones, the glucose around it
+//       and its WOD, and the actions it needs (log the WOD, rename or dismiss a detected one).
+//  Details (collapsed until opened, remembered): live heart rate, the Heart & Glucose timeline, recovery
+//  vitals, key metrics, Charge vs Effort, the week, glucose & insulin, your cards and data sources. Every
+//  value binds to the SAME real data the classic TodayView reads, and every tap routes to the same public
+//  destination. The sky is a fixed, full-bleed background (edge-to-edge under the status bar, does not
+//  scroll).
 
 import SwiftUI
 import StrandDesign
@@ -68,6 +71,21 @@ struct LiquidTodayView: View {
     @State private var weekStrain: Double?
     @State private var weekWods = 0
 
+    // Block 2, glucose now (Apple Health, iOS): the latest reading and its trend, the selected day's figures,
+    // and the last three hours for the small chart. Nil / empty ⇒ the block hides.
+    @State private var glucoseNow: GlucoseNow?
+    @State private var glucoseDay: GlucoseDayStats?
+    @State private var glucoseSpark: [GlucoseTrace.Point] = []
+    @State private var glucoseSparkWindow: ClosedRange<Double> = 0...1
+
+    // Block 3, the selected day's workout: its sessions newest first, and for the newest one its minutes in
+    // heart-rate zones 1…5, the WODs logged for it and the glucose around it.
+    @State private var dayWorkouts: [WorkoutRow] = []
+    @State private var workoutZones: [Double]?
+    @State private var workoutWods: [WodLogRow] = []
+    @State private var workoutGlucose: WorkoutGlucose?
+    @State private var confirmDismissWorkout = false
+
     // sheets / expanders
     @State private var guideSection: ScoreSection?
     @State private var showCustomise = false
@@ -75,6 +93,9 @@ struct LiquidTodayView: View {
     @State private var showSupport = false
     @State private var synthesisExpanded = false
     @State private var showLiveSession = false
+    @State private var showWodEditor = false
+    /// Everything past the three blocks, folded until the user opens it (remembered across launches).
+    @AppStorage("liquidToday.detailsExpanded") private var detailsExpanded = false
 
     /// Live Sessions (silent guardian) beta gate — the SAME key the Settings toggle writes. Default ON
     /// (the entry is BETA-labelled in-UI); off removes the Start-session control entirely.
@@ -98,6 +119,9 @@ struct LiquidTodayView: View {
     /// today's row has no vitals yet, so these fall back to the last night that recorded them. Never
     /// resolved in body — body rescans repo.days ~23× per pass, and this cache keeps that read O(1).
     @State private var cachedVitalsDay: DailyMetric?
+    /// Nights banked toward Charge's baseline while it is still being learned (nil once Charge exists or on
+    /// a past day), resolved in load(): it scans repo.days.
+    @State private var chargeCalibrationNights: Int?
     /// Flips true once the first load() completes. Until then the hero gauges + sky render STATIC so the
     /// launch data-churn (refresh publish + BLE/HR notifies) isn't fighting 4 live canvases + CoreMotion.
     @State private var dataLoaded = false
@@ -228,19 +252,22 @@ struct LiquidTodayView: View {
                 liquidRefreshIndicator   // grows in the revealed space; a vessel filling with the pull
 
                 VStack(alignment: .leading, spacing: 12) {
-                    scene
-                    if !nightLows.isEmpty { nightLowSection }
-                    heartRateSection
-                    yourCardsSection
-                    synthesisSection
-                    recoveryVitalsSection
-                    keyMetricsSection
-                    if hasRecStrain { recoveryStrainSection }
-                    if hasTodayCross { todayCrossSection }
-                    if hasWeekData { weekSummarySection }
-                    lastWorkoutsSection
-                    if hasGlucoseToday { glucoseTodaySection }
-                    dataSourcesSection
+                    scene                                   // block 1: the scores and what they mean
+                    if !nightLows.isEmpty { nightLowSection }  // qualifies Charge, so it sits right under it
+                    if hasGlucoseBlock { glucoseNowSection }    // block 2
+                    todayWorkoutSection                         // block 3
+                    detailsToggle
+                    if detailsExpanded {
+                        heartRateSection
+                        if hasTodayCross { todayCrossSection }
+                        recoveryVitalsSection
+                        keyMetricsSection
+                        if hasRecStrain { recoveryStrainSection }
+                        if hasWeekData { weekSummarySection }
+                        if hasGlucoseToday { glucoseTodaySection }
+                        yourCardsSection
+                        dataSourcesSection
+                    }
                     Color.clear.frame(height: 90) // floating tab-bar clearance
                 }
                 .padding(.horizontal, 16)
@@ -284,6 +311,33 @@ struct LiquidTodayView: View {
         // A firm tick when the pull passes the release threshold (the custom liquid refresh).
         .liquidMediumHaptic(trigger: pullHaptic)
         .task(id: "\(repo.refreshSeq)-\(selectedDayOffset)") { await load() }
+        #if os(iOS)
+        // Glucose now stays current while Today is on screen: Loop writes a CGM reading to Apple Health every
+        // few minutes, and the next full reload (a strap sync) may be further off than that.
+        .task(id: selectedDayOffset) {
+            guard selectedDayOffset == 0 else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 120_000_000_000)
+                guard !Task.isCancelled else { return }
+                await refreshGlucose()
+            }
+        }
+        // Log the WOD of the day's workout, dated when the workout started.
+        .sheet(isPresented: $showWodEditor) {
+            WodEditorView(existing: nil,
+                          initialDate: dayWorkouts.first.map { Date(timeIntervalSince1970: TimeInterval($0.startTs)) }) {
+                Task { await load() }
+            }
+        }
+        #endif
+        .confirmationDialog("Not a workout?", isPresented: $confirmDismissWorkout, titleVisibility: .visible) {
+            Button("Hide this activity", role: .destructive) {
+                if let w = dayWorkouts.first { dismissWorkout(w) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("NOOP stops showing it as a workout. Its heart rate stays in your day.")
+        }
         .sheet(item: $guideSection) { section in
             NavigationStack { ScoringGuideView(initialSection: section, onClose: { guideSection = nil }) }
         }
@@ -434,58 +488,37 @@ struct LiquidTodayView: View {
             LiquidWordmark()
                 .padding(.top, 30)
             heroCard.padding(.top, 22)
-            if liveSessionsBeta {
-                liveSessionStartRow.padding(.top, 10)
-            }
         }
     }
 
-    /// One-tap Live Session start (silent guardian, beta) — sits directly under the hero scores, the
-    /// Charge its band is gated on. Same translucent chrome as the hero card so it reads as part of the
-    /// sky scene, quiet by design.
-    private var liveSessionStartRow: some View {
+    /// One-tap Live Session start (silent guardian, beta), in today's workout block: where a session starts.
+    private var liveSessionButton: some View {
         Button { showLiveSession = true } label: {
-            HStack(spacing: 10) {
+            HStack(spacing: 6) {
                 Image(systemName: "shield.lefthalf.filled")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(StrandPalette.metricCyan)
-                // The session-start row shares the hero card's pinned-dark `heroFill`, so its text/chevron
-                // use the on-dark tokens — textPrimary/Secondary/Tertiary flip to dark ink in Light mode and
-                // went dark-on-near-black here too (#1013).
                 Text("Start session")
-                    .font(StrandFont.subhead)
-                    .foregroundStyle(StrandPalette.onDarkPrimary)
                 Text("BETA")
                     .font(StrandFont.overlineScaled(8.5)).tracking(1.2)
-                    .foregroundStyle(StrandPalette.onDarkSecondary)
-                    .padding(.horizontal, 8).padding(.vertical, 2.5)
-                    .background(Capsule().fill(.white.opacity(0.05))
-                        .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1)))
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(StrandPalette.onDarkTertiary)
+                    .foregroundStyle(StrandPalette.textSecondary)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 11)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(heroFill)
-                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(.white.opacity(0.11), lineWidth: 1))
-            )
+            .modifier(ActionChip(tint: StrandPalette.metricCyan))
         }
         .buttonStyle(LiquidPressStyle())
         .accessibilityLabel("Start a live session. Beta. Silent strap coaching against today's Charge.")
     }
 
+    /// Block 1: the three scores, and under them what they add up to (`stateVerdict`), in one card.
     private var heroCard: some View {
-        HStack(alignment: .top, spacing: 4) {
-            HeroScoreCell(label: "Charge", score: displayDay?.recovery, tint: StrandPalette.chargeColor,
-                          pill: "WHOOP", animated: dataLoaded, onGuide: { guideSection = .charge })
-            HeroScoreCell(label: "Effort", score: displayDay?.strain, tint: StrandPalette.effortColor,
-                          pill: nil, animated: dataLoaded, onGuide: { guideSection = .effort })
-            HeroScoreCell(label: "Rest", score: restScore, tint: StrandPalette.restColor,
-                          pill: "WHOOP", animated: dataLoaded, onGuide: { guideSection = .rest })
+        VStack(spacing: 14) {
+            HStack(alignment: .top, spacing: 4) {
+                HeroScoreCell(label: "Charge", score: displayDay?.recovery, tint: StrandPalette.chargeColor,
+                              pill: "WHOOP", animated: dataLoaded, onGuide: { guideSection = .charge })
+                HeroScoreCell(label: "Effort", score: displayDay?.strain, tint: StrandPalette.effortColor,
+                              pill: nil, animated: dataLoaded, onGuide: { guideSection = .effort })
+                HeroScoreCell(label: "Rest", score: restScore, tint: StrandPalette.restColor,
+                              pill: "WHOOP", animated: dataLoaded, onGuide: { guideSection = .rest })
+            }
+            stateVerdict
         }
         .padding(.vertical, 16)
         .padding(.horizontal, 12)
@@ -496,13 +529,181 @@ struct LiquidTodayView: View {
                     .strokeBorder(.white.opacity(0.11), lineWidth: 1))
                 .shadow(color: .black.opacity(0.6), radius: 30, y: 16)
         )
+        // The card is dark in both themes, so its colours resolve as on a dark screen: the light theme's
+        // deeper tints would sit too dark on it.
+        .environment(\.colorScheme, .dark)
+    }
+
+    // MARK: - Block 1: the verdict under the scores
+
+    /// A one-word verdict and one sentence on the day, the signals behind it when opened, and while a score
+    /// is still missing today, why, so an empty gauge never reads as broken. Inside the hero card, which is
+    /// dark in both themes, so the text uses the on-dark tokens.
+    private var stateVerdict: some View {
+        let signals = readiness.signals
+        return VStack(alignment: .leading, spacing: 10) {
+            Rectangle().fill(.white.opacity(0.10)).frame(height: 1)
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { synthesisExpanded.toggle() }
+            } label: {
+                HStack(alignment: .center, spacing: 10) {
+                    if let word = readinessWord {
+                        Text(word)
+                            .font(StrandFont.caption.weight(.bold))
+                            .foregroundStyle(verdictTint)
+                            .padding(.horizontal, 11)
+                            .padding(.vertical, 5)
+                            .background(Capsule().fill(verdictTint.opacity(0.16))
+                                .overlay(Capsule().strokeBorder(verdictTint.opacity(0.35), lineWidth: 1)))
+                            .fixedSize()
+                    }
+                    Text(synthLine)
+                        .font(StrandFont.subhead)
+                        .foregroundStyle(StrandPalette.onDarkPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if !signals.isEmpty {
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(StrandPalette.onDarkTertiary)
+                            .rotationEffect(.degrees(synthesisExpanded ? 180 : 0))
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(signals.isEmpty)
+            .accessibilityHint(signals.isEmpty ? Text(verbatim: "") : Text("Shows the signals behind it"))
+            if synthesisExpanded {
+                ForEach(signals, id: \.key) { signalRow($0) }
+                    .transition(.opacity)
+            }
+            ForEach(Array(missingScoreNotes.enumerated()), id: \.offset) { _, note in
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Image(systemName: "hourglass")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(StrandPalette.onDarkTertiary)
+                    note
+                        .font(StrandFont.caption)
+                        .foregroundStyle(StrandPalette.onDarkSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(.horizontal, 6)
+    }
+
+    /// One readiness signal: a dot in its state's colour, what it is, what it says, and its figures. Built
+    /// from the signal's key and state rather than the engine's English sentence, so it reads in the app's
+    /// language.
+    private func signalRow(_ s: ReadinessEngine.Signal) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Circle().fill(signalTint(s.flag)).frame(width: 7, height: 7)
+            VStack(alignment: .leading, spacing: 1) {
+                signalLabel(s)
+                    .font(StrandFont.caption.weight(.semibold))
+                    .foregroundStyle(StrandPalette.onDarkPrimary)
+                signalDetail(s)
+                    .font(StrandFont.caption)
+                    .foregroundStyle(StrandPalette.onDarkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 6)
+            if let figures = signalFigures(s) {
+                Text(verbatim: figures)
+                    .font(StrandFont.captionNumber)
+                    .foregroundStyle(StrandPalette.onDarkTertiary)
+                    .fixedSize()
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func signalLabel(_ s: ReadinessEngine.Signal) -> Text {
+        switch s.key {
+        case "hrv": return Text(verbatim: "HRV")
+        case "rhr": return Text("Resting HR")
+        case "respRate": return Text("Respiratory rate")
+        case "acwr": return Text("Training load")
+        case "monotony": return Text("Training variety")
+        default: return Text(verbatim: s.label)
+        }
+    }
+
+    private func signalDetail(_ s: ReadinessEngine.Signal) -> Text {
+        switch (s.key, s.flag) {
+        case ("hrv", .good): return Text("Above your baseline")
+        case ("hrv", .watch): return Text("A little below your baseline")
+        case ("hrv", .bad): return Text("Well below your baseline")
+        case ("rhr", .good): return Text("At or below your baseline")
+        case ("rhr", .watch): return Text("A little above your baseline")
+        case ("rhr", .bad): return Text("Well above your baseline")
+        case ("respRate", .bad): return Text("Above your baseline, sometimes an early sign of illness")
+        case ("respRate", _): return Text("A little above your baseline")
+        case ("monotony", _): return Text("A similar load every day")
+        case ("acwr", _):
+            let ratio = readiness.acwr ?? 1
+            if ratio < 0.8 { return Text("Lighter than usual: room to build") }
+            if ratio < 1.3 { return Text("In line with your usual load") }
+            if ratio < 1.5 { return Text("Building fast: watch for fatigue") }
+            return Text("Well above your usual load")
+        default: return Text("In your normal range")
+        }
+    }
+
+    /// The figures behind a signal: tonight against the baseline for the vitals, the week's load against the
+    /// month's for training load.
+    private func signalFigures(_ s: ReadinessEngine.Signal) -> String? {
+        switch s.key {
+        case "hrv", "rhr", "respRate": return s.evidence
+        case "acwr": return readiness.acwr.map { String(format: "%.2f", $0) }
+        default: return nil
+        }
+    }
+
+    private func signalTint(_ flag: ReadinessEngine.Flag) -> Color {
+        switch flag {
+        case .good: return StrandPalette.statusPositive
+        case .neutral: return StrandPalette.onDarkTertiary
+        case .watch: return StrandPalette.statusWarning
+        case .bad: return StrandPalette.statusCritical
+        }
+    }
+
+    private var verdictTint: Color {
+        switch readiness.level {
+        case .strained, .rundown: return StrandPalette.statusWarning
+        default: return StrandPalette.chargeColor
+        }
+    }
+
+    /// Why a score is missing on today, one line each: Charge while its baseline is still being learned (or
+    /// before last night is in), Effort before the strap has recorded the day, Rest before a night is scored.
+    /// Only for today: on a past day a missing score is missing data.
+    private var missingScoreNotes: [Text] {
+        guard selectedDayOffset == 0, dataLoaded else { return [] }
+        var notes: [Text] = []
+        if displayDay?.recovery == nil {
+            if let n = chargeCalibrationNights {
+                notes.append(Text("Charge is learning your baseline: \(n) of \(Baselines.minNightsSeed) nights."))
+            } else {
+                notes.append(Text("Charge appears once last night's sleep is in from the strap."))
+            }
+        }
+        if displayDay?.strain == nil {
+            notes.append(Text("Effort builds up as the strap records your day."))
+        }
+        if restScore == nil {
+            notes.append(Text("Rest appears after a night's sleep with the strap."))
+        }
+        return notes
     }
 
     // MARK: - Heart rate
 
     private var heartRateSection: some View {
         VStack(spacing: 8) {
-            sectionHead("HEART RATE", trailing: "Live")
+            sectionHead("HEART RATE", trailing: Text("Live"))
             // #979: the whole-day HR trend (Deep Timeline) still exists but was buried behind Metrics →
             // Show all → Deep Timeline. Make the live HR card a one-tap route into it, with a visible
             // "Full day" affordance so it's discoverable again. (This comment used to claim the Deep
@@ -646,61 +847,410 @@ struct LiquidTodayView: View {
         .buttonStyle(LiquidPressStyle())
     }
 
-    // MARK: - Synthesis (greeting + readiness pills + one-liner)
+    // MARK: - Block 2: glucose now
 
-    private var synthesisSection: some View {
+    /// Shown when Apple Health has CGM readings for the selected day (so on iOS only), so people without a
+    /// CGM never see an empty glucose card.
+    private var hasGlucoseBlock: Bool { glucoseDay != nil }
+
+    /// Today: the latest reading with its trend arrow and age, the last three hours, and the day so far. A
+    /// past day: its figures and its trace. Informational only, never a treatment surface: Apple Health can
+    /// lag the CGM, and the CGM app and Loop stay the source of truth.
+    private var glucoseNowSection: some View {
         VStack(spacing: 8) {
-            HStack {
-                Text(greeting).font(StrandFont.rounded(19)).foregroundStyle(StrandPalette.textPrimary)
-                    .lineLimit(1).minimumScaleFactor(0.6)   // yield to the pills rather than push them to wrap
-                Spacer(minLength: 8)
-                HStack(spacing: 8) {
-                    if let word = readinessWord {
-                        Text(word)
-                            .font(StrandFont.caption.weight(.bold))
-                            .foregroundStyle(StrandPalette.chargeColor)
-                            .padding(.horizontal, 13)
-                            .padding(.vertical, 6)
-                            .background(Capsule().fill(StrandPalette.chargeColor.opacity(0.14))
-                                .overlay(Capsule().strokeBorder(StrandPalette.chargeColor.opacity(0.3), lineWidth: 1)))
+            sectionHead(selectedDayOffset == 0 ? "GLUCOSE NOW" : "GLUCOSE", trailing: Text(verbatim: "Apple Health"))
+            card {
+                VStack(alignment: .leading, spacing: 12) {
+                    if let now = glucoseNow { glucoseNowRow(now) }
+                    if glucoseSpark.count >= 2 {
+                        VStack(alignment: .leading, spacing: 4) {
+                            GlucoseSparkline(points: glucoseSpark, window: glucoseSparkWindow)
+                                .equatable()
+                                .frame(height: 64)
+                            Text(selectedDayOffset == 0 ? "Last 3 hours" : "The whole day")
+                                .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                        }
                     }
-                    HStack(spacing: 5) {
-                        Circle().fill(StrandPalette.chargeColor).frame(width: 6, height: 6)
-                        Text(displayDay?.recovery != nil ? "Solid" : "Calibrating")
-                            .font(StrandFont.caption.weight(.bold))
-                            .foregroundStyle(StrandPalette.chargeColor)
+                    if let day = glucoseDay {
+                        HStack(alignment: .top, spacing: 12) {
+                            glucoseStat("Time in range", value: "\(Int(day.tirPct.rounded()))%")
+                            glucoseStat("Average", value: "\(Int(day.mean.rounded())) mg/dL")
+                            glucoseStat("Lows", value: "\(day.hypoEvents)")
+                        }
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Capsule().strokeBorder(StrandPalette.chargeColor.opacity(0.3), lineWidth: 1))
+                    Text("From your CGM in Apple Health. Informational only, not medical advice.")
+                        .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .fixedSize(horizontal: true, vertical: false)   // pills keep their natural width — no "Calibrating" wrap
             }
-            .padding(.horizontal, 2)
-            .padding(.top, 4)
+        }
+    }
 
-            Button { withAnimation(.easeInOut(duration: 0.2)) { synthesisExpanded.toggle() } } label: {
-                card {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("SYNTHESIS").font(StrandFont.overline).tracking(1.6)
-                                .foregroundStyle(StrandPalette.textSecondary)
-                            Spacer()
-                            Text(synthesisExpanded ? "hide" : "show").font(StrandFont.caption)
+    /// The latest reading, its range and its trend arrow; re-drawn once a minute so its age stays true
+    /// between reloads, and shown as the last reading (no arrow) once it is too old to be "now".
+    private func glucoseNowRow(_ now: GlucoseNow) -> some View {
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let stale = now.isStale(now: context.date.timeIntervalSince1970)
+            let tint = stale ? StrandPalette.textSecondary : glucoseTint(now.mgdl)
+            HStack(alignment: .center, spacing: 10) {
+                (Text(verbatim: "\(Int(now.mgdl.rounded()))").font(StrandFont.rounded(40))
+                    + Text(verbatim: " mg/dL").font(StrandFont.caption))
+                    .foregroundStyle(tint)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                if !stale, let trend = now.trend {
+                    GlucoseTrendArrow(trend: trend).foregroundStyle(tint)
+                }
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(glucoseRangeWord(now.mgdl))
+                        .font(StrandFont.caption.weight(.semibold))
+                        .foregroundStyle(tint)
+                    Text(verbatim: glucoseAge(now, at: context.date))
+                        .font(StrandFont.caption)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                }
+                .multilineTextAlignment(.trailing)
+            }
+        }
+    }
+
+    private func glucoseStat(_ label: LocalizedStringKey, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label).font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                .lineLimit(1).minimumScaleFactor(0.8)
+            Text(verbatim: value).font(StrandFont.number(16)).foregroundStyle(StrandPalette.textPrimary)
+                .lineLimit(1).minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Below the target range in the critical colour, above it in the warning colour, always with the word.
+    private func glucoseTint(_ mgdl: Double) -> Color {
+        if mgdl < GlucoseTrace.lowThreshold { return StrandPalette.statusCritical }
+        if mgdl > 180 { return StrandPalette.statusWarning }
+        return StrandPalette.textPrimary
+    }
+
+    /// The consensus ranges (Battelino et al., Diabetes Care 2019): below 54, below 70, 70–180, above 180,
+    /// above 250 mg/dL.
+    private func glucoseRangeWord(_ mgdl: Double) -> LocalizedStringKey {
+        if mgdl < 54 { return "Very low" }
+        if mgdl < 70 { return "Below range" }
+        if mgdl <= 180 { return "In range" }
+        if mgdl <= 250 { return "Above range" }
+        return "Very high"
+    }
+
+    private func glucoseAge(_ now: GlucoseNow, at date: Date) -> String {
+        let seconds = date.timeIntervalSince1970 - now.ts
+        if now.isStale(now: date.timeIntervalSince1970) {
+            let clock = Date(timeIntervalSince1970: now.ts).formatted(date: .omitted, time: .shortened)
+            return String(localized: "Last reading \(clock)")
+        }
+        let minutes = Int(seconds / 60)
+        return minutes < 1 ? String(localized: "just now") : String(localized: "\(minutes) min ago")
+    }
+
+    /// Re-reads today's glucose from Apple Health between full reloads (every two minutes while Today is on
+    /// screen), and only touches the view state when a new reading arrived.
+    private func refreshGlucose() async {
+        #if os(iOS)
+        guard selectedDayOffset == 0, let health else { return }
+        let start = crossBounds.lowerBound
+        let readings = await health.glucoseWindow(start: start, end: Date())
+        guard readings.count != crossGlucose.count || readings.last?.ts != crossGlucose.last?.ts else { return }
+        crossGlucose = readings
+        crossTrace = GlucoseTrace(readings: readings)
+        updateGlucoseBlocks()
+        #endif
+    }
+
+    /// Block 2's figures and the glucose around block 3's workout, from the loaded day's readings.
+    private func updateGlucoseBlocks() {
+        glucoseDay = DiabetesMetrics.glucoseDaily(crossGlucose).values.max { $0.readings < $1.readings }
+        if selectedDayOffset == 0 {
+            glucoseNow = GlucoseNow.latest(crossGlucose)
+            let end = Date().timeIntervalSince1970
+            glucoseSparkWindow = (end - 3 * 3_600)...end
+        } else {
+            glucoseNow = nil
+            glucoseSparkWindow = crossBounds.lowerBound.timeIntervalSince1970...crossBounds.upperBound.timeIntervalSince1970
+        }
+        glucoseSpark = crossTrace.visible(from: glucoseSparkWindow.lowerBound, to: glucoseSparkWindow.upperBound)
+        workoutGlucose = dayWorkouts.first.flatMap {
+            WorkoutGlucose.around(crossTrace, start: Double($0.startTs), end: Double($0.endTs))
+        }
+    }
+
+    // MARK: - Block 3: today's workout
+
+    /// The selected day's latest session: what it was, when, its Effort, its heart-rate zones, the glucose
+    /// around it and its WOD, with the actions it needs. Tapping it opens the workout.
+    private var todayWorkoutSection: some View {
+        VStack(spacing: 8) {
+            sectionHead(selectedDayOffset == 0 ? "TODAY'S WORKOUT" : "WORKOUT",
+                        trailing: dayWorkouts.count > 1 ? Text("\(dayWorkouts.count) sessions") : nil)
+            card {
+                if let w = dayWorkouts.first { workoutBlock(w) } else { noWorkoutBlock }
+            }
+            NavigationLink { WorkoutsView() } label: {
+                HStack(spacing: 4) {
+                    Text("All workouts").font(StrandFont.subhead)
+                    Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundStyle(StrandPalette.accent)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.horizontal, 4)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func workoutBlock(_ w: WorkoutRow) -> some View {
+        let detected = WorkoutSource.classify(w.source) == .detected
+        return VStack(alignment: .leading, spacing: 14) {
+            NavigationLink { WorkoutDetailView(row: w) } label: {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .center, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack(spacing: 8) {
+                                Text(LocalizedStringKey(WorkoutSource.displaySport(w.sport)))
+                                    .font(StrandFont.number(17))
+                                    .foregroundStyle(StrandPalette.textPrimary)
+                                    .lineLimit(1)
+                                if detected { SourceBadge("Detected", tint: StrandPalette.metricPurple) }
+                            }
+                            Text(verbatim: workoutTimes(w))
+                                .font(StrandFont.caption)
                                 .foregroundStyle(StrandPalette.textTertiary)
                         }
-                        Text(synthLine).font(StrandFont.body).foregroundStyle(StrandPalette.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        if synthesisExpanded {
-                            Text(readiness.summary).font(StrandFont.caption)
-                                .foregroundStyle(StrandPalette.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+                        Spacer(minLength: 8)
+                        (Text(verbatim: effortText(w.strain)).font(StrandFont.number(17))
+                            + Text(verbatim: " EFFORT").font(StrandFont.overlineScaled(9)))
+                            .foregroundStyle(StrandPalette.textPrimary)
+                            .fixedSize()
+                        Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(StrandPalette.textTertiary)
                     }
+                    LiquidTube(frac: (w.strain ?? 0) / 100, tint: StrandPalette.effortColor, height: 10, animated: false)
                 }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the workout")
+            if let zones = workoutZones { HRZoneSplitView(minutes: zones) }
+            if let g = workoutGlucose { workoutGlucoseRow(g) }
+            #if os(iOS)
+            ForEach(workoutWods) { wod in wodRow(wod) }
+            #endif
+            if detected { detectedPrompt(w) }
+            workoutActions
+        }
+    }
+
+    private var noWorkoutBlock: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(selectedDayOffset == 0 ? "No workout yet today." : "No workout on this day.")
+                .font(StrandFont.subhead)
+                .foregroundStyle(StrandPalette.textPrimary)
+            Text("Train with the strap on and NOOP finds the session from your heart rate.")
+                .font(StrandFont.caption)
+                .foregroundStyle(StrandPalette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+            workoutActions
+        }
+    }
+
+    /// Glucose at the start and at the end, and a note when it went below 70 during it or in the hour after.
+    private func workoutGlucoseRow(_ g: WorkoutGlucose) -> some View {
+        let start = g.startMgdl.map { String(Int($0.rounded())) } ?? "–"
+        let end = g.endMgdl.map { String(Int($0.rounded())) } ?? "–"
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Glucose, start → end").font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+                Spacer(minLength: 8)
+                Text(verbatim: "\(start) → \(end) mg/dL").font(StrandFont.number(15))
+                    .foregroundStyle(StrandPalette.textPrimary)
+                    .fixedSize()
+            }
+            if g.wentLow, let low = g.lowestMgdl {
+                Label {
+                    Text("Below 70 mg/dL during it or in the hour after, lowest \(Int(low.rounded())) mg/dL.")
+                        .fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                }
+                .font(StrandFont.caption)
+                .foregroundStyle(StrandPalette.statusWarning)
+            }
+        }
+    }
+
+    #if os(iOS)
+    /// A WOD logged for this workout, opening its own screen (glucose around it, progression).
+    private func wodRow(_ wod: WodLogRow) -> some View {
+        NavigationLink { WodDetailView(wod: wod, onChanged: { Task { await load() } }) } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "figure.strengthtraining.functional")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(StrandPalette.effortColor)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(verbatim: "WOD").font(StrandFont.overlineScaled(9)).tracking(1.2)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                    Text(verbatim: wod.title).font(StrandFont.subhead).foregroundStyle(StrandPalette.textPrimary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                if let result = WodFormat.result(wod) {
+                    Text(verbatim: result).font(StrandFont.number(15)).foregroundStyle(StrandPalette.textPrimary)
+                }
+                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(StrandPalette.textTertiary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+    #endif
+
+    /// A detected session asks what it was: rename it to a sport, or say it wasn't a workout.
+    private func detectedPrompt(_ w: WorkoutRow) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("NOOP found this from your heart rate. What was it?")
+                .font(StrandFont.caption)
+                .foregroundStyle(StrandPalette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { renameMenu(w); notAWorkoutButton }
+                VStack(alignment: .leading, spacing: 8) { renameMenu(w); notAWorkoutButton }
+            }
+        }
+    }
+
+    private func renameMenu(_ w: WorkoutRow) -> some View {
+        Menu {
+            ForEach(WorkoutsView.relabelSports, id: \.self) { sport in
+                Button { relabel(w, to: sport) } label: { Text(LocalizedStringKey(sport)) }
+            }
+        } label: {
+            Label("Rename", systemImage: "pencil").modifier(ActionChip(tint: StrandPalette.accent))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+    }
+
+    private var notAWorkoutButton: some View {
+        Button { confirmDismissWorkout = true } label: {
+            Label("Not a workout", systemImage: "xmark").modifier(ActionChip(tint: StrandPalette.textSecondary))
+        }
+        .buttonStyle(LiquidPressStyle())
+    }
+
+    /// A WOD can be logged here (iOS, where the WOD log lives) while none is logged for the session yet.
+    private var canLogWod: Bool {
+        #if os(iOS)
+        return workoutWods.isEmpty
+        #else
+        return false
+        #endif
+    }
+
+    /// Log the WOD and, today, start a live session.
+    @ViewBuilder private var workoutActions: some View {
+        let logWod = canLogWod
+        let live = liveSessionsBeta && selectedDayOffset == 0
+        if logWod || live {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { workoutActionButtons(logWod: logWod, live: live) }
+                VStack(alignment: .leading, spacing: 8) { workoutActionButtons(logWod: logWod, live: live) }
+            }
+        }
+    }
+
+    @ViewBuilder private func workoutActionButtons(logWod: Bool, live: Bool) -> some View {
+        if logWod {
+            Button { showWodEditor = true } label: {
+                Label("Log WOD", systemImage: "plus").modifier(ActionChip(tint: StrandPalette.effortColor))
             }
             .buttonStyle(LiquidPressStyle())
         }
+        if live { liveSessionButton }
+    }
+
+    private func relabel(_ w: WorkoutRow, to sport: String) {
+        Task { await repo.relabelDetected(w, sport: sport); await load() }
+    }
+
+    private func dismissWorkout(_ w: WorkoutRow) {
+        Task { await repo.dismissDetected(w); await load() }
+    }
+
+    /// "18:02–19:05 · 63 min · 540 kcal".
+    private func workoutTimes(_ w: WorkoutRow) -> String {
+        let start = Date(timeIntervalSince1970: TimeInterval(w.startTs)).formatted(date: .omitted, time: .shortened)
+        let end = Date(timeIntervalSince1970: TimeInterval(w.endTs)).formatted(date: .omitted, time: .shortened)
+        return "\(start)–\(end) · " + workoutSub(w)
+    }
+
+    /// A workout's imported zone split (the source's own percentages) as minutes, which the workout screen
+    /// prefers over one derived from the strap's samples.
+    private static func importedZoneMinutes(_ w: WorkoutRow) -> [Double]? {
+        guard let pct = WorkoutZones.percents(w.zonesJSON) else { return nil }
+        let minutes = (w.durationS ?? Double(w.endTs - w.startTs)) / 60
+        return minutes > 0 ? pct.map { minutes * $0 / 100 } : nil
+    }
+
+    /// The WODs logged for a workout: those whose logged time resolves to it, by the same rule the WOD screen
+    /// uses to find its workout (`WodTimeWindow.resolve` over the sessions recorded within half a day).
+    static func wods(for w: WorkoutRow, among wods: [WodLogRow], workouts: [WorkoutRow]) -> [WodLogRow] {
+        wods.filter { wod in
+            let logged = Double(wod.ts)
+            guard abs(logged - Double(w.startTs)) < 12 * 3_600 else { return false }
+            let spans = workouts
+                .filter { abs(Double($0.startTs) - logged) < 12 * 3_600 }
+                .map { (start: Double($0.startTs), end: Double($0.endTs)) }
+            let window = WodTimeWindow.resolve(loggedTs: logged,
+                                               durationS: (wod.resultSeconds ?? wod.timeCapS).map(Double.init),
+                                               workouts: spans)
+            return window.recorded && window.start == Double(w.startTs) && window.end == Double(w.endTs)
+        }
+    }
+
+    // MARK: - Details (folded)
+
+    private var detailsToggle: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.25)) { detailsExpanded.toggle() }
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Details").font(StrandFont.headline).foregroundStyle(StrandPalette.textPrimary)
+                    Text("Heart rate, vitals, key metrics, the week, your cards and data sources")
+                        .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .rotationEffect(.degrees(detailsExpanded ? 180 : 0))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 13)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(StrandPalette.surfaceRaised)
+                    .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .strokeBorder(StrandPalette.hairline, lineWidth: 1))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(LiquidPressStyle())
+        .padding(.top, 4)
+        .accessibilityValue(detailsExpanded ? Text("Shown") : Text("Hidden"))
     }
 
     // MARK: - Recovery vitals
@@ -844,7 +1394,7 @@ struct LiquidTodayView: View {
                     weekStat("Time in range", weekTir.map { "\(Int($0.rounded()))%" }, StrandPalette.metricCyan)
                     weekStat("Avg glucose", weekGlucoseAvg.map { "\(Int($0.rounded())) mg/dL" }, StrandPalette.metricRose)
                     weekStat("WODs", weekWods > 0 ? "\(weekWods)" : nil, StrandPalette.effortColor)
-                    weekStat("Avg strain", weekStrain.map { "\(Int($0.rounded()))" }, StrandPalette.chargeColor)
+                    weekStat("Avg Effort", weekStrain.map { effortText($0) }, StrandPalette.effortColor)
                 }
             }
         }
@@ -865,29 +1415,29 @@ struct LiquidTodayView: View {
         return vals.isEmpty ? nil : vals.reduce(0, +) / Double(vals.count)
     }
 
-    // MARK: - Recovery vs Strain (30-day trend)
+    // MARK: - Charge vs Effort (30-day trend)
 
     private var hasRecStrain: Bool { recStrain.filter { $0.recovery != nil || $0.strain != nil }.count >= 2 }
 
     private var recoveryStrainSection: some View {
         VStack(spacing: 8) {
-            sectionHead("RECOVERY vs STRAIN", trailing: "30 days")
+            sectionHead("CHARGE vs EFFORT", trailing: Text("30 days"))
             card {
                 VStack(alignment: .leading, spacing: 10) {
                     RecoveryStrainChart(points: recStrain)
                     HStack(spacing: 16) {
-                        legendDot(StrandPalette.chargeColor, "Recovery")
-                        legendDot(StrandPalette.effortColor, "Strain")
+                        legendDot(StrandPalette.chargeColor, Text(verbatim: "Charge"))
+                        legendDot(StrandPalette.effortColor, Text(verbatim: "Effort"))
                     }
                 }
             }
         }
     }
 
-    private func legendDot(_ c: Color, _ label: LocalizedStringKey) -> some View {
+    private func legendDot(_ c: Color, _ label: Text) -> some View {
         HStack(spacing: 6) {
             Circle().fill(c).frame(width: 8, height: 8)
-            Text(label).font(StrandFont.caption).foregroundStyle(StrandPalette.textSecondary)
+            label.font(StrandFont.caption).foregroundStyle(StrandPalette.textSecondary)
         }
     }
 
@@ -935,17 +1485,15 @@ struct LiquidTodayView: View {
     }
 
     /// The section overline's right-hand tag: "today" / "yesterday" / a short date for older days.
-    private var crossTrailing: String {
+    private var crossTrailing: Text {
         switch selectedDayOffset {
-        case 0: return "today"
-        case 1: return "yesterday"
-        default: return Self.crossDayFormatter.string(from: selectedLogicalDay)
+        case 0: return Text("today")
+        case 1: return Text("yesterday")
+        default:
+            return Text(verbatim: selectedLogicalDay.formatted(
+                .dateTime.day().month(.abbreviated).locale(Locale.autoupdatingCurrent)))
         }
     }
-
-    private static let crossDayFormatter: DateFormatter = {
-        let f = DateFormatter(); f.dateFormat = "d MMM"; return f
-    }()
 
     private var keyMetricsSection: some View {
         // HRV / Rest HR tiles share the recovery vitals' per-field today-first carry so they don't blank at
@@ -953,14 +1501,15 @@ struct LiquidTodayView: View {
         let hrv = displayDay?.avgHrv ?? vitalsDay?.avgHrv
         let rhr = (displayDay?.restingHr ?? vitalsDay?.restingHr).map(Double.init)
         return VStack(spacing: 8) {
-            sectionHead("KEY METRICS", trailing: "14-day trend")
+            sectionHead("KEY METRICS", trailing: Text("14-day trend"))
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                ktile("Recovery", intText(displayDay?.recovery), "%", StrandPalette.chargeColor, frac(displayDay?.recovery), spark: sparks["recovery"] ?? [])
-                ktile("Strain", intText(displayDay?.strain), "%", StrandPalette.effortColor, frac(displayDay?.strain), spark: sparks["strain"] ?? [])
-                ktile("Sleep", sleepText, "", StrandPalette.restColor, fracOver(displayDay?.totalSleepMin, 480), spark: sparks["sleep"] ?? [])
-                ktile("HRV", intText(hrv), "ms", StrandPalette.metricCyan, fracOver(hrv, 120), spark: sparks["hrv"] ?? [])
-                ktile("Rest HR", intText(rhr), "bpm", StrandPalette.metricRose, fracOver(rhr, 100), spark: sparks["rhr"] ?? [])
-                ktile("Steps", stepsText, "", StrandPalette.chargeColor, fracOver(stepCount, 10000), spark: sparks["steps"] ?? [])
+                // Charge and Effort are the scores' names in every language, as on the hero.
+                ktile(Text(verbatim: "Charge"), intText(displayDay?.recovery), "%", StrandPalette.chargeColor, frac(displayDay?.recovery), spark: sparks["recovery"] ?? [])
+                ktile(Text(verbatim: "Effort"), intText(displayDay?.strain), "", StrandPalette.effortColor, frac(displayDay?.strain), spark: sparks["strain"] ?? [])
+                ktile(Text("Sleep"), sleepText, "", StrandPalette.restColor, fracOver(displayDay?.totalSleepMin, 480), spark: sparks["sleep"] ?? [])
+                ktile(Text(verbatim: "HRV"), intText(hrv), "ms", StrandPalette.metricCyan, fracOver(hrv, 120), spark: sparks["hrv"] ?? [])
+                ktile(Text("Rest HR"), intText(rhr), "bpm", StrandPalette.metricRose, fracOver(rhr, 100), spark: sparks["rhr"] ?? [])
+                ktile(Text("Steps"), stepsText, "", StrandPalette.chargeColor, fracOver(stepCount, 10000), spark: sparks["steps"] ?? [])
             }
             NavigationLink { MetricExplorerView() } label: {
                 Text("Show all metrics").font(StrandFont.subhead).foregroundStyle(StrandPalette.accent)
@@ -975,10 +1524,10 @@ struct LiquidTodayView: View {
         Array(days.compactMap(pick).suffix(14))
     }
 
-    private func ktile(_ label: LocalizedStringKey, _ value: String, _ unit: String, _ tint: Color,
+    private func ktile(_ label: Text, _ value: String, _ unit: String, _ tint: Color,
                        _ frac: Double?, spark: [Double] = []) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label).font(StrandFont.overlineScaled(9)).tracking(1.2)
+            label.font(StrandFont.overlineScaled(9)).tracking(1.2)
                 .textCase(.uppercase)
                 .foregroundStyle(StrandPalette.textTertiary)
             (Text(value).font(StrandFont.number(17))
@@ -1008,49 +1557,11 @@ struct LiquidTodayView: View {
         )
     }
 
-    // MARK: - Last workouts
-
-    private var lastWorkoutsSection: some View {
-        VStack(spacing: 8) {
-            sectionHead("LAST WORKOUTS", trailing: "\(workouts.count) total")
-            if let w = workouts.first {
-                NavigationLink { WorkoutsView() } label: { workoutCard(w) }
-                    .buttonStyle(LiquidPressStyle())
-            } else {
-                card {
-                    Text("No workouts yet")
-                        .font(StrandFont.subhead)
-                        .foregroundStyle(StrandPalette.textTertiary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-        }
-    }
-
-    private func workoutCard(_ w: WorkoutRow) -> some View {
-        card {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(WorkoutSource.displaySport(w.sport)).font(StrandFont.number(15))
-                            .foregroundStyle(StrandPalette.textPrimary)
-                        Text(workoutSub(w)).font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
-                    }
-                    Spacer()
-                    (Text(effortText(w.strain)).font(StrandFont.number(15))
-                        + Text(" EFFORT").font(StrandFont.overlineScaled(9)))
-                        .foregroundStyle(StrandPalette.textPrimary)
-                }
-                LiquidTube(frac: (w.strain ?? 0) / 100, tint: StrandPalette.effortColor, height: 12, animated: false)
-            }
-        }
-    }
-
     // MARK: - Data sources
 
     private var dataSourcesSection: some View {
         VStack(spacing: 8) {
-            sectionHead("DATA SOURCES", trailing: "Provenance")
+            sectionHead("DATA SOURCES", trailing: Text("Provenance"))
             NavigationLink { DataSourcesView() } label: {
                 card {
                     VStack(spacing: 12) {
@@ -1073,11 +1584,13 @@ struct LiquidTodayView: View {
 
     // MARK: - Reusable chrome
 
-    private func sectionHead(_ title: String, trailing: String) -> some View {
+    private func sectionHead(_ title: LocalizedStringKey, trailing: Text? = nil) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title).font(StrandFont.overline).tracking(1.6).foregroundStyle(StrandPalette.textTertiary)
             Spacer()
-            Text(trailing).font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+            if let trailing {
+                trailing.font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+            }
         }
         .padding(.horizontal, 2)
         .padding(.top, 4)
@@ -1114,6 +1627,9 @@ struct LiquidTodayView: View {
         let freshCutoff = Repository.localDayKey(Calendar.current.date(byAdding: .day, value: -2, to: Date()) ?? Date())
         cachedVitalsDay = (selectedDayOffset == 0) ? Repository.lastVitalsDay(days: repo.days, todayKey: tkey) : nil
         if let v = cachedVitalsDay, v.day < freshCutoff { cachedVitalsDay = nil }
+        chargeCalibrationNights = selectedDayOffset == 0
+            ? RecoveryScorer.calibrationNights(nightlyHrv: repo.days.map(\.avgHrv), hasRecovery: day?.recovery != nil)
+            : nil
 
         // KEY METRICS 14-day trend series — computed ONCE here (repo.days is large; never in body).
         sparks = [
@@ -1182,6 +1698,23 @@ struct LiquidTodayView: View {
         hrValues = hrBucketsDay.map { $0.bpm }
         workouts = await wkA
 
+        // Block 3: the day's sessions (started inside its window), newest first; for the newest, its minutes
+        // in heart-rate zones from the strap and the WODs logged for it.
+        dayWorkouts = workouts.filter { $0.startTs >= from && $0.startTs < to }.sorted { $0.startTs > $1.startTs }
+        let allWods = await wodsA
+        if let w = dayWorkouts.first {
+            // Zones as the workout screen shows them: an imported split first, else the strap's own samples.
+            if let imported = Self.importedZoneMinutes(w) {
+                workoutZones = imported
+            } else {
+                workoutZones = await repo.workoutZoneMinutes(from: w.startTs, to: w.endTs, maxHR: profile.hrMax)
+            }
+            workoutWods = Self.wods(for: w, among: allWods, workouts: workouts)
+        } else {
+            workoutZones = nil
+            workoutWods = []
+        }
+
         // "Heart & Glucose" timeline for the selected day: workout bands are the day's sessions clipped to
         // the window; the chart reads heart rate itself at its zoom's resolution. Glucose/carbs/bolus are
         // read live from Apple Health on iOS (empty on macOS, where the section never shows).
@@ -1212,6 +1745,7 @@ struct LiquidTodayView: View {
             DiabetesMetrics.hypoEvents(nightGlucose, tzOffsetSeconds: TimeZone.current.secondsFromGMT()),
             sleepStart: mainSleep.map { Double($0.startTs) }, sleepEnd: mainSleep.map { Double($0.endTs) })
         #endif
+        updateGlucoseBlocks()
 
         // Day-key each diabetes series to the selected day (they're daily), with a latest fallback only
         // at offset 0 — mirrors stepsEst above. A missing day stays nil so the row simply doesn't show.
@@ -1237,7 +1771,7 @@ struct LiquidTodayView: View {
         let strain7 = repo.days.compactMap { $0.strain }.suffix(7)
         weekStrain = strain7.isEmpty ? nil : strain7.reduce(0, +) / Double(strain7.count)
         let sevenAgo = Int(Date().timeIntervalSince1970) - 7 * 86_400
-        weekWods = (await wodsA).filter { $0.ts >= sevenAgo }.count
+        weekWods = allWods.filter { $0.ts >= sevenAgo }.count
 
         // First load done — bring the hero gauges + sky to life now the launch churn has settled.
         if !dataLoaded { withAnimation(.easeIn(duration: 0.4)) { dataLoaded = true } }
@@ -1246,22 +1780,23 @@ struct LiquidTodayView: View {
     // MARK: - Derived (sync, off repo.today / repo.days)
 
     /// Cached in load() — ReadinessEngine.evaluate scans the full history and was invoked ~3× per body
-    /// pass (readinessWord + synthLine + readiness.summary). The fallback runs only in the brief window
+    /// pass (readinessWord + synthLine + signals). The fallback runs only in the brief window
     /// before the first load() populates the cache.
     private var readiness: ReadinessEngine.Readiness {
         cachedReadiness ?? ReadinessEngine.evaluate(days: repo.days, today: cachedDisplayDay?.day)
     }
 
-    private var readinessWord: String? {
+    /// The verdict's word. "Recover", not "Rest": Rest is a score's name.
+    private var readinessWord: LocalizedStringKey? {
         switch readiness.level {
         case .primed: return "Push"
         case .balanced: return "Maintain"
-        case .strained, .rundown: return "Rest"
+        case .strained, .rundown: return "Recover"
         case .insufficient: return nil
         }
     }
 
-    private var synthLine: String {
+    private var synthLine: LocalizedStringKey {
         switch readiness.level {
         case .primed: return "You're primed. A hard session should land well today."
         case .balanced: return "You're in a good spot for training."
@@ -1269,11 +1804,6 @@ struct LiquidTodayView: View {
         case .rundown: return "Several recovery signals are down. Prioritise rest today."
         case .insufficient: return "Still learning your baseline. A few more nights and this fills in."
         }
-    }
-
-    private var greeting: String {
-        let h = Calendar.current.component(.hour, from: Date())
-        return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"
     }
 
     private var stepCount: Double? { displayDay?.steps.map(Double.init) ?? stepsEst }
@@ -1477,7 +2007,7 @@ private struct HeroScoreCell: View {
                 .foregroundStyle(StrandPalette.onDarkSecondary)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("\(label), \(score.map { String(Int($0.rounded())) } ?? "no data yet"). See how it is scored."))
+            .accessibilityLabel(Text("\(label), \(score.map { String(Int($0.rounded())) } ?? String(localized: "no data yet")). See how it is scored."))
             if let pill {
                 Text(pill)
                     .font(StrandFont.overlineScaled(8.5)).tracking(1.2)
@@ -1541,7 +2071,7 @@ private struct LiquidLiveHR: View {
         if let last = fallback.last { return Int(last.rounded()) }
         return nil
     }
-    private var subtitle: String {
+    private var subtitle: LocalizedStringKey {
         if isLive { return "Live · beat by beat" }
         if fallback.count >= 2 { return "5-minute average · since midnight" }
         return live.connected ? "Waiting for the strap" : "Strap not connected"
@@ -1598,7 +2128,7 @@ private struct LiquidLiveHR: View {
         }
     }
 
-    private func stat(_ label: String, _ v: Double?) -> some View {
+    private func stat(_ label: LocalizedStringKey, _ v: Double?) -> some View {
         HStack(spacing: 5) {
             Text(label).font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
             Text(v.map { String(Int($0.rounded())) } ?? "–")
@@ -1672,7 +2202,7 @@ private struct LiquidStrapBatteryRow: View {
     /// Mac / Android pill and the classic Today badge.
     private func batteryText(pct: Double) -> String {
         let base = "\(Int(pct.rounded()))%"
-        if live.charging == true { return "\(base) · Charging" }
+        if live.charging == true { return "\(base) · " + String(localized: "Charging") }
         if let est = estimateText { return "\(base) · \(est)" }
         return base
     }
@@ -1691,6 +2221,125 @@ private struct LiquidStrapBatteryRow: View {
         return days == 1
             ? String(localized: "~1 day left")
             : String(localized: "~\(days) days left")
+    }
+}
+
+// MARK: - Today blocks: small pieces
+
+/// A compact capsule action in the Today blocks (log a WOD, rename, start a session).
+private struct ActionChip: ViewModifier {
+    let tint: Color
+    func body(content: Content) -> some View {
+        content
+            .font(StrandFont.caption.weight(.semibold))
+            .foregroundStyle(tint)
+            .lineLimit(1)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .frame(minHeight: 36)
+            .background(Capsule().fill(tint.opacity(0.12)))
+            .overlay(Capsule().strokeBorder(tint.opacity(0.28), lineWidth: 1))
+            .contentShape(Capsule())
+    }
+}
+
+/// The CGM-style trend arrow: flat, 45° or straight, doubled when fast.
+private struct GlucoseTrendArrow: View {
+    let trend: GlucoseNow.Trend
+
+    var body: some View {
+        HStack(spacing: -6) {
+            ForEach(0..<(fast ? 2 : 1), id: \.self) { _ in Image(systemName: symbol) }
+        }
+        .font(.system(size: 24, weight: .bold))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+    }
+
+    private var fast: Bool { trend == .risingFast || trend == .fallingFast }
+
+    private var symbol: String {
+        switch trend {
+        case .risingFast, .rising: return "arrow.up"
+        case .risingSlowly: return "arrow.up.right"
+        case .steady: return "arrow.right"
+        case .fallingSlowly: return "arrow.down.right"
+        case .falling, .fallingFast: return "arrow.down"
+        }
+    }
+
+    private var label: Text {
+        switch trend {
+        case .risingFast: return Text("Rising fast")
+        case .rising: return Text("Rising")
+        case .risingSlowly: return Text("Rising slowly")
+        case .steady: return Text("Steady")
+        case .fallingSlowly: return Text("Falling slowly")
+        case .falling: return Text("Falling")
+        case .fallingFast: return Text("Falling fast")
+        }
+    }
+}
+
+/// Glucose over a window as a small chart: the 70–180 mg/dL target band, the line broken at sensor gaps, the
+/// 70 mg/dL line, and the latest reading as a dot. Same colours as the Heart & Glucose timeline. Equatable,
+/// so it redraws only when its readings change.
+private struct GlucoseSparkline: View, Equatable {
+    let points: [GlucoseTrace.Point]
+    let window: ClosedRange<Double>
+
+    nonisolated static func == (a: GlucoseSparkline, b: GlucoseSparkline) -> Bool {
+        a.points == b.points && a.window == b.window
+    }
+
+    var body: some View {
+        let lowest = points.map(\.mgdl).min() ?? 70
+        let highest = points.map(\.mgdl).max() ?? 180
+        let lo = max(0, (min(55, lowest - 8) / 10).rounded(.down) * 10)
+        let hi = (max(200, highest + 12) / 20).rounded(.up) * 20
+        Canvas { ctx, size in
+            // A gutter on the left for the band's edge labels, so the line never runs through them.
+            let gutter: CGFloat = 24
+            let plotWidth = max(1, size.width - gutter)
+            let span = max(1, window.upperBound - window.lowerBound)
+            func x(_ ts: Double) -> CGFloat { gutter + CGFloat((ts - window.lowerBound) / span) * plotWidth }
+            func y(_ v: Double) -> CGFloat { CGFloat(1 - (v - lo) / (hi - lo)) * size.height }
+            // Target band, the low line and their labels.
+            ctx.fill(Path(CGRect(x: gutter, y: y(180), width: plotWidth, height: y(70) - y(180))),
+                     with: .color(StrandPalette.statusPositive.opacity(0.10)))
+            var lowLine = Path()
+            lowLine.move(to: CGPoint(x: gutter, y: y(70)))
+            lowLine.addLine(to: CGPoint(x: size.width, y: y(70)))
+            ctx.stroke(lowLine, with: .color(StrandPalette.statusCritical.opacity(0.45)),
+                       style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+            for v in [180.0, 70.0] {
+                ctx.draw(Text(verbatim: "\(Int(v))").font(.system(size: 9, weight: .medium, design: .rounded))
+                            .foregroundColor(StrandPalette.textTertiary),
+                         at: CGPoint(x: 0, y: y(v)), anchor: .leading)
+            }
+            // The trace, one path per segment (no line across a sensor gap).
+            var path = Path()
+            var segment = -1
+            for p in points {
+                let pt = CGPoint(x: x(p.ts), y: y(p.mgdl))
+                if p.segment != segment { path.move(to: pt); segment = p.segment } else { path.addLine(to: pt) }
+            }
+            var clipped = ctx
+            clipped.clip(to: Path(CGRect(x: gutter, y: 0, width: plotWidth, height: size.height)))
+            clipped.stroke(path, with: .color(StrandPalette.chartGlucose),
+                           style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+            // The latest reading, ringed in the card's surface so it reads over the line.
+            if let last = points.last(where: { window.contains($0.ts) }) {
+                let r: CGFloat = 4
+                let dot = CGRect(x: x(last.ts) - r, y: y(last.mgdl) - r, width: 2 * r, height: 2 * r)
+                ctx.fill(Path(ellipseIn: dot.insetBy(dx: -2, dy: -2)), with: .color(StrandPalette.surfaceRaised))
+                ctx.fill(Path(ellipseIn: dot),
+                         with: .color(last.mgdl < GlucoseTrace.lowThreshold ? StrandPalette.statusCritical : StrandPalette.chartGlucose))
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Glucose chart"))
+        .accessibilityValue(Text("Lowest \(Int(lowest.rounded())), highest \(Int(highest.rounded())) mg/dL"))
     }
 }
 
