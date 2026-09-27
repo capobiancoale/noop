@@ -131035,7 +131035,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Frequenza cardiaca e HRV spesso non cambiano durante un'ipoglicemia notturna, quindi la Carica può sembrare normale anche dopo. Tieni conto di come ti senti davvero oggi."
+            "value": "Frequenza cardiaca e HRV spesso non cambiano durante un'ipoglicemia notturna, quindi Charge può sembrare normale anche dopo. Tieni conto di come ti senti davvero oggi."
           }
         }
       }
@@ -132826,6 +132826,876 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sotto la Zona 1: %@"
+          }
+        }
+      }
+    },
+    "Recover": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupera"
+          }
+        }
+      }
+    },
+    "You're primed. A hard session should land well today.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sei in gran forma: oggi una sessione intensa dovrebbe andare bene."
+          }
+        }
+      }
+    },
+    "You're in a good spot for training.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sei in una buona condizione per allenarti."
+          }
+        }
+      }
+    },
+    "Signals are down a touch. Keep it easy today.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I segnali sono un po' in calo: oggi vai leggero."
+          }
+        }
+      }
+    },
+    "Several recovery signals are down. Prioritise rest today.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diversi segnali di recupero sono in calo: oggi dai priorità al riposo."
+          }
+        }
+      }
+    },
+    "Still learning your baseline. A few more nights and this fills in.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sto ancora imparando la tua linea di base: ancora qualche notte e si completa."
+          }
+        }
+      }
+    },
+    "Shows the signals behind it": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra i segnali su cui si basa"
+          }
+        }
+      }
+    },
+    "Training variety": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Varietà dell'allenamento"
+          }
+        }
+      }
+    },
+    "Above your baseline": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sopra la tua linea di base"
+          }
+        }
+      }
+    },
+    "A little below your baseline": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un po' sotto la tua linea di base"
+          }
+        }
+      }
+    },
+    "Well below your baseline": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Molto sotto la tua linea di base"
+          }
+        }
+      }
+    },
+    "At or below your baseline": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alla tua linea di base o sotto"
+          }
+        }
+      }
+    },
+    "A little above your baseline": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un po' sopra la tua linea di base"
+          }
+        }
+      }
+    },
+    "Well above your baseline": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Molto sopra la tua linea di base"
+          }
+        }
+      }
+    },
+    "Above your baseline, sometimes an early sign of illness": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sopra la tua linea di base, a volte un primo segno di malattia"
+          }
+        }
+      }
+    },
+    "A similar load every day": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un carico simile ogni giorno"
+          }
+        }
+      }
+    },
+    "Lighter than usual: room to build": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più leggero del solito: c'è margine per crescere"
+          }
+        }
+      }
+    },
+    "In line with your usual load": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In linea con il tuo carico abituale"
+          }
+        }
+      }
+    },
+    "Building fast: watch for fatigue": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In rapida crescita: attenzione alla fatica"
+          }
+        }
+      }
+    },
+    "Well above your usual load": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Molto sopra il tuo carico abituale"
+          }
+        }
+      }
+    },
+    "In your normal range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nel tuo intervallo normale"
+          }
+        }
+      }
+    },
+    "Charge is learning your baseline: %lld of %lld nights.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charge sta imparando la tua linea di base: %1$lld di %2$lld notti."
+          }
+        }
+      }
+    },
+    "Charge appears once last night's sleep is in from the strap.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charge compare quando il sonno di stanotte arriva dalla fascia."
+          }
+        }
+      }
+    },
+    "Effort builds up as the strap records your day.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effort cresce man mano che la fascia registra la tua giornata."
+          }
+        }
+      }
+    },
+    "Rest appears after a night's sleep with the strap.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rest compare dopo una notte di sonno con la fascia."
+          }
+        }
+      }
+    },
+    "GLUCOSE NOW": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GLICEMIA ADESSO"
+          }
+        }
+      }
+    },
+    "GLUCOSE": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GLICEMIA"
+          }
+        }
+      }
+    },
+    "Last 3 hours": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultime 3 ore"
+          }
+        }
+      }
+    },
+    "The whole day": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutto il giorno"
+          }
+        }
+      }
+    },
+    "Lows": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ipoglicemie"
+          }
+        }
+      }
+    },
+    "Very low": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Molto bassa"
+          }
+        }
+      }
+    },
+    "Below range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sotto il range"
+          }
+        }
+      }
+    },
+    "In range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nel range"
+          }
+        }
+      }
+    },
+    "Above range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sopra il range"
+          }
+        }
+      }
+    },
+    "Very high": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Molto alta"
+          }
+        }
+      }
+    },
+    "Last reading %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultima lettura %@"
+          }
+        }
+      }
+    },
+    "Rising fast": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In rapida salita"
+          }
+        }
+      }
+    },
+    "Rising": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In salita"
+          }
+        }
+      }
+    },
+    "Rising slowly": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In lenta salita"
+          }
+        }
+      }
+    },
+    "Falling slowly": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In lenta discesa"
+          }
+        }
+      }
+    },
+    "Falling": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In discesa"
+          }
+        }
+      }
+    },
+    "Falling fast": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In rapida discesa"
+          }
+        }
+      }
+    },
+    "Glucose chart": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grafico della glicemia"
+          }
+        }
+      }
+    },
+    "Lowest %lld, highest %lld mg/dL": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimo %1$lld, massimo %2$lld mg/dL"
+          }
+        }
+      }
+    },
+    "TODAY'S WORKOUT": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ALLENAMENTO DI OGGI"
+          }
+        }
+      }
+    },
+    "WORKOUT": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ALLENAMENTO"
+          }
+        }
+      }
+    },
+    "All workouts": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutti gli allenamenti"
+          }
+        }
+      }
+    },
+    "Opens the workout": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apre l'allenamento"
+          }
+        }
+      }
+    },
+    "No workout yet today.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora nessun allenamento oggi."
+          }
+        }
+      }
+    },
+    "No workout on this day.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun allenamento in questo giorno."
+          }
+        }
+      }
+    },
+    "Train with the strap on and NOOP finds the session from your heart rate.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allenati indossando la fascia: NOOP trova la sessione dalla frequenza cardiaca."
+          }
+        }
+      }
+    },
+    "Glucose, start → end": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia, inizio → fine"
+          }
+        }
+      }
+    },
+    "Below 70 mg/dL during it or in the hour after, lowest %lld mg/dL.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sotto 70 mg/dL durante l'allenamento o nell'ora successiva, minimo %lld mg/dL."
+          }
+        }
+      }
+    },
+    "NOOP found this from your heart rate. What was it?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP l'ha trovato dalla frequenza cardiaca. Che allenamento era?"
+          }
+        }
+      }
+    },
+    "Not a workout?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non era un allenamento?"
+          }
+        }
+      }
+    },
+    "Hide this activity": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nascondi questa attività"
+          }
+        }
+      }
+    },
+    "NOOP stops showing it as a workout. Its heart rate stays in your day.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP non la mostrerà più come allenamento. La sua frequenza cardiaca resta nella tua giornata."
+          }
+        }
+      }
+    },
+    "Start a live session. Beta. Silent strap coaching against today's Charge.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia una sessione dal vivo. Beta. Indicazioni silenziose dalla fascia in base al Charge di oggi."
+          }
+        }
+      }
+    },
+    "Details": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dettagli"
+          }
+        }
+      }
+    },
+    "Heart rate, vitals, key metrics, the week, your cards and data sources": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frequenza cardiaca, parametri vitali, metriche principali, la settimana, le tue schede e le fonti dati"
+          }
+        }
+      }
+    },
+    "Shown": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visibili"
+          }
+        }
+      }
+    },
+    "CHARGE vs EFFORT": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CHARGE vs EFFORT"
+          }
+        }
+      }
+    },
+    "Avg Effort": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effort medio"
+          }
+        }
+      }
+    },
+    "HEART & GLUCOSE": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CUORE E GLICEMIA"
+          }
+        }
+      }
+    },
+    "KEY METRICS": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "METRICHE PRINCIPALI"
+          }
+        }
+      }
+    },
+    "RECOVERY VITALS": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PARAMETRI DI RECUPERO"
+          }
+        }
+      }
+    },
+    "DATA SOURCES": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FONTI DATI"
+          }
+        }
+      }
+    },
+    "YOUR CARDS": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LE TUE SCHEDE"
+          }
+        }
+      }
+    },
+    "Full day": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giornata intera"
+          }
+        }
+      }
+    },
+    "View sources": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vedi fonti"
+          }
+        }
+      }
+    },
+    "yesterday": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ieri"
+          }
+        }
+      }
+    },
+    "Opens the full-day heart rate timeline": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apre la frequenza cardiaca dell'intera giornata"
+          }
+        }
+      }
+    },
+    "BEATS PER MINUTE": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BATTITI AL MINUTO"
+          }
+        }
+      }
+    },
+    "Live · beat by beat": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In diretta · battito per battito"
+          }
+        }
+      }
+    },
+    "Waiting for the strap": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In attesa della fascia"
+          }
+        }
+      }
+    },
+    "Waiting for a live heartbeat…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In attesa del battito in diretta…"
+          }
+        }
+      }
+    },
+    "Connect your strap to see live heart rate": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collega la fascia per vedere la frequenza cardiaca in diretta"
+          }
+        }
+      }
+    },
+    "Profile and settings": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profilo e impostazioni"
+          }
+        }
+      }
+    },
+    "Support NOOP. It's free; donations are optional and help development.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sostieni NOOP. È gratuita; le donazioni sono facoltative e aiutano lo sviluppo."
+          }
+        }
+      }
+    },
+    "%@. Tap to pick a day, swipe to change day.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@. Tocca per scegliere un giorno, scorri per cambiare giorno."
+          }
+        }
+      }
+    },
+    "%@, %@. See how it is scored.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@. Scopri come viene calcolato."
+          }
+        }
+      }
+    },
+    "no data yet": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ancora nessun dato"
+          }
+        }
+      }
+    },
+    "Cycling": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ciclismo"
+          }
+        }
+      }
+    },
+    "Strength Training": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allenamento di forza"
+          }
+        }
+      }
+    },
+    "Swimming": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuoto"
+          }
+        }
+      }
+    },
+    "Rowing": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Canottaggio"
+          }
+        }
+      }
+    },
+    "Hiking": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escursionismo"
           }
         }
       }
