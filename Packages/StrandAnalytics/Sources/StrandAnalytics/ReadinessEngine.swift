@@ -16,12 +16,14 @@ public enum ReadinessEngine {
     public static func dayKey(_ key: String, adding days: Int) -> String? {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
-        f.calendar = Calendar(identifier: .gregorian)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        f.calendar = calendar
         f.timeZone = TimeZone(secondsFromGMT: 0)
         f.dateFormat = "yyyy-MM-dd"
         f.isLenient = false
         guard let date = f.date(from: key), f.string(from: date) == key,
-              let next = f.calendar.date(byAdding: .day, value: days, to: date) else { return nil }
+              let next = calendar.date(byAdding: .day, value: days, to: date) else { return nil }
         return f.string(from: next)
     }
 

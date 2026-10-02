@@ -190,7 +190,8 @@ extension WodLogRow {
             && movements.count == other.movements.count
             && zip(movements, other.movements).allSatisfy { a, b in
                 norm(a.name) == norm(b.name) && a.reps == b.reps && a.scheme == b.scheme
-                    && a.sets == b.sets && a.weightKg == b.weightKg && a.rxWeightKg == b.rxWeightKg
+                    && a.sets == b.sets && (resultKind == .weight || a.weightKg == b.weightKg)
+                    && a.rxWeightKg == b.rxWeightKg
                     && a.notes == b.notes
             }
     }
