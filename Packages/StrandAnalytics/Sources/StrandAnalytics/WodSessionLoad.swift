@@ -6,7 +6,7 @@ extension StrainScorer.LoggedSession {
     /// time, else the time cap). nil without an RPE or a duration. Imports that know only the date anchor a
     /// WOD to local noon, so one at exactly 12:00:00 local time is treated as time-unknown.
     public init?(wod: WodLogRow, tzOffsetSeconds: Int) {
-        guard let rpe = wod.rpe, rpe > 0, let secs = wod.resultSeconds ?? wod.timeCapS, secs > 0 else { return nil }
+        guard let rpe = wod.rpe, rpe.isFinite, rpe > 0, let secs = wod.durationS ?? wod.resultSeconds ?? wod.timeCapS, secs > 0 else { return nil }
         let localSecond = ((wod.ts + tzOffsetSeconds) % 86_400 + 86_400) % 86_400
         self.init(rpe: min(rpe, 10), durationMin: Double(secs) / 60, ts: wod.ts, timeKnown: localSecond != 43_200)
     }

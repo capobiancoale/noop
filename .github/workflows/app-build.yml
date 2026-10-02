@@ -10,7 +10,7 @@ name: App build (macOS + iOS)
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, ChatGPT_V2]
     paths:
       - 'Strand/**'
       - 'StrandiOS/**'
@@ -20,7 +20,7 @@ on:
       - 'project.yml'
       - '.github/workflows/app-build.yml'
   push:
-    branches: [main]
+    branches: [main, ChatGPT_V2]
     paths:
       - 'Strand/**'
       - 'StrandiOS/**'

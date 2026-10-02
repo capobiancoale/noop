@@ -41,9 +41,9 @@ struct WodLogView: View {
 
             if !benchmarks.isEmpty {
                 Section("Bests") {
-                    ForEach(benchmarks, id: \.title) { b in
+                    ForEach(benchmarks, id: \.id) { b in
                         NavigationLink {
-                            WodProgressionView(title: b.title) { Task { await reload() } }
+                            WodProgressionView(title: b.title, reference: b.reference) { Task { await reload() } }
                         } label: {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
@@ -88,16 +88,19 @@ struct WodLogView: View {
 
     // MARK: Bests (per-title progress)
 
-    private struct Bench { let title: String; let best: String; let count: Int }
+    private struct Bench { let id: String; let title: String; let best: String; let count: Int; let reference: WodLogRow }
 
     /// One "best" row per WOD title that has ≥ 2 attempts — the progress at a glance. The best is the
     /// min finish time / max rounds / max reps / max weight, matching each WOD's own result kind.
     private var benchmarks: [Bench] {
-        let byTitle = Dictionary(grouping: wods, by: { $0.title })
+        var remaining = wods
         var out: [Bench] = []
-        for (title, rows) in byTitle where rows.count >= 2 {
-            guard let best = WodFormat.best(of: rows) else { continue }
-            out.append(Bench(title: title, best: best, count: rows.count))
+        while let anchor = remaining.first {
+            let rows = remaining.filter { anchor.isComparable(to: $0) }
+            remaining.removeAll { $0.id == anchor.id || anchor.isComparable(to: $0) }
+            guard rows.count >= 2, let best = WodFormat.best(of: rows) else { continue }
+            let label = anchor.title + " · " + (anchor.benchmarkVersion ?? "") + " · " + (anchor.scaling ?? "")
+            out.append(Bench(id: anchor.id, title: label, best: best, count: rows.count, reference: anchor))
         }
         return out.sorted { $0.count > $1.count }
     }
@@ -158,13 +161,14 @@ enum WodFormat {
 
     /// The best result across attempts of one WOD title (all assumed same kind as the first).
     static func best(of rows: [WodLogRow]) -> String? {
-        guard let kind = rows.first?.resultKind else { return nil }
+        guard let anchor = rows.first, rows.allSatisfy({ anchor.isComparable(to: $0) }) else { return nil }
+        let kind = anchor.resultKind
         switch kind {
         case .time:
             return rows.compactMap { $0.resultSeconds }.min().map(clock)
         case .roundsReps:
             // Rank by total reps ≈ rounds*100 + extra, so more rounds always wins.
-            let best = rows.max { ($0.resultRounds ?? 0) * 100 + ($0.resultReps ?? 0) < ($1.resultRounds ?? 0) * 100 + ($1.resultReps ?? 0) }
+            let best = rows.max { ($0.resultRounds ?? 0, $0.resultReps ?? 0) < ($1.resultRounds ?? 0, $1.resultReps ?? 0) }
             return best.flatMap { r in r.resultRounds.map { "\($0) + \(r.resultReps ?? 0)" } }
         case .reps:
             return rows.compactMap { $0.resultReps }.max().map { "\($0) reps" }
@@ -179,6 +183,7 @@ enum WodFormat {
     /// that are present are shown, so a bare "Pull-up" stays "Pull-up".
     static func movement(_ m: WodMovement) -> String {
         var parts: [String] = [m.name]
+        if let sets = m.sets { parts.append("\(sets) sets") }
         if let s = m.scheme, !s.isEmpty { parts.append(s) }
         else if let r = m.reps { parts.append("\(r)") }
         if let me = m.weightKg, let rx = m.rxWeightKg {
@@ -195,7 +200,7 @@ enum WodFormat {
     static func progressionValue(_ w: WodLogRow) -> Double? {
         switch w.resultKind {
         case .time:       return w.resultSeconds.map(Double.init)
-        case .roundsReps: return w.resultRounds.map { Double($0 * 100 + (w.resultReps ?? 0)) }
+        case .roundsReps: return nil // Rounds + extra reps are ordered lexicographically; no arbitrary scalar chart.
         case .reps:       return w.resultReps.map(Double.init)
         case .weight:     return w.resultWeightKg
         case .none:       return nil

@@ -7,20 +7,24 @@ import WhoopStore
 /// history into a single readiness read plus the drivers behind it. Everything here is a pure,
 /// deterministic function of the rows you pass in — no networking, no strap commands, no state.
 ///
-/// Signals and their references:
-/// - **HRV readiness** — z-score of today's HRV against the personal trailing baseline. A drop of
-///   roughly half a standard deviation flags autonomic fatigue (Plews et al. 2013; Buchheit 2014).
-/// - **Resting-HR drift** — elevated resting HR vs baseline is a classic overtraining / illness
-///   signal (Lamberts et al. 2004).
-/// - **Respiratory-rate drift** — a rise in sleeping respiratory rate is an early illness signal.
-/// - **Training Stress Balance (ACWR)** — acute (7-day) vs chronic (28-day) strain. The 0.8–1.3
-///   band is the "sweet spot"; >1.5 is associated with higher injury risk (Gabbett 2016).
-/// - **Training monotony** — mean/SD of daily strain over a week; high monotony (low variety) is
-///   associated with higher strain and illness (Foster 1998).
-///
-/// Not medical advice. These are approximations from a consumer strap; they describe trends in
-/// *your own* data, nothing more.
+/// Descriptive personal trends only. Thresholds and synthesis are experimental UI heuristics,
+/// not diagnostic cut-offs or an injury-risk model. Missing calendar days are never rest days.
 public enum ReadinessEngine {
+    public static let methodVersion = "readiness-calendar-v2"
+
+    /// Civil-day arithmetic in UTC prevents DST or the current device time zone changing history.
+    public static func dayKey(_ key: String, adding days: Int) -> String? {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.calendar = Calendar(identifier: .gregorian)
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        f.dateFormat = "yyyy-MM-dd"
+        f.isLenient = false
+        guard let date = f.date(from: key), f.string(from: date) == key,
+              let next = f.calendar.date(byAdding: .day, value: days, to: date) else { return nil }
+        return f.string(from: next)
+    }
+
 
     // MARK: Output types
 
@@ -127,7 +131,10 @@ public enum ReadinessEngine {
                              summary: "Wear the strap for a few nights and your readiness read will appear here.",
                              signals: [], acwr: nil, monotony: nil)
         }
-        let history = sorted.filter { $0.day < latest.day }   // everything before today
+        guard let baselineStart = dayKey(latest.day, adding: -baselineWindow) else {
+            return Readiness(level: .insufficient, headline: "Readiness", summary: "Invalid day.", signals: [], acwr: nil, monotony: nil)
+        }
+        let history = sorted.filter { $0.day >= baselineStart && $0.day < latest.day }   // everything before today
 
         var signals: [Signal] = []
 
@@ -139,10 +146,10 @@ public enum ReadinessEngine {
             unit: "ms",
             decimals: 0,
             higherIsBetter: true,
-            goodText: "above your baseline - well recovered",
+            goodText: "above your personal baseline",
             neutralText: "in your normal range",
             watchText: "a touch below baseline",
-            badText: "suppressed - a sign of autonomic fatigue")
+            badText: "below your personal baseline")
         if let s = hrvSignal { signals.append(s) }
 
         // Resting-HR drift ---------------------------------------------------
@@ -156,7 +163,7 @@ public enum ReadinessEngine {
             goodText: "at or below baseline",
             neutralText: "in your normal range",
             watchText: "running a little high",
-            badText: "elevated - overtraining or illness can do this")
+            badText: "above your personal baseline")
         if let s = rhrSignal { signals.append(s) }
 
         // Respiratory-rate drift (illness early signal) ----------------------
@@ -172,7 +179,7 @@ public enum ReadinessEngine {
                 if z >= 2.0 {
                     signals.append(Signal(key: "respRate", label: "Respiratory rate",
                         evidence: evidence(value: rr, baseline: m, unit: "rpm", decimals: 1),
-                        detail: "up vs baseline - sometimes an early sign of getting sick", flag: .bad))
+                        detail: "above your personal baseline", flag: .bad))
                 } else if z >= 1.5 {
                     signals.append(Signal(key: "respRate", label: "Respiratory rate",
                         evidence: evidence(value: rr, baseline: m, unit: "rpm", decimals: 1),
@@ -182,28 +189,30 @@ public enum ReadinessEngine {
         }
 
         // Training Stress Balance (ACWR) + monotony --------------------------
-        let strainSeries = sorted.compactMap { $0.strain }
+        let chronicStart = dayKey(latest.day, adding: -(chronicWindow - 1))!
+        let acuteStart = dayKey(latest.day, adding: -(acuteWindow - 1))!
+        let eligible = sorted.filter { $0.day >= chronicStart && $0.day <= latest.day }
+        let byDay = Dictionary(eligible.map { ($0.day, $0) }, uniquingKeysWith: { _, last in last })
+        let chronicRows = byDay.values.compactMap { row -> Double? in
+            guard let v = row.strain, v.isFinite, v >= 0 else { return nil }
+            return v
+        }
+        let acuteRows = byDay.values.filter { $0.day >= acuteStart }.compactMap { row -> Double? in
+            guard let v = row.strain, v.isFinite, v >= 0 else { return nil }
+            return v
+        }
         var acwr: Double? = nil
         var monotony: Double? = nil
-        if strainSeries.count >= minChronic {
-            let acute = mean(Array(strainSeries.suffix(acuteWindow)))!
-            let chronic = mean(Array(strainSeries.suffix(chronicWindow)))!
-            if chronic > 0 {
-                let ratio = acute / chronic
-                acwr = ratio
-                signals.append(acwrSignal(ratio, acute: acute, chronic: chronic))
-            }
-            // Foster monotony over the last week of strain.
-            let week = Array(strainSeries.suffix(acuteWindow))
-            if week.count >= 4, let sd = sampleSD(week), sd > 0, let m = mean(week) {
-                let mono = m / sd
-                monotony = mono
-                if mono >= 2.0 {
-                    signals.append(Signal(key: "monotony", label: "Training variety",
-                        evidence: "monotony \(String(format: "%.1f", mono))",
-                        detail: "low - similar strain every day raises strain/illness risk", flag: .watch))
-                }
-            }
+        // Complete calendar windows are required: an absent value is unknown, an explicit zero is rest.
+        if chronicRows.count == chronicWindow, acuteRows.count == acuteWindow,
+           let acute = mean(acuteRows), let chronic = mean(chronicRows), chronic > 0 {
+            let ratio = acute / chronic
+            acwr = ratio
+            signals.append(acwrSignal(ratio, acute: acute, chronic: chronic))
+        }
+        if acuteRows.count == acuteWindow, let sd = sampleSD(acuteRows), sd > 0,
+           let m = mean(acuteRows) {
+            monotony = m / sd
         }
 
         let (level, headline, summary) = synthesize(signals: signals,
@@ -220,7 +229,8 @@ public enum ReadinessEngine {
                                 higherIsBetter: Bool,
                                 goodText: String, neutralText: String,
                                 watchText: String, badText: String) -> Signal? {
-        guard let v = value, baseline.count >= minBaseline,
+        let baseline = baseline.filter { $0.isFinite && $0 > 0 }
+        guard let v = value, v.isFinite, v > 0, baseline.count >= minBaseline,
               let m = mean(baseline), let sd = sampleSD(baseline), sd > 0 else { return nil }
         // Orient z so positive always means "better".
         let z = (higherIsBetter ? (v - m) : (m - v)) / sd
@@ -244,19 +254,19 @@ public enum ReadinessEngine {
         case ..<0.8:
             return Signal(key: "acwr", label: "Training load",
                 evidence: evidence,
-                detail: "ramping down (acute:chronic \(pct)) - room to build", flag: .watch)
+                detail: "lower recent load (acute:chronic \(pct))", flag: .watch)
         case 0.8..<1.3:
             return Signal(key: "acwr", label: "Training load",
                 evidence: evidence,
-                detail: "in the sweet spot (acute:chronic \(pct))", flag: .good)
+                detail: "similar recent load (acute:chronic \(pct))", flag: .good)
         case 1.3..<1.5:
             return Signal(key: "acwr", label: "Training load",
                 evidence: evidence,
-                detail: "building fast (acute:chronic \(pct)) - watch fatigue", flag: .watch)
+                detail: "higher recent load (acute:chronic \(pct))", flag: .watch)
         default:
             return Signal(key: "acwr", label: "Training load",
                 evidence: evidence,
-                detail: "spiking (acute:chronic \(pct)) - higher injury risk", flag: .bad)
+                detail: "markedly higher recent load (acute:chronic \(pct))", flag: .bad)
         }
     }
 
@@ -285,18 +295,18 @@ public enum ReadinessEngine {
 
         if bad.count >= 2 || (recoveryDown && loadHigh) {
             return (.rundown, "Run down",
-                    "Several signals are down at once. Treat today as recovery - easy movement, real sleep tonight.")
+                    "Several signals differ from your baseline. Compare them with your check-in and recent sessions.")
         }
         if recoveryDown || loadHigh || bad.count >= 1 {
             return (.strained, "Strained",
-                    "One of your signals is flagging. You can train, but keep it controlled and bank the recovery.")
+                    "One or more signals differ from your baseline. This does not determine whether you should train.")
         }
         if good.count >= 2 && watch.isEmpty {
             return (.primed, "Primed",
-                    "Your signals are aligned and your load is supported. A harder session is well backed today.")
+                    "Your recorded signals are aligned. They do not predict today's performance.")
         }
         return (.balanced, "Balanced",
-                "Nothing's flagging. Train to feel - your body's holding steady.")
+                "Your recorded signals are near their usual range. Your own sensations provide additional context.")
     }
 
     // MARK: Stats helpers

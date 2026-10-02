@@ -27,6 +27,50 @@ import WhoopProtocol
 // (exponential TRIMP, b = 1.92 men / 1.67 women); Tanaka 2001 (HRmax = 208 − 0.7×age).
 
 public enum StrainScorer {
+    public static let methodVersion = "load-interval-v2"
+    /// Engineering limit, not a physiological threshold. Gaps above 60 s are not integrated.
+    public static let maximumGapSeconds = 60.0
+
+    public struct Coverage: Equatable, Sendable {
+        public let samples: Int
+        public let observedSeconds: Double
+        public let gapSeconds: Double
+        public let lastTimestamp: Int?
+    }
+
+    private static func uniqueSamples(_ hr: [HRSample]) -> [HRSample] {
+        // Conflicting duplicates use the lower reading: deterministic, without inventing extra time.
+        Dictionary(hr.filter { $0.bpm > 0 }.map { ($0.ts, $0) },
+                   uniquingKeysWith: { a, b in a.bpm <= b.bpm ? a : b })
+            .values.sorted { $0.ts < $1.ts }
+    }
+
+    private static func timedSamples(_ hr: [HRSample]) -> [(sample: HRSample, seconds: Double)] {
+        let rows = uniqueSamples(hr)
+        guard rows.count >= 2 else { return [] }
+        let deltas = zip(rows, rows.dropFirst()).map { Double($1.ts) - Double($0.ts) }
+        let usable = deltas.filter { $0 > 0 && $0 <= maximumGapSeconds }.sorted()
+        guard !usable.isEmpty else { return [] }
+        // One inferred terminal sample interval preserves regular-stream semantics; it is documented,
+        // never used to bridge a recording gap, and never exceeds the accepted cadence limit.
+        let terminal = usable[usable.count / 2]
+        return rows.enumerated().map { i, row in
+            let dt = i < deltas.count ? deltas[i] : terminal
+            return (row, dt > 0 && dt <= maximumGapSeconds ? dt : 0)
+        }
+    }
+
+    public static func coverage(_ hr: [HRSample]) -> Coverage {
+        let rows = uniqueSamples(hr)
+        let observed = timedSamples(rows).reduce(0) { $0 + $1.seconds }
+        let gaps = zip(rows, rows.dropFirst()).reduce(0.0) { total, pair in
+            let dt = Double(pair.1.ts) - Double(pair.0.ts)
+            return total + (dt > maximumGapSeconds ? dt : 0)
+        }
+        return Coverage(samples: rows.count, observedSeconds: observed, gapSeconds: gaps,
+                        lastTimestamp: rows.last?.ts)
+    }
+
 
     // MARK: - Constants (strain.py)
 
@@ -142,17 +186,17 @@ public enum StrainScorer {
 
     static func edwardsTRIMP(_ hr: [HRSample], restingHR: Double, hrReserve: Double,
                              sampleDurationMin: Double) -> Double {
-        var weighted = 0
-        for s in hr { weighted += zoneWeight(Double(s.bpm), restingHR: restingHR, hrReserve: hrReserve) }
-        return Double(weighted) * sampleDurationMin
+        timedSamples(hr).reduce(0) {
+            $0 + Double(zoneWeight(Double($1.sample.bpm), restingHR: restingHR, hrReserve: hrReserve)) * $1.seconds / 60
+        }
     }
 
     static func banisterTRIMP(_ hr: [HRSample], restingHR: Double, hrReserve: Double,
                               sampleDurationMin: Double, b: Double) -> Double {
         var acc = 0.0
-        for s in hr {
-            let x = pctHRR(Double(s.bpm), restingHR: restingHR, hrReserve: hrReserve) / 100.0
-            if x > 0 { acc += sampleDurationMin * x * banisterScale * exp(b * x) }
+        for item in timedSamples(hr) {
+            let x = pctHRR(Double(item.sample.bpm), restingHR: restingHR, hrReserve: hrReserve) / 100.0
+            if x > 0 { acc += item.seconds / 60 * x * banisterScale * exp(b * x) }
         }
         return acc
     }
@@ -162,8 +206,8 @@ public enum StrainScorer {
     /// Map accumulated TRIMP onto [0, 100] via 100 × ln(TRIMP+1) / ln(D), 2 dp.
     /// TRIMP ≤ 0 → 0.
     public static func trimpToStrain(_ trimp: Double, denominator: Double = strainDenominator) -> Double {
-        if trimp <= 0 { return 0 }
-        let value = maxStrain * log(trimp + 1.0) / log(denominator)
+        if !trimp.isFinite || trimp <= 0 || !denominator.isFinite || denominator <= 1 { return 0 }
+        let value = min(maxStrain, maxStrain * log(trimp + 1.0) / log(denominator))
         return (value * 100).rounded() / 100
     }
 
@@ -246,16 +290,9 @@ public enum StrainScorer {
         let effMax = maxHR ?? Double(defaultMaxHR())
         // Enough data to trust the score: a dense stream (≥ minReadings) OR a sparse-but-sustained
         // one spanning ≥ minSpanSeconds with a sample floor (#482 — the 5/MG's ~30 s HR cadence).
-        let enoughData: Bool
-        if hr.count >= minReadings {
-            enoughData = true
-        } else if hr.count >= minSparseReadings {
-            let tss = hr.map { $0.ts }
-            enoughData = ((tss.max() ?? 0) - (tss.min() ?? 0)) >= minSpanSeconds
-        } else {
-            enoughData = false
-        }
-        if !enoughData || effMax <= restingHR { return nil }
+        let c = coverage(hr)
+        let enoughData = c.samples >= minSparseReadings && c.observedSeconds >= Double(minSpanSeconds)
+        if !enoughData || !effMax.isFinite || !restingHR.isFinite || effMax <= restingHR { return nil }
 
         let sampleDur = sampleDurationMinutes(hr)
         let hrReserve = effMax - restingHR
@@ -335,13 +372,11 @@ public enum StrainScorer {
     /// Classic Edwards (1993) TRIMP: minutes at 50–60, 60–70, 70–80, 80–90 and 90–100% of HRmax weighted 1–5.
     static func classicEdwardsTRIMP(_ hr: [HRSample], maxHR: Double, sampleDurationMin: Double) -> Double {
         guard maxHR > 0 else { return 0 }
-        var weighted = 0
-        for s in hr {
-            let pct = Double(s.bpm) / maxHR * 100
-            if pct >= 90 { weighted += 5 } else if pct >= 80 { weighted += 4 } else if pct >= 70 { weighted += 3 }
-            else if pct >= 60 { weighted += 2 } else if pct >= 50 { weighted += 1 }
+        return timedSamples(hr).reduce(0) { total, item in
+            let pct = Double(item.sample.bpm) / maxHR * 100
+            let weight = pct >= 90 ? 5 : pct >= 80 ? 4 : pct >= 70 ? 3 : pct >= 60 ? 2 : pct >= 50 ? 1 : 0
+            return total + Double(weight) * item.seconds / 60
         }
-        return Double(weighted) * sampleDurationMin
     }
 
     /// TRIMP the logged sessions add on top of the heart-rate TRIMP: for each window (sessions sharing one

@@ -481,6 +481,13 @@ extension WhoopStore {
                 t.add(column: "rx", .boolean)
             }
         }
+        migrator.registerMigration("v25-athlete-session") { db in
+            try db.alter(table: "wodLog") { t in
+                t.add(column: "durationS", .integer)
+                t.add(column: "benchmarkVersion", .text)
+                t.add(column: "scaling", .text)
+            }
+        }
         return migrator
     }
 }

@@ -81,7 +81,7 @@ struct WodDetailView: View {
             WodEditorView(existing: current) { reloadAfterEdit() }
         }
         .task {
-            history = await repo.wodHistory(title: current.title)
+            history = await repo.wodHistory(title: current.title).filter { current.isComparable(to: $0) }
             await loadEffortContribution()
             await loadGlucose()
         }
@@ -136,23 +136,17 @@ struct WodDetailView: View {
             if let s = session {
                 LabeledContent("Session load (sRPE)",
                                value: "\(Int(s.rpe)) × \(Int(s.durationMin.rounded())) min = \(Int(s.load.rounded()))")
-                if !effortLoaded {
-                    ProgressView()
-                } else if let added = effortAdded {
-                    if added >= 0.5 {
-                        LabeledContent("Added to the day's Effort", value: "+\(Int(added.rounded()))")
-                    } else {
-                        Text("Your heart rate already reflects this session, so it adds nothing extra to Effort.")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                    }
-                } else {
-                    Text("No heart rate that day, so Effort could not be scored.")
-                        .font(.subheadline).foregroundStyle(.secondary)
+                if current.durationS == nil {
+                    Text("Duration inferred from the result or time cap; enter actual duration for a more specific session log.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
-                Text("Heart rate misses much of the muscular load of lifting and WODs. The session-RPE load (RPE × minutes, Foster 2001) adds to Effort only where the heart rate recorded less than a session this hard carries (Tibana 2018).")
+                if let volume = current.recordedVolumeKg {
+                    LabeledContent("Recorded external volume", value: "\(Int(volume.rounded())) kg·reps")
+                }
+                Text("Perceived load, external volume and cardiovascular load describe different aspects of a session. They are not interchangeable.")
                     .font(.caption).foregroundStyle(.secondary)
             } else {
-                Text("Add an RPE and a time (result or time cap) to count this WOD's muscular load in Effort.")
+                Text("Add RPE and actual duration to view perceived session load.")
                     .font(.subheadline).foregroundStyle(.secondary)
             }
         } header: {
@@ -441,7 +435,8 @@ struct WodProgressionChart: View {
     let currentId: String?
 
     init(history: [WodLogRow], currentId: String? = nil) {
-        self.history = history
+        let anchor = history.first(where: { $0.id == currentId }) ?? history.first
+        self.history = anchor.map { reference in history.filter { reference.isComparable(to: $0) } } ?? []
         self.currentId = currentId
     }
 
@@ -472,7 +467,7 @@ struct WodProgressionChart: View {
         if points.count >= 2 {
             chart(points)
         } else {
-            Text("Log at least two sessions to see progression.")
+            Text("Comparable attempts need the same version, movements and scaling. Rounds + reps remain listed in their original units.")
                 .font(.subheadline).foregroundStyle(.secondary)
         }
     }
@@ -598,6 +593,7 @@ struct WodProgressionChart: View {
 struct WodProgressionView: View {
     @EnvironmentObject private var repo: Repository
     let title: String
+    var reference: WodLogRow? = nil
     let onChanged: () -> Void
     @State private var history: [WodLogRow] = []
 
@@ -632,7 +628,11 @@ struct WodProgressionView: View {
     }
 
     private func reload() { onChanged(); Task { await reloadAsync() } }
-    private func reloadAsync() async { history = await repo.wodHistory(title: title) }
+    private func reloadAsync() async {
+        let rows = await repo.wodHistory(title: reference?.title ?? title)
+        let anchor = reference ?? rows.first
+        history = anchor.map { ref in rows.filter { ref.isComparable(to: $0) } } ?? []
+    }
 }
 
 #endif

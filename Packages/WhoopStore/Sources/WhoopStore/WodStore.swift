@@ -21,6 +21,7 @@ import GRDB
 /// compatible: rows written before v24 decode with the new fields nil.
 public struct WodMovement: Equatable, Codable, Sendable {
     public var name: String
+    public var sets: Int?
     public var reps: Int?
     public var scheme: String?
     /// Reps ACTUALLY completed (distinct from the prescribed `reps`/`scheme`) — e.g. prescribed 5×5 but
@@ -30,7 +31,8 @@ public struct WodMovement: Equatable, Codable, Sendable {
     public var rxWeightKg: Double?
     public var notes: String?
     public init(name: String, reps: Int? = nil, scheme: String? = nil, repsDone: Int? = nil,
-                weightKg: Double? = nil, rxWeightKg: Double? = nil, notes: String? = nil) {
+                weightKg: Double? = nil, rxWeightKg: Double? = nil, notes: String? = nil, sets: Int? = nil) {
+        self.sets = sets
         self.name = name; self.reps = reps; self.scheme = scheme; self.repsDone = repsDone
         self.weightKg = weightKg; self.rxWeightKg = rxWeightKg; self.notes = notes
     }
@@ -67,13 +69,18 @@ public struct WodLogRow: Equatable, Codable, Sendable, Identifiable {
     public var rx: Bool?
     public var notes: String?
     public var movements: [WodMovement]
+    public var durationS: Int?
+    public var benchmarkVersion: String?
+    public var scaling: String?
     public var createdTs: Int
 
     public init(id: String, ts: Int, day: String, type: String, title: String,
                 format: String? = nil, timeCapS: Int? = nil, resultKind: WodResultKind = .none,
                 resultSeconds: Int? = nil, resultRounds: Int? = nil, resultReps: Int? = nil,
                 resultWeightKg: Double? = nil, rpe: Double? = nil, rx: Bool? = nil, notes: String? = nil,
-                movements: [WodMovement] = [], createdTs: Int) {
+                movements: [WodMovement] = [], createdTs: Int,
+                durationS: Int? = nil, benchmarkVersion: String? = nil, scaling: String? = nil) {
+        self.durationS = durationS; self.benchmarkVersion = benchmarkVersion; self.scaling = scaling
         self.id = id; self.ts = ts; self.day = day; self.type = type; self.title = title
         self.format = format; self.timeCapS = timeCapS; self.resultKind = resultKind
         self.resultSeconds = resultSeconds; self.resultRounds = resultRounds; self.resultReps = resultReps
@@ -110,18 +117,20 @@ extension WhoopStore {
             try db.execute(sql: """
                 INSERT INTO wodLog
                     (id, ts, day, type, title, format, timeCapS, resultKind, resultSeconds, resultRounds,
-                     resultReps, resultWeightKg, rpe, rx, notes, movementsJSON, createdTs)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     resultReps, resultWeightKg, rpe, rx, notes, movementsJSON, createdTs, durationS, benchmarkVersion, scaling)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     ts = excluded.ts, day = excluded.day, type = excluded.type, title = excluded.title,
                     format = excluded.format, timeCapS = excluded.timeCapS, resultKind = excluded.resultKind,
                     resultSeconds = excluded.resultSeconds, resultRounds = excluded.resultRounds,
                     resultReps = excluded.resultReps, resultWeightKg = excluded.resultWeightKg,
                     rpe = excluded.rpe, rx = excluded.rx, notes = excluded.notes,
-                    movementsJSON = excluded.movementsJSON
+                    movementsJSON = excluded.movementsJSON,
+                    durationS = excluded.durationS, benchmarkVersion = excluded.benchmarkVersion,
+                    scaling = excluded.scaling
                 """, arguments: [r.id, r.ts, r.day, r.type, r.title, r.format, r.timeCapS,
                                  r.resultKind.rawValue, r.resultSeconds, r.resultRounds, r.resultReps,
-                                 r.resultWeightKg, r.rpe, r.rx, r.notes, movementsJSON, r.createdTs])
+                                 r.resultWeightKg, r.rpe, r.rx, r.notes, movementsJSON, r.createdTs, r.durationS, r.benchmarkVersion, r.scaling])
             return db.changesCount
         }
     }
@@ -163,6 +172,36 @@ extension WhoopStore {
             resultReps: row["resultReps"], resultWeightKg: row["resultWeightKg"],
             rpe: row["rpe"], rx: row["rx"], notes: row["notes"],
             movements: WodMovementCodec.decode(row["movementsJSON"]),
-            createdTs: row["createdTs"])
+            createdTs: row["createdTs"], durationS: row["durationS"],
+            benchmarkVersion: row["benchmarkVersion"], scaling: row["scaling"])
+    }
+}
+
+extension WodLogRow {
+    /// Exact protocol identity. Missing version/scaling stays unclassified, never silently comparable.
+    public func isComparable(to other: WodLogRow) -> Bool {
+        func norm(_ s: String?) -> String { (s ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        guard !norm(benchmarkVersion).isEmpty, !norm(scaling).isEmpty,
+              !movements.isEmpty, rx != nil else { return false }
+        return norm(title) == norm(other.title) && type == other.type && format == other.format
+            && resultKind == other.resultKind && timeCapS == other.timeCapS
+            && norm(benchmarkVersion) == norm(other.benchmarkVersion)
+            && norm(scaling) == norm(other.scaling) && rx == other.rx
+            && movements.count == other.movements.count
+            && zip(movements, other.movements).allSatisfy { a, b in
+                norm(a.name) == norm(b.name) && a.reps == b.reps && a.scheme == b.scheme
+                    && a.sets == b.sets && a.weightKg == b.weightKg && a.rxWeightKg == b.rxWeightKg
+                    && a.notes == b.notes
+            }
+    }
+
+    /// Recorded external volume only, never an estimate of muscular fatigue.
+    public var recordedVolumeKg: Double? {
+        let terms = movements.compactMap { m -> Double? in
+            guard let kg = m.weightKg, kg.isFinite, kg >= 0,
+                  let reps = m.repsDone, reps >= 0 else { return nil }
+            return kg * Double(reps)
+        }
+        return terms.isEmpty ? nil : terms.reduce(0, +)
     }
 }

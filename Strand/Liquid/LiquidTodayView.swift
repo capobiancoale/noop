@@ -252,7 +252,15 @@ struct LiquidTodayView: View {
                 liquidRefreshIndicator   // grows in the revealed space; a vessel filling with the pull
 
                 VStack(alignment: .leading, spacing: 12) {
+                    #if os(iOS)
+                    AthleteCheckInCard(day: selectedDayKey, recovery: displayDay?.recovery)
+                        .id(selectedDayKey)
+                    #endif
                     scene                                   // block 1: the scores and what they mean
+                    #if os(iOS)
+                    AthleteReviewCard(day: selectedDayKey)
+                        .id(selectedDayKey)
+                    #endif
                     if !nightLows.isEmpty { nightLowSection }  // qualifies Charge, so it sits right under it
                     if hasGlucoseBlock { glucoseNowSection }    // block 2
                     todayWorkoutSection                         // block 3
@@ -1789,19 +1797,19 @@ struct LiquidTodayView: View {
     /// The verdict's word. "Recover", not "Rest": Rest is a score's name.
     private var readinessWord: LocalizedStringKey? {
         switch readiness.level {
-        case .primed: return "Push"
-        case .balanced: return "Maintain"
-        case .strained, .rundown: return "Recover"
+        case .primed: return "Aligned"
+        case .balanced: return "Usual range"
+        case .strained, .rundown: return "Changed"
         case .insufficient: return nil
         }
     }
 
     private var synthLine: LocalizedStringKey {
         switch readiness.level {
-        case .primed: return "You're primed. A hard session should land well today."
-        case .balanced: return "You're in a good spot for training."
-        case .strained: return "Signals are down a touch. Keep it easy today."
-        case .rundown: return "Several recovery signals are down. Prioritise rest today."
+        case .primed: return "Your recorded signals are aligned. Compare them with how you feel."
+        case .balanced: return "Your recorded signals are near their usual range."
+        case .strained: return "Some signals differ from your baseline."
+        case .rundown: return "Several signals differ from your baseline. Review your check-in and recent sessions."
         case .insufficient: return "Still learning your baseline. A few more nights and this fills in."
         }
     }

@@ -9,12 +9,12 @@ name: Swift Packages CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, ChatGPT_V2]
     paths:
       - 'Packages/**'
       - '.github/workflows/swift-packages.yml'
   push:
-    branches: [main]
+    branches: [main, ChatGPT_V2]
     paths:
       - 'Packages/**'
       - '.github/workflows/swift-packages.yml'

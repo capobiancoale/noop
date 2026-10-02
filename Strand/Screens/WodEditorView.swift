@@ -35,6 +35,8 @@ struct WodEditorView: View {
         var done = ""
         var weight = ""
         var rxWeight = ""
+        var sets = ""
+        var movementNotes: String?
     }
 
     @State private var type = "CrossFit"
@@ -52,6 +54,12 @@ struct WodEditorView: View {
     @State private var resWeight = ""
     @State private var rpe = 0.0
     @State private var notes = ""
+    @State private var durationMin = ""
+    @State private var benchmarkVersion = ""
+    @State private var scaling = ""
+    @State private var saving = false
+    @State private var saveError: String?
+    @State private var didPrefill = false
 
     private let types = ["CrossFit", "Weightlifting", "Hyrox", "Running", "Rowing", "Other"]
     private let formats = ["For Time", "AMRAP", "EMOM", "Strength", "Intervals", "Other"]
@@ -83,14 +91,23 @@ struct WodEditorView: View {
                     }
                 }
 
+                Section("Session and comparison") {
+                    TextField("Actual duration (min)", text: $durationMin).keyboardType(.decimalPad)
+                    TextField("Benchmark version (e.g. Fran v1)", text: $benchmarkVersion)
+                    TextField("Scaling / equipment (use RX if unchanged)", text: $scaling)
+                    Text("Only attempts with the same protocol, movements, loads and scaling are compared. Duration is the whole effort you rate with RPE.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+
                 Section("Movements") {
                     ForEach($movements) { $m in
                         VStack(spacing: 6) {
                             TextField("Movement (e.g. Thruster, Pull-up)", text: $m.name)
+                            TextField("Sets", text: $m.sets).keyboardType(.numberPad)
                             HStack(spacing: 8) {
                                 TextField("Reps / scheme", text: $m.reps)
                                 Divider()
-                                TextField("Reps done", text: $m.done).keyboardType(.numberPad)
+                                TextField("Total reps done", text: $m.done).keyboardType(.numberPad)
                             }
                             .font(.subheadline)
                             HStack(spacing: 8) {
@@ -148,10 +165,14 @@ struct WodEditorView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save() }
-                        .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(saving || title.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
-            .onAppear { if let e = existing { prefill(e) } }
+            .onAppear { if !didPrefill { if let e = existing { prefill(e) }; didPrefill = true } }
+            .interactiveDismissDisabled(saving)
+            .alert("Could not save", isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })) {
+                Button("OK", role: .cancel) { saveError = nil }
+            } message: { Text(saveError ?? "") }
         }
     }
     /// The result inputs for the selected scoring kind.
@@ -192,6 +213,9 @@ struct WodEditorView: View {
     // MARK: Prefill (edit) + save
 
     private func prefill(_ e: WodLogRow) {
+        durationMin = e.durationS.map { WodFormat.trimmed(Double($0) / 60) } ?? ""
+        benchmarkVersion = e.benchmarkVersion ?? ""
+        scaling = e.scaling ?? ""
         type = e.type
         title = e.title
         date = Date(timeIntervalSince1970: TimeInterval(e.ts))
@@ -204,6 +228,8 @@ struct WodEditorView: View {
             m.done = $0.repsDone.map(String.init) ?? ""
             m.weight = $0.weightKg.map(WodFormat.trimmed) ?? ""
             m.rxWeight = $0.rxWeightKg.map(WodFormat.trimmed) ?? ""
+            m.sets = $0.sets.map(String.init) ?? ""
+            m.movementNotes = $0.notes
             return m
         }
         resultKind = e.resultKind
@@ -216,6 +242,7 @@ struct WodEditorView: View {
     }
 
     private func save() {
+        guard validInputs else { saveError = "Check numeric fields: use non-negative values, seconds below 60, and a positive duration."; return }
         let ts = Int(date.timeIntervalSince1970)
         let movs: [WodMovement] = movements.compactMap { m in
             let n = m.name.trimmingCharacters(in: .whitespaces)
@@ -228,7 +255,7 @@ struct WodEditorView: View {
                                scheme: scheme,
                                repsDone: Int(m.done.trimmingCharacters(in: .whitespaces)),
                                weightKg: parseDouble(m.weight),
-                               rxWeightKg: parseDouble(m.rxWeight))
+                               rxWeightKg: parseDouble(m.rxWeight), notes: m.movementNotes, sets: Int(m.sets))
         }
         let row = WodLogRow(
             id: existing?.id ?? UUID().uuidString,
@@ -247,10 +274,38 @@ struct WodEditorView: View {
             rx: rxMode == 0 ? nil : (rxMode == 1),
             notes: notes.trimmingCharacters(in: .whitespaces).isEmpty ? nil : notes,
             movements: movs,
-            createdTs: existing?.createdTs ?? Int(Date().timeIntervalSince1970)
+            createdTs: existing?.createdTs ?? Int(Date().timeIntervalSince1970),
+            durationS: parseDouble(durationMin).map { Int(($0 * 60).rounded()) },
+            benchmarkVersion: benchmarkVersion.isEmpty ? nil : benchmarkVersion,
+            scaling: scaling.isEmpty ? nil : scaling
         )
-        Task { await repo.saveWod(row); onSaved() }
-        dismiss()
+        saving = true
+        Task {
+            do {
+                guard let store = await repo.storeHandle() else { throw CocoaError(.fileWriteUnknown) }
+                try await store.upsertWod(row)
+                repo.onWodsChanged?()
+                onSaved()
+                dismiss()
+            } catch { saveError = "Your changes were not saved. Please retry." }
+            saving = false
+        }
+    }
+
+    private var validInputs: Bool {
+        func validInt(_ s: String) -> Bool {
+            s.isEmpty || (Int(s).map { $0 >= 0 && $0 <= 1_000_000 } ?? false)
+        }
+        func validNumber(_ s: String) -> Bool {
+            s.isEmpty || (parseDouble(s).map { $0.isFinite && $0 >= 0 && $0 <= 1_000_000 } ?? false)
+        }
+        guard [timeCapMin, resMin, resSec, resRounds, resReps].allSatisfy(validInt),
+              validNumber(resWeight), validNumber(durationMin),
+              durationMin.isEmpty || (parseDouble(durationMin) ?? 0) > 0,
+              (Int(resSec) ?? 0) < 60 else { return false }
+        return movements.allSatisfy {
+            validInt($0.done) && validInt($0.sets) && validNumber($0.weight) && validNumber($0.rxWeight)
+        }
     }
 
     /// Parse a weight allowing a comma decimal separator (Italian locale). Blank → nil.
