@@ -676,10 +676,10 @@ struct TodayView: View {
     /// shows no readiness word, matching the old card hiding itself). Mirror EXACTLY in Kotlin.
     static func readinessWord(_ level: ReadinessEngine.Level) -> String? {
         switch level {
-        case .primed:       return String(localized: "Push")
-        case .balanced:     return String(localized: "Maintain")
-        case .strained:     return String(localized: "Rest")
-        case .rundown:      return String(localized: "Rest")
+        case .primed:       return String(localized: "Aligned")
+        case .balanced:     return String(localized: "Usual range")
+        case .strained:     return String(localized: "Changed")
+        case .rundown:      return String(localized: "Changed")
         case .insufficient: return nil
         }
     }
@@ -1599,7 +1599,7 @@ struct TodayView: View {
                                 Text("load \(String(format: "%.2f", acwr))")
                                     .font(StrandFont.captionNumber)
                                     .foregroundStyle(StrandPalette.textTertiary)
-                                    .help("Acute (7-day) vs chronic (28-day) training load. 0.8-1.3 is the sweet spot.")
+                                    .help("Descriptive recent-to-longer-term load ratio. It does not estimate injury risk or prescribe training.")
                             }
                         }
                         Text(r.summary).font(StrandFont.subhead)
