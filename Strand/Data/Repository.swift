@@ -1888,6 +1888,7 @@ final class Repository: ObservableObject {
         let native = (try? await store.journalEntries(deviceId: Self.journalDeviceId,
                                                       from: from, to: to)) ?? []
         return Self.mergeJournal(imported: imported, native: native)
+            .filter { !$0.question.hasPrefix("noop.checkin.v1.") }
     }
 
     /// Imported journal rows only (used by the logging card to adopt the export's exact question

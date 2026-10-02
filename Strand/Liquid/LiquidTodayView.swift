@@ -150,7 +150,6 @@ struct LiquidTodayView: View {
     }
     /// The day key the day-scoped read-outs key on. At offset 0 follows repo.today?.day.
     private var selectedDayKey: String {
-        if selectedDayOffset == 0, let todayKey = repo.today?.day { return todayKey }
         return Repository.localDayKey(selectedLogicalDay)
     }
     /// The DailyMetric shown for the selected day — read from the cache resolved in load() (was an
@@ -164,7 +163,8 @@ struct LiquidTodayView: View {
     /// per data/day change from load(), never from body.
     private func resolveDisplayDay() -> DailyMetric? {
         if selectedDayOffset == 0 {
-            return repo.today ?? repo.days.last(where: { $0.day == selectedDayKey })
+            if repo.today?.day == selectedDayKey { return repo.today }
+            return repo.days.last(where: { $0.day == selectedDayKey })
         }
         return repo.days.last(where: { $0.day == selectedDayKey })
     }
@@ -257,6 +257,8 @@ struct LiquidTodayView: View {
                         .id(selectedDayKey)
                     #endif
                     scene                                   // block 1: the scores and what they mean
+                    Text("Charge is an experimental estimate. Open Understand your signals for sources and limits.")
+                        .font(.caption).foregroundStyle(.secondary)
                     #if os(iOS)
                     AthleteReviewCard(day: selectedDayKey)
                         .id(selectedDayKey)
@@ -1623,7 +1625,7 @@ struct LiquidTodayView: View {
         // readiness verdict. Both scan repo.days (up to 599 rows); doing it per-render was the stutter.
         let day = resolveDisplayDay()
         cachedDisplayDay = day
-        cachedReadiness = ReadinessEngine.evaluate(days: repo.days, today: day?.day)
+        cachedReadiness = ReadinessEngine.evaluate(days: repo.days, today: selectedDayKey)
         // Prior-day vitals carry, resolved ONCE here (never in body). Bound to today's own key so it can't
         // echo today's still-forming row; only on today (a past day's own row is the whole story).
         let tkey = cachedDisplayDay?.day ?? selectedDayKey

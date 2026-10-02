@@ -122,10 +122,12 @@ extension Notification.Name {
 
 struct AthleteReviewCard: View {
     @EnvironmentObject private var repo: Repository
+    @EnvironmentObject private var profile: ProfileStore
     let day: String
     @State private var journal: [JournalEntry] = []
     @State private var sessions: [WodLogRow] = []
     @State private var coverage: StrainScorer.Coverage?
+    @State private var cardiovascularLoad: Double?
     @State private var sources: [String] = []
     @State private var loaded = false
     @State private var error: String?
@@ -174,7 +176,10 @@ struct AthleteReviewCard: View {
                 if let error { Text(error).font(.caption) }
                 Text("Logged sessions: \(currentSessions.count) · previous 7 days: \(previousSessions.count)")
                 Text("Sleep: \(average(week.compactMap(\.totalSleepMin))) min/night · \(week.compactMap(\.totalSleepMin).count)/7 nights")
-                Text("Cardiovascular Effort: \(average(week.compactMap(\.strain))) /100 · \(week.compactMap(\.strain).count)/7 days")
+                Text("Historical Effort (composite): \(average(week.compactMap(\.strain))) /100 · \(week.compactMap(\.strain).count)/7 days")
+                Text("Selected-day cardiovascular load: " + (cardiovascularLoad.map { String(format: "%.1f TRIMP", $0) } ?? "Unavailable — needs HR coverage, resting HR and maximum HR"))
+                Text("Historical Effort may include estimated session-RPE contributions. The cardiovascular load above uses only recorded HR and is shown separately.")
+                    .font(.caption).foregroundStyle(.secondary)
                 let loads = currentSessions.compactMap { s -> Double? in
                     guard let r = s.rpe, r.isFinite, let duration = s.durationS, duration > 0 else { return nil }
                     return r * Double(duration) / 60
@@ -206,8 +211,14 @@ struct AthleteReviewCard: View {
         .task(id: "\(repo.refreshSeq)-\(refresh)") { await read() }
         .onReceive(NotificationCenter.default.publisher(for: .athleteJournalChanged)) { _ in refresh += 1 }
         .sheet(isPresented: $showEditor) {
-            WodEditorView(existing: nil) { refresh += 1 }
+            WodEditorView(existing: nil, initialDate: Self.date(for: day)) { refresh += 1 }
         }
+    }
+
+    private static func date(for day: String) -> Date? {
+        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"; f.timeZone = .current
+        return f.date(from: day).flatMap { Calendar.current.date(bySettingHour: 12, minute: 0, second: 0, of: $0) }
     }
 
     private func read() async {
@@ -222,6 +233,9 @@ struct AthleteReviewCard: View {
             if let date = f.date(from: day), let end = Calendar.current.date(byAdding: .day, value: 1, to: date) {
                 let hr = await repo.hrSamples(from: Int(date.timeIntervalSince1970), to: Int(end.timeIntervalSince1970) - 1, limit: 200000)
                 coverage = StrainScorer.coverage(hr)
+                if let resting = selected?.restingHr, profile.hrMax > resting {
+                    cardiovascularLoad = StrainScorer.trimp(hr, maxHR: Double(profile.hrMax), restingHR: Double(resting))
+                } else { cardiovascularLoad = nil }
             }
             error = nil
         } catch { error = "Some records could not be loaded. Try opening this day again." }
