@@ -239,7 +239,7 @@ struct AthleteReviewCard: View {
                 } else { cardiovascularLoad = nil }
             }
             error = nil
-        } catch { error = "Some records could not be loaded. Try opening this day again." }
+        } catch { self.error = "Some records could not be loaded. Try opening this day again." }
         loaded = true
     }
 }
