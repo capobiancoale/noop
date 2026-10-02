@@ -164,6 +164,7 @@ struct AthleteReviewCard: View {
                                 Text("Latest local HR sample: " + Date(timeIntervalSince1970: Double(ts)).formatted(date: .abbreviated, time: .shortened))
                             }
                             Text("Coverage includes one estimated final sampling interval; gaps over 60 seconds are excluded. It does not describe imported score coverage.")
+                            Text("Cardiovascular calculation uses maximum HR from Settings: \(profile.hrMax) bpm, and this day’s recorded resting HR. Maximum HR may itself be estimated.")
                         }
                         Text("Methods: " + StrainScorer.methodVersion + " · " + ReadinessEngine.methodVersion)
                     }

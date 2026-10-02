@@ -459,7 +459,6 @@ struct TodayView: View {
     /// non-UTC pre-04:00 case (#304) where Today is the LOCAL-calendar-day row, not the logical-day one.
     /// Falls back to the logical key when no row is banked yet. Past offsets use the logical key directly.
     private var selectedDayKey: String {
-        if selectedDayOffset == 0, let todayKey = repo.today?.day { return todayKey }
         return Repository.localDayKey(selectedLogicalDay)
     }
 
@@ -468,7 +467,8 @@ struct TodayView: View {
     /// by key. nil when no row exists for that day, every read-out then renders its honest empty state.
     private var displayDay: DailyMetric? {
         if selectedDayOffset == 0 {
-            return repo.today ?? repo.days.last(where: { $0.day == selectedDayKey })
+            if repo.today?.day == selectedDayKey { return repo.today }
+            return repo.days.last(where: { $0.day == selectedDayKey })
         }
         return repo.days.last(where: { $0.day == selectedDayKey })
     }
@@ -892,7 +892,7 @@ struct TodayView: View {
         // the carried Charge/Synthesis avoid. So when carrying, anchor Readiness on the last scored day's
         // key instead (the section header then stamps "Last night · <date>"). Honest: it's the real prior
         // read, not a fabricated today's, and today's own readiness wins the instant tonight is scored.
-        let anchor = lastScoredRecoveryDay?.day ?? Repository.logicalDayKey(Date())
+        let anchor = selectedDayKey
         return ReadinessEngine.evaluate(days: repo.days, today: anchor)
     }
 
@@ -1208,6 +1208,7 @@ struct TodayView: View {
                 // Compact top bar: profile/settings (left) · ‹ Today › day-nav (centre, bold) · strap
                 // battery (right). Replaces the big title + the full-width day-nav pill (WHOOP-style).
                 todayTopBar
+                AthleteCheckInCard(day: selectedDayKey, recovery: displayDay?.recovery).id(selectedDayKey)
                 HealthAlertBanner()
                 #else
                 HealthAlertBanner()
@@ -1278,6 +1279,11 @@ struct TodayView: View {
                             .fill(StrandPalette.surfaceBase.opacity(0.72))
                     )
                     .staggeredAppear(index: 0)
+                #endif
+                #if os(iOS)
+                Text("Charge is an experimental estimate. Open Understand your signals for sources and limits.")
+                    .font(.caption).foregroundStyle(.secondary)
+                AthleteReviewCard(day: selectedDayKey).id(selectedDayKey)
                 #endif
                 heartRateTrendSection.staggeredAppear(index: 1)
                 // Design Reset: rings -> Heart rate -> Your cards (the flat mockup order); the greeting +
