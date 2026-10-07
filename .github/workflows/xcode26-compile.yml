@@ -8,7 +8,7 @@ name: App build (Xcode 26)
 on:
   workflow_dispatch:
   push:
-    branches: [claude-automatic-build]
+    branches: [claude-automatic-build, ChatGPT_V2]
     paths:
       - 'Strand/**'
       - 'StrandiOS/**'
