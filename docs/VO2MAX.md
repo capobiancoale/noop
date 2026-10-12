@@ -123,8 +123,15 @@ with RHR the median nightly resting heart rate of the last 7 nights (at least 4 
 activity index (0–15) rebuilt from the last 7 days' Effort. It needs a waist measurement, typed straight into
 the card on the VO₂max screen (or in Settings; 60–160 cm, 24–63 in, saved to the profile). The screen shows it
 ± its SEE. Resting estimates are the less accurate kind (INTERLIVE, above), and the model
-overestimated in an independent US cohort (BALL ST: Peterman et al., J Am Heart Assoc 2020). Stored weekly
-as `vo2max_est`.
+overestimated in an independent US cohort (BALL ST: Peterman et al., J Am Heart Assoc 2020).
+
+**Daily, re-evaluated every 10 minutes.** The estimate is recomputed every 10 minutes and after every sync,
+whether or not you train, and stored as `vo2max_est`: one point per day, from the 7 calendar days ending that
+day (at least 4 nights of resting heart rate; an active day is Effort ≥ 30). The chart shows the daily dots and
+their 7-day average over 30 days, 90 days or a year. VO₂max is a capacity that changes over weeks, and no
+validated method gives a new value every 10 minutes from a wrist strap without pace or power, so the 10 minutes
+set how soon new evidence (a night, a trained day) appears, not how often something is measured. Without a
+waist, the screen says so and offers the entry; it does not switch to another formula.
 
 ## 3. From WODs
 
@@ -166,7 +173,7 @@ are stored locally as `vo2max_manual` (and `vo2max_manual_method`: 1 lab, 2 fiel
 
 For each value the screen shows the exercise estimate as it read at the end of that day (median of the
 sessions of the previous 90 days), the value from WODs (a supine measurement within the 60 days before) and
-the resting estimate of that week (within 14 days before), each with the difference in mL/kg/min and in
+the resting estimate of that day (the latest daily point within 7 days before), each with the difference in mL/kg/min and in
 percent; within ±10% it is shown in green.
 
 ## Metric keys
@@ -174,7 +181,7 @@ percent; within ±10% it is shown in green.
 | Key | Source | Meaning |
 |---|---|---|
 | `vo2max_exercise` | `<device>-noop` | estimate from runs and walks, per session day |
-| `vo2max_est` | `<device>-noop` | estimate at rest (HUNT), weekly on Saturday |
+| `vo2max_est` | `<device>-noop` | estimate at rest (HUNT), one point per day (older history may be weekly) |
 | `vo2max_manual`, `vo2max_manual_method` | `manual-vo2max` | the values you enter |
 | `vo2max_rhr_supine` | `manual-vo2max` | resting heart rate measured lying down (for the value from WODs) |
 | `vo2max` | `apple-health` | Apple Health's VO₂max, when imported |

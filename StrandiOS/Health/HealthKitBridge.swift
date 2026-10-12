@@ -730,7 +730,7 @@ final class HealthKitBridge: ObservableObject {
                 add(.respiratoryRate, HKUnit.count().unitDivided(by: .minute()), rr, row.day, noon)
             }
         }
-        // VO₂max: the estimate from walks and runs on the days it has one, else the weekly estimate at rest
+        // VO₂max: the estimate from walks and runs on the days it has one, else the daily estimate at rest
         // (the two methods aren't mixed within the window). Last 90 days.
         let vo2From = HealthKitBridge.dayString(Date().addingTimeInterval(-90 * 86_400))
         var vo2 = (try? await whoopStore.metricSeries(deviceId: computedDeviceId, key: "vo2max_exercise",

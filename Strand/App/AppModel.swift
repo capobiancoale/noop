@@ -197,6 +197,8 @@ final class AppModel: ObservableObject {
     private var readSpineCancellable: AnyCancellable?
     /// Daily re-arm timer for the single-instant firmware smart alarm (see scheduleDailySmartAlarmRearm).
     private var smartAlarmRearmTimer: Timer?
+    /// The 10-minute VO₂max re-evaluation loop (see startVO2maxRefreshLoop).
+    private var vo2maxRefreshTask: Task<Void, Never>?
 
     init() {
         let live = LiveState()
@@ -398,6 +400,28 @@ final class AppModel: ObservableObject {
                 // freshly-scored history so the Health hub cards read a ready result.
                 await self.refreshV5Signals()
                 try? await Task.sleep(nanoseconds: 900_000_000_000)  // 15 min, matches the offload cadence
+            }
+        }
+        startVO2maxRefreshLoop()
+    }
+
+    /// How often the daily VO₂max estimate is re-evaluated (seconds). VO₂max itself changes over weeks, so
+    /// this re-reads the newest nights and training, it does not measure anything new every 10 minutes.
+    static let vo2maxRefreshIntervalS: UInt64 = 600
+
+    /// Re-evaluate today's VO₂max estimate every 10 minutes, whether or not the user trains. Cheap (no raw
+    /// heart-rate reads: `IntelligenceEngine.refreshVO2maxEstimate` works on the cached daily rows), so it runs
+    /// beside the 15-minute scoring tick rather than inside it. Skipped during an import and while the
+    /// dashboard cache or the store is not ready (the engine checks both); the scoring pass ends with the full
+    /// version of the same step, so a sync or an edit updates it at once.
+    private func startVO2maxRefreshLoop() {
+        vo2maxRefreshTask?.cancel()
+        vo2maxRefreshTask = Task(priority: .utility) { [weak self] in
+            try? await Task.sleep(nanoseconds: 30_000_000_000)   // let the launch refresh and first scoring land
+            while !Task.isCancelled {
+                guard let self else { return }
+                if !self.hasActiveImport { await self.intelligence.refreshVO2maxEstimate() }
+                try? await Task.sleep(nanoseconds: Self.vo2maxRefreshIntervalS * 1_000_000_000)
             }
         }
     }

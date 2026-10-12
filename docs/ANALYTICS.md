@@ -554,8 +554,12 @@ Source: `VO2maxEngine.swift`, screen `VO2maxView`; full method, validation and r
   per-minute mean after the first 3 minutes; resting HR the 14-night median; HRmax the user's setting, else the
   second-highest believable workout peak of the year, else Tanaka. The number is the median of the newest
   ≤ 5 sessions of 90 days, stored per session day as `vo2max_exercise`.
-- **At rest.** The HUNT non-exercise model (Nes et al. 2011) ± its SEE, weekly as `vo2max_est` (Fitness Age).
-  The waist it needs can be typed on the VO₂max screen.
+- **At rest.** The HUNT non-exercise model (Nes et al. 2011) ± its SEE (5.70 men, 5.14 women mL/kg/min), as a
+  **daily series** `vo2max_est`: one point per day, the Nes estimate on the 7 calendar days ending that day
+  (median nightly resting HR, at least 4 nights; PA-index from the window's strain, active day = strain ≥ 30, the
+  rule the weekly Fitness Age uses). `FitnessAgeEngine.dailyVO2maxSeries`; the screen draws the dots with a 7-day
+  rolling mean and a 30 days / 90 days / 1 year range. The waist it needs can be typed on the VO₂max screen;
+  without it nothing is estimated (no fallback on another formula). Re-evaluated every 10 minutes, see below.
 - **From WODs.** Heart-rate ratio `PF · HRmax / HRrest` (PF 15.3 men, Uth et al. 2004; 14.5 women, Uth 2005)
   with the HRmax above and HRrest measured awake and supine after 15 min of rest (Castagna et al. 2022): a
   guided 15-minute capture with the strap, mean of the final 2 min (`supineRestingHR`), stored as
@@ -563,6 +567,20 @@ Source: `VO2maxEngine.swift`, screen `VO2maxView`; full method, validation and r
   provisional (reads high). Independent SEE 6.9–7.9 mL/kg/min (Esco et al. 2012).
 - **Your values.** Entered by hand (`vo2max_manual`, source `manual-vo2max`), each compared with every estimate
   at that date.
+
+**Why a daily series re-evaluated every 10 minutes, and not a value per 10 minutes.** VO₂max is an aerobic
+capacity: it moves over weeks of training or detraining. No validated method turns a wrist strap's heart rate into
+a new VO₂max every few minutes without an external workload (speed or power), and a CrossFit class has none; a
+value per 10-minute window would be invented noise, far below the model's own SEE of about 5–6 mL/kg/min. What can
+honestly be done is to re-evaluate the estimate as soon as there is new evidence, trained or not, and keep the
+history at the resolution the quantity has. So `IntelligenceEngine.refreshVO2maxEstimate` (a 10-minute timer in
+`AppModel`, no raw heart-rate reads) recomputes today's and yesterday's point from the cached daily rows and the
+profile and stores it when it changed, and every scoring pass (after each sync, import or edit) rewrites the last
+120 days and evicts stored days that no longer have a point (never days whose 7-day window is not loaded). A
+change of age, sex or waist rewrites the whole window at the next refresh. The screen shows the latest value,
+"Updated at HH:mm" (the time of the last re-evaluation) and ± SEE. `fitness_age` stays weekly (Saturday key). The
+estimate at rest is not replaced by the heart-rate-ratio formula when the waist is missing: that formula expects a
+resting HR measured awake and lying down, and the nightly floor reads high for it (see From WODs).
 
 `Tools/vo2max-validation` checks the assumptions on 981 laboratory treadmill tests (PhysioNet, Malaga): the
 submaximal HR–VO₂ line reaches VO₂max at HRmax with bias +0.85, SD 5.5 mL/kg/min (SD 7.0 with an age-predicted

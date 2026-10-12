@@ -136329,6 +136329,126 @@
           }
         }
       }
+    },
+    "VO₂ Max (daily estimate)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VO₂ Max (stima giornaliera)"
+          }
+        }
+      }
+    },
+    "90 days": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "90 giorni"
+          }
+        }
+      }
+    },
+    "Updated at %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiornato alle %@"
+          }
+        }
+      }
+    },
+    "VO₂max over time": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VO₂max nel tempo"
+          }
+        }
+      }
+    },
+    "Latest daily estimate": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultima stima giornaliera"
+          }
+        }
+      }
+    },
+    "VO₂max is your aerobic capacity: it changes over weeks of training, not minute to minute. NOOP recalculates it every 10 minutes from your latest nights and training, so a new value appears as soon as there's new evidence, and the chart keeps one point per day.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il VO₂max è la tua capacità aerobica: cambia in settimane di allenamento, non di minuto in minuto. NOOP lo ricalcola ogni 10 minuti dalle tue ultime notti e dai tuoi allenamenti, così un nuovo valore compare appena ci sono nuovi dati, e il grafico tiene un punto al giorno."
+          }
+        }
+      }
+    },
+    "Add your waist circumference to get a daily VO₂max estimate: it is one of the model's inputs, and without it there is no number to show. The values from runs, walks and WODs below do not need it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi la circonferenza vita per avere una stima giornaliera del VO₂max: è uno degli input del modello e, senza, non c'è nessun numero da mostrare. I valori da corse, camminate e WOD qui sotto non ne hanno bisogno."
+          }
+        }
+      }
+    },
+    "Add your waist circumference in the daily estimate above to see this estimate: it is one of the model's inputs.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi la circonferenza vita nella stima giornaliera qui sopra per vedere questa stima: è uno degli input del modello."
+          }
+        }
+      }
+    },
+    "Add your age in Settings to see this estimate: it is one of the model's inputs.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi la tua età in Impostazioni per vedere questa stima: è uno degli input del modello."
+          }
+        }
+      }
+    },
+    "Nothing to show in this period.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niente da mostrare in questo periodo."
+          }
+        }
+      }
+    },
+    "At rest: one dot per day, the line is the 7-day average.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A riposo: un punto al giorno, la linea è la media su 7 giorni."
+          }
+        }
+      }
+    },
+    "At rest: the HUNT fitness model (Nes 2011) from age, sex, waist, resting heart rate and activity, worked out on your latest 7 days and kept as one point per day. It is a trend, not a new measurement every few minutes, and for one person it is typically off by 5 to 6 mL/kg/min.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A riposo: il modello di forma fisica HUNT (Nes 2011) da età, sesso, vita, frequenza cardiaca a riposo e attività, calcolato sugli ultimi 7 giorni e tenuto come un punto al giorno. È una tendenza, non una nuova misura ogni pochi minuti, e per una singola persona sbaglia in genere di 5-6 mL/kg/min."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

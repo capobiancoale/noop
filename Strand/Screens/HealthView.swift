@@ -651,7 +651,7 @@ private struct FitnessAgeSection: View {
 
     /// Latest weekly Fitness Age (years) read from the "fitness_age" metricSeries, nil until loaded/computed.
     @State private var fitnessAge: Double?
-    /// Latest estimated VO₂max (ml/kg/min) from "vo2max_est" — only present once a waist is set.
+    /// Latest daily estimated VO₂max (ml/kg/min) from "vo2max_est" — only present once a waist is set.
     @State private var vo2max: Double?
     @State private var loaded = false
 
@@ -879,7 +879,7 @@ private struct FitnessAgeSection: View {
         .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
     }
 
-    /// Load the latest weekly Fitness Age (+ optional VO₂max) from the strap's metricSeries. Uses the
+    /// Load the latest weekly Fitness Age (+ the daily VO₂max estimate) from the strap's metricSeries. Uses the
     /// same `exploreSeries(key:source:)` path every other metric on this screen reads, with source
     /// "my-whoop" (the Repository merges the computed "-noop" rows under any real import). Takes the
     /// freshest point — the weekly value is keyed to the week's Saturday and refines through the week.
