@@ -133699,6 +133699,2226 @@
           }
         }
       }
+    },
+    " %@ · typically %@ to %@, %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " %1$@ · di solito da %2$@ a %3$@, %4$@."
+          }
+        }
+      }
+    },
+    " bpm": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " bpm"
+          }
+        }
+      }
+    },
+    " · filtered": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · filtrato"
+          }
+        }
+      }
+    },
+    "%@ kcal": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ kcal"
+          }
+        }
+      }
+    },
+    "%@ needed": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ necessarie"
+          }
+        }
+      }
+    },
+    "%@ slept": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ dormite"
+          }
+        }
+      }
+    },
+    "%@, %lld items, %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$lld elementi, %3$@"
+          }
+        }
+      }
+    },
+    "%@-%@  ·  %lld days": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@-%2$@  ·  %3$lld giorni"
+          }
+        }
+      }
+    },
+    "%@-%@  ·  1 day": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@-%2$@  ·  1 giorno"
+          }
+        }
+      }
+    },
+    "%@. Imported, can't be merged.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@. Importata, non può essere unita."
+          }
+        }
+      }
+    },
+    "%@. Not selected.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@. Non selezionata."
+          }
+        }
+      }
+    },
+    "%@. Selected.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@. Selezionata."
+          }
+        }
+      }
+    },
+    "%@: %@. Not enough history yet for a typical range.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: %2$@. Cronologia ancora insufficiente per un intervallo tipico."
+          }
+        }
+      }
+    },
+    "%lld ease-off": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld × rallenta"
+          }
+        }
+      }
+    },
+    "%lld paired": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld associate"
+          }
+        }
+      }
+    },
+    "%lld push": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld × spingi"
+          }
+        }
+      }
+    },
+    "%lld sessions guarded": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld sessioni sorvegliate"
+          }
+        }
+      }
+    },
+    "%lld to %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "da %1$lld a %2$lld"
+          }
+        }
+      }
+    },
+    "%lld-%lld%@ · step %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld-%2$lld%3$@ · passo %4$lld"
+          }
+        }
+      }
+    },
+    "%lld–%lld bpm": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld–%2$lld bpm"
+          }
+        }
+      }
+    },
+    "0-%@ scale": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "scala 0-%@"
+          }
+        }
+      }
+    },
+    "1 paired": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 associata"
+          }
+        }
+      }
+    },
+    "1 session guarded": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 sessione sorvegliata"
+          }
+        }
+      }
+    },
+    "A WHOOP membership runs $300-480 a year, for life. NOOP does this for free: one person, no servers, no subscription.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un abbonamento WHOOP costa $300-480 l'anno, per sempre. NOOP fa lo stesso gratis: una persona, nessun server, nessun abbonamento."
+          }
+        }
+      }
+    },
+    "A classic one-glance read of NOOP's own scores. Same data, different lens.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una classica lettura a colpo d'occhio dei punteggi di NOOP. Stessi dati, un'altra prospettiva."
+          }
+        }
+      }
+    },
+    "A one-tap guarded workout: the strap watches your heart rate against a band gated on today's Charge, and only ever buzzes to correct course. Silence means you're on track.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un allenamento sorvegliato con un solo tocco: la fascia confronta la tua frequenza cardiaca con un intervallo legato alla Charge di oggi e vibra solo per correggere la rotta. Il silenzio significa che sei in linea."
+          }
+        }
+      }
+    },
+    "A redesigned Today screen in the new liquid language: the scores as living liquid, a time-of-day sky, and a calmer layout. Same numbers, new look.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una schermata Oggi ridisegnata nel nuovo linguaggio liquido: i punteggi come liquido vivo, un cielo che cambia con l'ora del giorno e un layout più calmo. Stessi numeri, nuovo aspetto."
+          }
+        }
+      }
+    },
+    "Above band": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sopra l'intervallo"
+          }
+        }
+      }
+    },
+    "Above your band.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sopra il tuo intervallo."
+          }
+        }
+      }
+    },
+    "Acute (7-day) vs chronic (28-day) training load. 0.8-1.3 is the sweet spot.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carico di allenamento acuto (7 giorni) vs cronico (28 giorni). 0,8-1,3 è la zona ideale."
+          }
+        }
+      }
+    },
+    "Add a custom item…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi un elemento personalizzato…"
+          }
+        }
+      }
+    },
+    "All sources": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutte le sorgenti"
+          }
+        }
+      }
+    },
+    "All sports": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutti gli sport"
+          }
+        }
+      }
+    },
+    "Armed on the strap itself with the experimental 5/MG command. A strap-driven wake is still unconfirmed on 5/MG on our side (confirmed only on WHOOP 4.0), so keep a backup alarm for anything you truly can't miss.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Programmata sulla fascia stessa con il comando sperimentale 5/MG. Da parte nostra, un risveglio gestito dalla fascia non è ancora confermato su 5/MG (confermato solo su WHOOP 4.0), quindi tieni una sveglia di riserva per tutto ciò che non puoi davvero perdere."
+          }
+        }
+      }
+    },
+    "Armed on the strap itself, so it can buzz at your wake time even if your phone is asleep or NOOP is closed. Sends the exact alarm command the official app sends, confirmed buzzing on a real WHOOP 4.0 (community wire capture + on-device test, #535). Keep a backup alarm for anything you truly can't miss.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Programmata sulla fascia stessa, così può vibrare all'ora del risveglio anche se il telefono è in stop o NOOP è chiuso. Invia lo stesso identico comando di sveglia dell'app ufficiale, con vibrazione confermata su un vero WHOOP 4.0 (cattura del traffico da parte della community + test sul dispositivo, #535). Tieni una sveglia di riserva per tutto ciò che non puoi davvero perdere."
+          }
+        }
+      }
+    },
+    "Arms the strap to buzz at your wake time, even if NOOP is closed. Sends the exact alarm command the official app sends, confirmed buzzing on a real WHOOP 4.0 (community wire capture + on-device test, #535). Keep a backup alarm for anything you truly can't miss.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Predispone la fascia a vibrare all'ora del risveglio, anche se NOOP è chiuso. Invia lo stesso identico comando di sveglia dell'app ufficiale, con vibrazione confermata su un vero WHOOP 4.0 (cattura del traffico da parte della community + test sul dispositivo, #535). Tieni una sveglia di riserva per tutto ciò che non puoi davvero perdere."
+          }
+        }
+      }
+    },
+    "Average HR must be 25-250 bpm.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La FC media deve essere tra 25 e 250 bpm."
+          }
+        }
+      }
+    },
+    "BETA": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BETA"
+          }
+        }
+      }
+    },
+    "Band": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intervallo"
+          }
+        }
+      }
+    },
+    "Band Sleep State": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stato del sonno della fascia"
+          }
+        }
+      }
+    },
+    "Beat-to-beat variation": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variazione tra un battito e l'altro"
+          }
+        }
+      }
+    },
+    "Below band": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sotto l'intervallo"
+          }
+        }
+      }
+    },
+    "Below your band.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sotto il tuo intervallo."
+          }
+        }
+      }
+    },
+    "Beta feature": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Funzione beta"
+          }
+        }
+      }
+    },
+    "Bring in a markers CSV (date, marker, value, unit). Names that match the catalog fold onto your existing markers; anything else comes in as a custom marker. Rows that can't be read are skipped and counted, never guessed. Everything you import stays on %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa un CSV di marcatori (data, marcatore, valore, unità). I nomi che corrispondono al catalogo vengono associati ai tuoi marcatori esistenti; tutto il resto entra come marcatore personalizzato. Le righe che non si riescono a leggere vengono saltate e conteggiate, mai indovinate. Tutto ciò che importi resta su %@."
+          }
+        }
+      }
+    },
+    "Calories must be 0-20,000.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le calorie devono essere tra 0 e 20.000."
+          }
+        }
+      }
+    },
+    "Cardiovascular load for the day, on a 0-100 scale (was 0-21).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carico cardiovascolare della giornata, su una scala 0-100 (prima 0-21)."
+          }
+        }
+      }
+    },
+    "Change to Number": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambia in Numero"
+          }
+        }
+      }
+    },
+    "Change to Yes/No": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambia in Sì/No"
+          }
+        }
+      }
+    },
+    "Charge %lld today, so your band is %lld–%lld bpm.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charge %1$lld oggi, quindi il tuo intervallo è %2$lld–%3$lld bpm."
+          }
+        }
+      }
+    },
+    "Charge weighs your HRV against your personal baseline (~55%%), resting heart rate (~20%%), rest quality (~15%%), respiration (~5%%) and skin-temperature deviation (~5%%). Effort is a 0-%@ cardiovascular load from time in heart-rate zones. Rest is staged from movement and heart rate. Everything is computed here from the strap's raw data. It works for any day NOOP collected raw streams.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charge pesa il tuo HRV rispetto alla tua linea di base personale (~55%%), la frequenza cardiaca a riposo (~20%%), la qualità del riposo (~15%%), la respirazione (~5%%) e la deviazione della temperatura cutanea (~5%%). Effort è un carico cardiovascolare 0-%@ calcolato dal tempo nelle zone di frequenza cardiaca. Rest viene suddiviso in fasi a partire da movimento e frequenza cardiaca. Tutto viene calcolato qui dai dati grezzi della fascia. Funziona per qualsiasi giorno in cui NOOP ha raccolto flussi grezzi."
+          }
+        }
+      }
+    },
+    "Choose CSV…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli CSV…"
+          }
+        }
+      }
+    },
+    "Choose a markers CSV file to import": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli un file CSV di marcatori da importare"
+          }
+        }
+      }
+    },
+    "Clear %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancella %@"
+          }
+        }
+      }
+    },
+    "Clear filters": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancella i filtri"
+          }
+        }
+      }
+    },
+    "Clear search": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancella la ricerca"
+          }
+        }
+      }
+    },
+    "Clock latched": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orologio agganciato"
+          }
+        }
+      }
+    },
+    "Clock latched: %@ · last frame %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orologio agganciato: %1$@ · ultimo frame %2$@"
+          }
+        }
+      }
+    },
+    "Coupled read": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lettura combinata"
+          }
+        }
+      }
+    },
+    "Coupled view": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vista combinata"
+          }
+        }
+      }
+    },
+    "Cues sent": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segnali inviati"
+          }
+        }
+      }
+    },
+    "Daily 0-3 proxy": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indice giornaliero 0-3"
+          }
+        }
+      }
+    },
+    "Data kept": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dati conservati"
+          }
+        }
+      }
+    },
+    "Day 1: bright light %@-%@, lights-out around %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giorno 1: luce intensa %1$@-%2$@, luci spente verso le %3$@."
+          }
+        }
+      }
+    },
+    "Decrease": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diminuisci"
+          }
+        }
+      }
+    },
+    "Delete (%lld)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina (%lld)"
+          }
+        }
+      }
+    },
+    "Delete this custom item": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina questo elemento personalizzato"
+          }
+        }
+      }
+    },
+    "Display name": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome visualizzato"
+          }
+        }
+      }
+    },
+    "Double-tap to select": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tocca due volte per selezionare"
+          }
+        }
+      }
+    },
+    "Each line min-max normalized within %@ · %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni linea è normalizzata min-max entro %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "Edit %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifica %@"
+          }
+        }
+      }
+    },
+    "Effort %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effort %@"
+          }
+        }
+      }
+    },
+    "Effort %@ %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effort %1$@ %2$@"
+          }
+        }
+      }
+    },
+    "End session": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termina sessione"
+          }
+        }
+      }
+    },
+    "Experimental · Liquid Today": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sperimentale · Liquid Today"
+          }
+        }
+      }
+    },
+    "Experimental · Live Sessions": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sperimentale · Sessioni in diretta"
+          }
+        }
+      }
+    },
+    "Extra or skipped beats": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battiti extra o saltati"
+          }
+        }
+      }
+    },
+    "Filter by source": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtra per sorgente"
+          }
+        }
+      }
+    },
+    "Filter by sport": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtra per sport"
+          }
+        }
+      }
+    },
+    "Finish selecting": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termina la selezione"
+          }
+        }
+      }
+    },
+    "Group": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppo"
+          }
+        }
+      }
+    },
+    "Guarding your session. Silence means you're on track.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sorveglio la tua sessione. Il silenzio significa che sei in linea."
+          }
+        }
+      }
+    },
+    "HOURS OF SLEEP": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ORE DI SONNO"
+          }
+        }
+      }
+    },
+    "HR Zones 1-3": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zone FC 1-3"
+          }
+        }
+      }
+    },
+    "HR Zones 4-5": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zone FC 4-5"
+          }
+        }
+      }
+    },
+    "Heads up: this test mode is off, so the report has no capture for it. For a useful report, turn the mode on, reproduce the problem while wearing the strap, then report again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attenzione: questa modalità di test è disattivata, quindi il report non contiene nessuna acquisizione per essa. Per un report utile, attiva la modalità, riproduci il problema indossando la fascia, poi segnala di nuovo."
+          }
+        }
+      }
+    },
+    "Hide this item": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nascondi questo elemento"
+          }
+        }
+      }
+    },
+    "Highlights this stage on the sleep chart": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidenzia questa fase nel grafico del sonno"
+          }
+        }
+      }
+    },
+    "History stays under the original question so WHOOP imports still line up.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La cronologia resta sotto la domanda originale, così le importazioni WHOOP continuano ad allinearsi."
+          }
+        }
+      }
+    },
+    "How to read this: HRV, Resting HR, Sleep duration, Respiratory rate and Skin temperature are measured from the strap (skin temp is shown as the deviation from your own baseline). Workouts is the count of activities you logged or that were detected. Recovery, Strain and Stress are NOOP's own on-device scores, not clinical measures: Recovery is a daily readiness composite (HRV, resting HR, sleep and skin-temp trend), Strain is cardiovascular load derived from heart rate, and Stress is a 0-3 autonomic-load index from resting HR and HRV.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Come leggere questo report: HRV, FC a riposo, Durata del sonno, Frequenza respiratoria e Temperatura della pelle sono misurati dalla fascia (la temperatura della pelle è mostrata come deviazione dalla tua linea di base). Allenamenti è il numero di attività che hai registrato o che sono state rilevate. Recupero, Sforzo e Stress sono punteggi calcolati da NOOP sul dispositivo, non misure cliniche: il Recupero è un indice composito giornaliero di prontezza (HRV, FC a riposo, sonno e andamento della temperatura cutanea), lo Sforzo è il carico cardiovascolare ricavato dalla frequenza cardiaca e lo Stress è un indice di carico autonomico 0-3 ricavato da FC a riposo e HRV."
+          }
+        }
+      }
+    },
+    "I am not a WHOOP employee, contractor, or affiliate, and I am not using NOOP on WHOOP's behalf.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non sono un dipendente, un collaboratore o un affiliato di WHOOP e non uso NOOP per conto di WHOOP."
+          }
+        }
+      }
+    },
+    "I own the WHOOP device I will use with NOOP and will only use it to access my own data. Doing so is my decision and my risk, including any effect on my WHOOP account, subscription, device, or warranty, and it may breach WHOOP's Terms of Service.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il dispositivo WHOOP che userò con NOOP è di mia proprietà e lo userò solo per accedere ai miei dati. È una mia decisione e un mio rischio, inclusi eventuali effetti sul mio account, abbonamento, dispositivo o garanzia WHOOP, e potrebbe violare i Termini di servizio di WHOOP."
+          }
+        }
+      }
+    },
+    "I understand NOOP is unofficial and experimental, is provided free and \"as is\" with no warranty, and is not a medical device or medical advice.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capisco che NOOP non è ufficiale ed è sperimentale, viene fornito gratuitamente e \"così com'è\" senza alcuna garanzia, e non è un dispositivo medico né un consiglio medico."
+          }
+        }
+      }
+    },
+    "Import failed its post-restore integrity check (SQLite reports: %@). The damaged file was removed; there was no previous data to roll back.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'importazione non ha superato il controllo di integrità dopo il ripristino (SQLite segnala: %@). Il file danneggiato è stato rimosso; non c'erano dati precedenti da ripristinare."
+          }
+        }
+      }
+    },
+    "Import failed its post-restore integrity check (SQLite reports: %@). Your previous data was rolled back automatically and is unchanged.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'importazione non ha superato il controllo di integrità dopo il ripristino (SQLite segnala: %@). I tuoi dati precedenti sono stati ripristinati automaticamente e non sono cambiati."
+          }
+        }
+      }
+    },
+    "Imported %lld readings (%lld markers)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importate %1$lld letture (%2$lld marcatori)"
+          }
+        }
+      }
+    },
+    "Imported history can't be merged": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La cronologia importata non può essere unita"
+          }
+        }
+      }
+    },
+    "In and out, but the band won more than it lost.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dentro e fuori dall'intervallo, ma hai passato più tempo dentro che fuori."
+          }
+        }
+      }
+    },
+    "In band": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nell'intervallo"
+          }
+        }
+      }
+    },
+    "In your band. On track.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nel tuo intervallo. Sei in linea."
+          }
+        }
+      }
+    },
+    "Increase": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aumenta"
+          }
+        }
+      }
+    },
+    "Kind": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tipo"
+          }
+        }
+      }
+    },
+    "LIVE SESSION": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SESSIONE IN DIRETTA"
+          }
+        }
+      }
+    },
+    "Last frame": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultimo frame"
+          }
+        }
+      }
+    },
+    "Lifestyle": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stile di vita"
+          }
+        }
+      }
+    },
+    "Liquid Today (prototype)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liquid Today (prototipo)"
+          }
+        }
+      }
+    },
+    "Live Session": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessione in diretta"
+          }
+        }
+      }
+    },
+    "Live Sessions (beta)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessioni in diretta (beta)"
+          }
+        }
+      }
+    },
+    "Long press to show or hide your heart rate.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tieni premuto per mostrare o nascondere la tua frequenza cardiaca."
+          }
+        }
+      }
+    },
+    "Longer ranges unlock as more history builds.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli intervalli più lunghi si sbloccano man mano che si accumula cronologia."
+          }
+        }
+      }
+    },
+    "Looks like a workout around %@-%@ (avg HR %lld, %lld min). Save it?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sembra un allenamento tra le %1$@ e le %2$@ (FC media %3$lld, %4$lld min). Vuoi salvarlo?"
+          }
+        }
+      }
+    },
+    "Looks like a workout on %@ around %@-%@ (avg HR %lld, %lld min). Save it?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sembra un allenamento del %1$@ tra le %2$@ e le %3$@ (FC media %4$lld, %5$lld min). Vuoi salvarlo?"
+          }
+        }
+      }
+    },
+    "Looks like a workout yesterday around %@-%@ (avg HR %lld, %lld min). Save it?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sembra un allenamento di ieri tra le %1$@ e le %2$@ (FC media %3$lld, %4$lld min). Vuoi salvarlo?"
+          }
+        }
+      }
+    },
+    "Merge": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unisci"
+          }
+        }
+      }
+    },
+    "Merge (%lld)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unisci (%lld)"
+          }
+        }
+      }
+    },
+    "Min-max normalized · sparse series widened past %@ · %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Normalizzato min-max · serie rade estese oltre %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "Mostly over the band — harder than today's Charge could pay for.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per lo più sopra l'intervallo — più intenso di quanto la Charge di oggi potesse permettersi."
+          }
+        }
+      }
+    },
+    "Mostly under the band — there was more in the tank today.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per lo più sotto l'intervallo — oggi c'era ancora energia da spendere."
+          }
+        }
+      }
+    },
+    "Move anyway": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sposta comunque"
+          }
+        }
+      }
+    },
+    "Move this sleep?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spostare questo sonno?"
+          }
+        }
+      }
+    },
+    "NOOP didn't get a folder back from the picker. If the Select button won't enable, try creating a fresh folder in Files (under On My iPhone or iCloud Drive) and choosing that instead.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP non ha ricevuto alcuna cartella dal selettore. Se il pulsante Seleziona non si attiva, prova a creare una nuova cartella in File (in Sul mio iPhone o iCloud Drive) e a sceglierla."
+          }
+        }
+      }
+    },
+    "NOOP gives you three daily scores (Charge, Effort and Rest), each on a 0-100 scale. They're built from your strap's raw signals using published, peer-reviewed sport science, and computed entirely on your device. They are NOT WHOOP's scores: we don't have WHOOP's private algorithms and don't pretend to. They aim at the same three questions using open science, so they'll usually track WHOOP's in direction, but won't match number-for-number. And that's the point.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP ti dà tre punteggi giornalieri (Charge, Effort e Rest), ciascuno su una scala da 0 a 100. Sono costruiti a partire dai segnali grezzi della tua fascia con scienza dello sport pubblicata e sottoposta a revisione paritaria, e calcolati interamente sul tuo dispositivo. NON sono i punteggi di WHOOP: non abbiamo gli algoritmi privati di WHOOP e non fingiamo di averli. Rispondono alle stesse tre domande con una scienza aperta, quindi di solito ne seguono la direzione, ma non coincidono numero per numero. Ed è proprio questo il punto."
+          }
+        }
+      }
+    },
+    "Name the merged session": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dai un nome alla sessione unita"
+          }
+        }
+      }
+    },
+    "New item group": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppo del nuovo elemento"
+          }
+        }
+      }
+    },
+    "No Charge banked today, so your band takes a careful middle course: %lld–%lld bpm.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oggi nessuna Charge accumulata, quindi il tuo intervallo segue una via di mezzo prudente: %1$lld–%2$lld bpm."
+          }
+        }
+      }
+    },
+    "No folder selected": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna cartella selezionata"
+          }
+        }
+      }
+    },
+    "No heart-rate detail for this night": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun dettaglio della frequenza cardiaca per questa notte"
+          }
+        }
+      }
+    },
+    "No live reading. Coaching is paused until the strap comes back.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna lettura in diretta. Il coaching è in pausa finché la fascia non torna."
+          }
+        }
+      }
+    },
+    "No live reading. Coaching is paused.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna lettura in diretta. Il coaching è in pausa."
+          }
+        }
+      }
+    },
+    "No sleep tracked last night": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun sonno registrato la scorsa notte"
+          }
+        }
+      }
+    },
+    "No usable rows found. Check the file has date, marker and value columns.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna riga utilizzabile trovata. Controlla che il file abbia le colonne data, marcatore e valore."
+          }
+        }
+      }
+    },
+    "None — silence, start to finish": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuno — silenzio, dall'inizio alla fine"
+          }
+        }
+      }
+    },
+    "Number": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Numero"
+          }
+        }
+      }
+    },
+    "OPTIMAL": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OTTIMALE"
+          }
+        }
+      }
+    },
+    "Open Sleep": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri Sonno"
+          }
+        }
+      }
+    },
+    "Opens the full %@ metric.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apre la metrica %@ completa."
+          }
+        }
+      }
+    },
+    "Opens the full Charge metric.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apre la metrica Charge completa."
+          }
+        }
+      }
+    },
+    "Overlay 2-4 signals": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sovrapponi 2-4 segnali"
+          }
+        }
+      }
+    },
+    "Pinch to zoom · drag to pan · hold to read": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pizzica per ingrandire · trascina per spostarti · tieni premuto per leggere"
+          }
+        }
+      }
+    },
+    "Please confirm each of these:": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conferma ciascuno di questi punti:"
+          }
+        }
+      }
+    },
+    "Please read the points below, then confirm each statement.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leggi i punti qui sotto, poi conferma ciascuna dichiarazione."
+          }
+        }
+      }
+    },
+    "Progress toward today's goal": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avanzamento verso l'obiettivo di oggi"
+          }
+        }
+      }
+    },
+    "RECOVERY": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RECUPERO"
+          }
+        }
+      }
+    },
+    "REMOVED": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RIMOSSE"
+          }
+        }
+      }
+    },
+    "RESTORATIVE SLEEP": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SONNO RIGENERANTE"
+          }
+        }
+      }
+    },
+    "RPE": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RPE"
+          }
+        }
+      }
+    },
+    "RX": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RX"
+          }
+        }
+      }
+    },
+    "RX / Scaled": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RX / Scaled"
+          }
+        }
+      }
+    },
+    "Recovery %lld percent": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupero %lld percento"
+          }
+        }
+      }
+    },
+    "Recovery calibrating, %lld of %lld nights": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calibrazione del recupero, %1$lld di %2$lld notti"
+          }
+        }
+      }
+    },
+    "Recovery, no data yet": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupero, ancora nessun dato"
+          }
+        }
+      }
+    },
+    "Recovery, strain and sleep in one glance": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupero, sforzo e sonno a colpo d'occhio"
+          }
+        }
+      }
+    },
+    "Removes this recorded sleep and recomputes the day without it. NOOP won't re-detect sleep in this window. You can undo for a few seconds after.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuove questo sonno registrato e ricalcola la giornata senza di esso. NOOP non rileverà di nuovo il sonno in questa finestra. Puoi annullare per qualche secondo dopo."
+          }
+        }
+      }
+    },
+    "Removes this sleep and recomputes the day without it. You can undo for a few seconds after.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuove questo sonno e ricalcola la giornata senza di esso. Puoi annullare per qualche secondo dopo."
+          }
+        }
+      }
+    },
+    "Rename item": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rinomina elemento"
+          }
+        }
+      }
+    },
+    "Rename, regroup, or remove an item to tidy your list. Renaming keeps the original question behind the scenes, so a WHOOP import still lines up. Custom items are deleted; built-in ones are hidden and can be restored below.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rinomina, raggruppa di nuovo o rimuovi un elemento per riordinare la tua lista. Rinominare mantiene la domanda originale dietro le quinte, così un'importazione WHOOP continua ad allinearsi. Gli elementi personalizzati vengono eliminati; quelli integrati vengono nascosti e possono essere ripristinati qui sotto."
+          }
+        }
+      }
+    },
+    "Rename…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rinomina…"
+          }
+        }
+      }
+    },
+    "Replaces the Today tab with the prototype redesign. Turn it off any time to return to the classic dashboard. Reads the same live data from your strap.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sostituisce la scheda Oggi con il redesign prototipo. Disattivalo in qualsiasi momento per tornare alla dashboard classica. Legge gli stessi dati in diretta dalla tua fascia."
+          }
+        }
+      }
+    },
+    "Rows drained (all time)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Righe scaricate (totale)"
+          }
+        }
+      }
+    },
+    "Rows drained (session)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Righe scaricate (sessione)"
+          }
+        }
+      }
+    },
+    "SILENT GUARDIAN": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GUARDIANO SILENZIOSO"
+          }
+        }
+      }
+    },
+    "Same cardiovascular-load idea as WHOOP's Day Strain (0-21). We rescaled the top of the ladder from 21 to 100 so all three scores share one scale. The rungs didn't move, so a 100 is as rare as a 21.0 was.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stessa idea di carico cardiovascolare del Day Strain di WHOOP (0-21). Abbiamo riscalato la cima della scala da 21 a 100 così che tutti e tre i punteggi condividano una sola scala. I gradini non si sono spostati, quindi un 100 è raro quanto lo era un 21,0."
+          }
+        }
+      }
+    },
+    "Segment": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segmento"
+          }
+        }
+      }
+    },
+    "Select": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seleziona"
+          }
+        }
+      }
+    },
+    "Select sessions to merge or delete": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seleziona le sessioni da unire o eliminare"
+          }
+        }
+      }
+    },
+    "Session summary": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riepilogo della sessione"
+          }
+        }
+      }
+    },
+    "Silence-first strap coaching during workouts.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coaching con la fascia basato sul silenzio durante gli allenamenti."
+          }
+        }
+      }
+    },
+    "Sleep deleted.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonno eliminato."
+          }
+        }
+      }
+    },
+    "Sleep deleted. NOOP won't detect sleep between %@ and %@ again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonno eliminato. NOOP non rileverà più sonno tra le %1$@ e le %2$@."
+          }
+        }
+      }
+    },
+    "Sleep performance %lld percent": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prestazione del sonno %lld percento"
+          }
+        }
+      }
+    },
+    "Sleep performance %lld percent. %@ slept, %@ needed": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prestazione del sonno %1$lld percento. %2$@ dormite, %3$@ necessarie"
+          }
+        }
+      }
+    },
+    "Sleep performance not available": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prestazione del sonno non disponibile"
+          }
+        }
+      }
+    },
+    "Sleeping heart rate through the night": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frequenza cardiaca nel sonno durante la notte"
+          }
+        }
+      }
+    },
+    "Strenuous": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intenso"
+          }
+        }
+      }
+    },
+    "Stress %@ of 3": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stress %@ di 3"
+          }
+        }
+      }
+    },
+    "Supplements": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Integratori"
+          }
+        }
+      }
+    },
+    "Suppress auto-nudges overnight (10pm-7am).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Silenzia gli avvisi automatici di notte (22:00-07:00)."
+          }
+        }
+      }
+    },
+    "Tap a stage to compare with your 30-day typical.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tocca una fase per confrontarla con il tuo tipico degli ultimi 30 giorni."
+          }
+        }
+      }
+    },
+    "Target high": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obiettivo massimo"
+          }
+        }
+      }
+    },
+    "Target low": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obiettivo minimo"
+          }
+        }
+      }
+    },
+    "That file is too large for a markers CSV import.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quel file è troppo grande per un'importazione CSV di marcatori."
+          }
+        }
+      }
+    },
+    "That's why a watch-only Charge starts out “Calibrating”. NOOP needs about seven nights of your HRV to learn what normal looks like for you. Until it has them it withholds the score rather than guess. Once the baseline is set, your Charge appears with its confidence, on the same 0-100 scale as a strap's.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ecco perché una Charge solo da orologio parte come “Calibrazione”. NOOP ha bisogno di circa sette notti del tuo HRV per imparare cosa è normale per te. Finché non le ha, trattiene il punteggio invece di tirare a indovinare. Una volta definita la linea di base, la tua Charge compare con il suo grado di confidenza, sulla stessa scala 0-100 di quella di una fascia."
+          }
+        }
+      }
+    },
+    "The line is each waking hour's 0-3 proxy, scored against your own calm hours today. The bar below splits your day into calm, moderate and high stress time.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La linea è l'indice 0-3 di ogni ora di veglia, valutato rispetto alle tue ore di calma di oggi. La barra sotto divide la tua giornata in tempo di calma, di stress moderato e di stress alto."
+          }
+        }
+      }
+    },
+    "These sessions have no sport label yet. Pick one for the merged session.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Queste sessioni non hanno ancora un'etichetta di sport. Scegline una per la sessione unita."
+          }
+        }
+      }
+    },
+    "This backup file is damaged and can't be restored (SQLite reports: %@). Your current data was left untouched. Try an earlier backup file.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo file di backup è danneggiato e non può essere ripristinato (SQLite segnala: %@). I tuoi dati attuali non sono stati toccati. Prova con un file di backup precedente."
+          }
+        }
+      }
+    },
+    "This moves the night to a time with no recorded data. Stages can't be derived there, so it may show as empty until data covers it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo sposta la notte in un momento senza dati registrati. Lì le fasi non possono essere ricavate, quindi potrebbe apparire vuota finché i dati non la coprono."
+          }
+        }
+      }
+    },
+    "Tick": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tacca"
+          }
+        }
+      }
+    },
+    "To the fullest extent the law allows, I will not hold the NOOP project or its contributors liable for any loss or damage arising from my use of it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nella misura massima consentita dalla legge, non riterrò il progetto NOOP o i suoi collaboratori responsabili di alcuna perdita o danno derivante dal mio utilizzo."
+          }
+        }
+      }
+    },
+    "Today's value is your recorded daily stress score (0-3).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il valore di oggi è il tuo punteggio di stress giornaliero registrato (0-3)."
+          }
+        }
+      }
+    },
+    "Today, %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oggi, %@"
+          }
+        }
+      }
+    },
+    "Too short to judge — the band needs a few minutes to mean anything.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Troppo breve per giudicare — l'intervallo ha bisogno di qualche minuto per avere un significato."
+          }
+        }
+      }
+    },
+    "Typical effort %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effort tipico %@"
+          }
+        }
+      }
+    },
+    "Typical effort, no data": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effort tipico, nessun dato"
+          }
+        }
+      }
+    },
+    "Undo": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annulla"
+          }
+        }
+      }
+    },
+    "Undo sleep deletion": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annulla l'eliminazione del sonno"
+          }
+        }
+      }
+    },
+    "Vitality %lld out of 100": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vitalità %lld su 100"
+          }
+        }
+      }
+    },
+    "Warming up. Cues stay quiet for the first minute.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riscaldamento. I segnali restano silenziosi per il primo minuto."
+          }
+        }
+      }
+    },
+    "We compare today's resting heart rate and HRV to your own 30-day baseline. A higher-than-usual resting HR and a lower-than-usual HRV both push the score up, classic signs the body is activated. The combined shift is mapped onto a 0-3 scale: 0 is calm, 1.5 sits at your baseline, 3 is highly activated.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confrontiamo la frequenza cardiaca a riposo e l'HRV di oggi con la tua linea di base personale di 30 giorni. Una FC a riposo più alta del solito e un HRV più basso del solito spingono entrambi il punteggio verso l'alto, segni classici di un corpo attivato. Lo scostamento combinato viene mappato su una scala 0-3: 0 è calma, 1,5 corrisponde alla tua linea di base, 3 è un'attivazione elevata."
+          }
+        }
+      }
+    },
+    "Wear the strap overnight to score a night first.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indossa la fascia di notte per ottenere prima il punteggio di una notte."
+          }
+        }
+      }
+    },
+    "YOUR BANDS": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LE TUE FASCE"
+          }
+        }
+      }
+    },
+    "Yes/No": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sì/No"
+          }
+        }
+      }
+    },
+    "You held the band. Right where today wanted you.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai tenuto l'intervallo. Esattamente dove ti voleva la giornata di oggi."
+          }
+        }
+      }
+    },
+    "Your cardiovascular load. NOOP turns every second of heart rate into a training-impulse using heart-rate-reserve zones (Karvonen), weights time in harder zones more heavily (Edwards / Banister), and places it on a logarithmic 0-100 scale, so easy days sit low and an all-out day approaches 100, which stays genuinely rare. A long walk with little cardio still counts, through a steps / active-energy floor.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo carico cardiovascolare. NOOP trasforma ogni secondo di frequenza cardiaca in un impulso di allenamento usando le zone della riserva di frequenza cardiaca (Karvonen), dà più peso al tempo trascorso nelle zone più dure (Edwards / Banister) e lo colloca su una scala logaritmica 0-100, così i giorni facili restano bassi e una giornata al massimo si avvicina a 100, che resta davvero raro. Una lunga camminata con poco cardio conta comunque, grazie a una soglia minima basata su passi / energia attiva."
+          }
+        }
+      }
+    },
+    "Zone %lld: %lld-%lld bpm (%lld-%lld%% max HR)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zona %1$lld: %2$lld-%3$lld bpm (%4$lld-%5$lld%% FC max)"
+          }
+        }
+      }
+    },
+    "Zone high": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limite superiore della zona"
+          }
+        }
+      }
+    },
+    "Zone low": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limite inferiore della zona"
+          }
+        }
+      }
+    },
+    "Zoomed in. Drag to pan · hold to read": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingrandito. Trascina per spostarti · tieni premuto per leggere"
+          }
+        }
+      }
+    },
+    "about your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in linea con il tuo solito"
+          }
+        }
+      }
+    },
+    "above your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sopra il tuo solito"
+          }
+        }
+      }
+    },
+    "asleep": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "addormentato"
+          }
+        }
+      }
+    },
+    "below your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sotto il tuo solito"
+          }
+        }
+      }
+    },
+    "e.g. 2.0-5.0 (your report's own range)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "es. 2.0-5.0 (l'intervallo indicato nel tuo referto)"
+          }
+        }
+      }
+    },
+    "no Effort recorded": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nessun Effort registrato"
+          }
+        }
+      }
+    },
+    "of 21": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "su 21"
+          }
+        }
+      }
+    },
+    "still": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "fermo"
+          }
+        }
+      }
+    },
+    "the NOOP database failed its integrity check (SQLite reports: %@). A backup of it would not restore. Export the WHOOP-format CSV (Settings → Export data) to save what's still readable.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "il database di NOOP non ha superato il controllo di integrità (SQLite segnala: %@). Non è stato possibile ripristinarne un backup. Esporta il CSV in formato WHOOP (Impostazioni → Esporta dati) per salvare ciò che è ancora leggibile."
+          }
+        }
+      }
+    },
+    "typically %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "di solito %@"
+          }
+        }
+      }
+    },
+    "up": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "alzato"
+          }
+        }
+      }
+    },
+    "vs typical - ": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vs tipico - "
+          }
+        }
+      }
+    },
+    "wake": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sveglio"
+          }
+        }
+      }
+    },
+    "· ~day %lld-%lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· ~giorno %1$lld-%2$lld"
+          }
+        }
+      }
+    },
+    "— bpm": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "— bpm"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
