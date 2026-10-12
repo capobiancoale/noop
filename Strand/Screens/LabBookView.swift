@@ -505,8 +505,8 @@ enum LabBookFormat {
 
     private static let dayFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "d MMM yyyy"
+        f.locale = Locale.autoupdatingCurrent
+        f.setLocalizedDateFormatFromTemplate("dMMMyyyy")
         return f
     }()
 
@@ -527,9 +527,9 @@ enum LabBookFormat {
     /// "d MMM yyyy" pinned to UTC, paired with `utcKeyFormatter` so `dayFromKey` round-trips a UTC day.
     private static let utcDayFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
+        f.locale = Locale.autoupdatingCurrent
         f.timeZone = TimeZone(identifier: "UTC")
-        f.dateFormat = "d MMM yyyy"
+        f.setLocalizedDateFormatFromTemplate("dMMMyyyy")
         return f
     }()
 

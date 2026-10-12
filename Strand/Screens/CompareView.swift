@@ -1034,8 +1034,8 @@ private struct MultiTooltip: View {
     /// Shared formatter; was rebuilt from scratch on every hover frame.
     private static let dateLabelFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "EEE d MMM yyyy"
+        f.locale = Locale.autoupdatingCurrent
+        f.setLocalizedDateFormatFromTemplate("EEEdMMMyyyy")
         return f
     }()
 

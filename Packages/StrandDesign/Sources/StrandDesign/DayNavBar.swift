@@ -144,10 +144,10 @@ public struct DayNavBar: View {
     }
 
     private static let dayFmt: DateFormatter = {
-        let f = DateFormatter(); f.dateFormat = "EEE d MMM"; f.locale = Locale(identifier: "en_US_POSIX"); return f
+        let f = DateFormatter(); f.locale = Locale.autoupdatingCurrent; f.setLocalizedDateFormatFromTemplate("EEEdMMM"); return f
     }()
     private static let fullDateFmt: DateFormatter = {
-        let f = DateFormatter(); f.dateFormat = "d MMM yyyy"; f.locale = Locale(identifier: "en_US_POSIX"); return f
+        let f = DateFormatter(); f.locale = Locale.autoupdatingCurrent; f.setLocalizedDateFormatFromTemplate("dMMMyyyy"); return f
     }()
 }
 #endif

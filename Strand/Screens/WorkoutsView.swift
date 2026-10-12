@@ -1496,10 +1496,11 @@ struct WorkoutsView: View {
 
     // MARK: - Formatting
 
+    // Shown to the user: in their language and its order ("27 Sep 2026", "27 set 2026").
     private static let dateFmt: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "d MMM yyyy"
+        f.locale = Locale.autoupdatingCurrent
+        f.setLocalizedDateFormatFromTemplate("dMMMyyyy")
         return f
     }()
 

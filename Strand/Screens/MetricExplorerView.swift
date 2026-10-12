@@ -30,14 +30,18 @@ private let strandDayParser: DateFormatter = {
 
 private func parseDay(_ day: String) -> Date? { strandDayParser.date(from: day) }
 
-/// "9 Jun 2026" — long, locale-stable date for the hero "as of" line.
+/// "9 Jun 2026" ("9 giu 2026") — long date for the hero "as of" line, in the user's language.
 private func longDate(_ d: Date) -> String {
-    let f = DateFormatter()
-    f.locale = Locale(identifier: "en_US_POSIX")
-    f.timeZone = TimeZone(identifier: "UTC")
-    f.dateFormat = "d MMM yyyy"
-    return f.string(from: d)
+    longDateFormatter.string(from: d)
 }
+
+private let longDateFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.locale = Locale.autoupdatingCurrent
+    f.timeZone = TimeZone(identifier: "UTC")
+    f.setLocalizedDateFormatFromTemplate("dMMMyyyy")
+    return f
+}()
 
 /// The category accent (colour communicates category only — never decoration).
 private func metricAccent(_ m: MetricDescriptor) -> Color {
