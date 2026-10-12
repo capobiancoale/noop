@@ -25,6 +25,14 @@ import WhoopStore
 struct MarkerEditorView: View {
     /// Persist the validated draft row(s). Async so the caller can write + refresh.
     let onSave: (_ drafts: [LabMarkerRow]) async -> Void
+    /// A catalog marker to open on (e.g. the blood-pressure pair from the metric detail), so the sheet
+    /// lands straight on its value fields instead of the marker list. nil = the usual marker list.
+    let initialMarkerKey: String?
+
+    init(initialMarkerKey: String? = nil, onSave: @escaping (_ drafts: [LabMarkerRow]) async -> Void) {
+        self.initialMarkerKey = initialMarkerKey
+        self.onSave = onSave
+    }
 
     @EnvironmentObject var repo: Repository
     @Environment(\.dismiss) private var dismiss
@@ -72,6 +80,17 @@ struct MarkerEditorView: View {
         #endif
         .background(StrandPalette.surfaceBase)
         .keyboardDoneToolbar($focused)
+        .onAppear { preselectInitialMarker() }
+    }
+
+    /// Open on `initialMarkerKey` when one was asked for and nothing is chosen yet. Same state `choose`
+    /// sets, without grabbing keyboard focus on appear.
+    private func preselectInitialMarker() {
+        guard selection == nil, !addingCustom, let key = initialMarkerKey,
+              let def = MarkerCatalog.definition(for: key) else { return }
+        selection = def
+        unit = def.canonicalUnit
+        unitChoice = 0
     }
 
     // MARK: - Marker picker

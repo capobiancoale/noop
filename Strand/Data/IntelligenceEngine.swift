@@ -111,6 +111,20 @@ final class IntelligenceEngine: ObservableObject {
         /// Empty unless the Steps mode is active (the gate is read once before the loop), so the default path
         /// is byte-identical: the trace recomputes the SAME wrap-aware sum analyzeDay already computed.
         let stepsTrace: [String]
+        /// The calendar day's mean and maximum strap heart rate (bpm), nil when the day has under an hour of
+        /// samples (see `dayHeartRateStats`). Feeds the `avg_hr` / `max_hr` Explore metrics.
+        let dayAvgHr: Double?
+        let dayMaxHr: Double?
+    }
+
+    /// Mean and maximum of a calendar day's strap heart-rate samples, or nil under one hour of samples
+    /// (3 600 at 1 Hz). A few minutes of wear would give a "daily average" that is really the average of
+    /// whatever was recorded, and a maximum from a sliver of the day. Pure.
+    nonisolated static func dayHeartRateStats(_ bpms: [Int]) -> (avg: Double, max: Double)? {
+        let minSamples = 3_600
+        guard bpms.count >= minSamples, let top = bpms.max() else { return nil }
+        let mean = Double(bpms.reduce(0, +)) / Double(bpms.count)
+        return (avg: mean, max: Double(top))
     }
 
     struct Computed: Identifiable {
@@ -605,9 +619,13 @@ final class IntelligenceEngine: ObservableObject {
                     }.map { $0.bpm }
                     rhrLine = Self.rhrFloorMeanLogLine(day: res.daily.day, floor: floor, inBedBpms: inBedBpms)
                 }
+                // The calendar day's average / maximum heart rate for the Explore avg_hr / max_hr metrics:
+                // `dayHr` is exactly [local midnight, local midnight + 24 h) from the owning strap.
+                let hrStats = Self.dayHeartRateStats(dayHr.map { $0.bpm })
                 out.append(DayScan(result: res, rhrLine: rhrLine,
                                    readOwner: owner, hrRows: hr.count,
-                                   sleepTrace: sleepTrace, stepsTrace: stepsTrace))
+                                   sleepTrace: sleepTrace, stepsTrace: stepsTrace,
+                                   dayAvgHr: hrStats?.avg, dayMaxHr: hrStats?.max))
             }
             return out
         }.value
@@ -622,9 +640,12 @@ final class IntelligenceEngine: ObservableObject {
         // Back on the main actor: fold the off-actor results into the pass-2 state in the SAME order the
         // loop produced them. Pure assignment / appends , no further store reads , so this is cheap and the
         // main actor was free during the heavy enumeration above.
+        var heartRateStatPoints: [MetricPoint] = []
         for scan in scanned {
             let res = scan.result
             readOwnerByDay[res.daily.day] = (scan.readOwner, scan.hrRows)
+            if let avg = scan.dayAvgHr { heartRateStatPoints.append(MetricPoint(day: res.daily.day, key: "avg_hr", value: avg)) }
+            if let top = scan.dayMaxHr { heartRateStatPoints.append(MetricPoint(day: res.daily.day, key: "max_hr", value: top)) }
             nightlyHrvByDay[res.daily.day] = res.daily.avgHrv
             nightlyRhrByDay[res.daily.day] = res.daily.restingHr.map(Double.init)
             nightlyRespByDay[res.daily.day] = res.daily.respRateBpm
@@ -944,6 +965,9 @@ final class IntelligenceEngine: ObservableObject {
             _ = try? await store.deleteDailyMetrics(deviceId: computedId, from: stale.day, to: stale.day)
         }
         if !restPoints.isEmpty { _ = try? await store.upsertMetricSeries(restPoints, deviceId: computedId) }
+        // Daily average / maximum strap heart rate (Explore avg_hr / max_hr), under the same computed source;
+        // a WHOOP export's own values for a day still win in the Explore read.
+        if !heartRateStatPoints.isEmpty { _ = try? await store.upsertMetricSeries(heartRateStatPoints, deviceId: computedId) }
 
         // ── Fitness Age (Phase 2) , weekly, keyed to the week's Saturday ────────────────────────────
         // Roll the last 7 computed days into the Nes/HUNT inputs and upsert a weekly Fitness Age under the
