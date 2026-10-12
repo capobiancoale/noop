@@ -262,8 +262,8 @@ public enum VO2maxEngine {
         guard age > 0, waistCm > 0, restingHR > 0 else { return nil }
         let v = FitnessAgeEngine.estimateVO2max(age: age, sex: sex, waistCm: waistCm, restingHR: restingHR,
                                                 paIndex: paIndex)
-        let see = sex.lowercased() == "female" ? FitnessAgeEngine.seeWomen : FitnessAgeEngine.seeMen
-        return RestingEstimate(vo2max: v, standardError: see, paIndex: paIndex)
+        return RestingEstimate(vo2max: v, standardError: FitnessAgeEngine.vo2maxStandardError(sex: sex),
+                               paIndex: paIndex)
     }
 
     // MARK: - From WODs: the heart-rate ratio

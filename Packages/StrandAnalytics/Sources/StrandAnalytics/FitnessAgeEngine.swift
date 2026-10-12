@@ -146,6 +146,160 @@ public enum FitnessAgeEngine {
     }
 }
 
+// MARK: - Daily VO₂max series (HUNT non-exercise model)
+//
+// VO₂max is an aerobic CAPACITY: it moves over weeks of training or detraining, not minute to minute, and no
+// validated method turns a wrist strap's heart rate into a new VO₂max every few minutes without an external
+// workload (speed or power), which a CrossFit class does not have. A value per 10-minute window would be invented
+// noise. What can honestly be done more often is to RE-EVALUATE the estimate whenever new evidence lands (a new
+// night's resting heart rate, a trained day) and to keep a real daily history of it.
+//
+// So the app recomputes it every 10 minutes and after every sync, and stores ONE point per day: the Nes et al.
+// (Med Sci Sports Exerc 2011) waist-variant estimate above, on the 7 calendar days ending on that day: the median
+// nightly resting heart rate (at least `minCoverageDays` nights, as `assessReadiness` requires) and the PA-index
+// reconstructed from the window's strain, with the same "active day" rule the weekly Fitness Age uses. The
+// model's standard error (`seeMen` / `seeWomen`, about 5 mL/kg/min) is far wider than a week-to-week change, so
+// the series is read as a trend, not as a measurement.
+extension FitnessAgeEngine {
+
+    /// Calendar days in the window a daily estimate is computed on (the same week the Fitness Age rolls).
+    public static let vo2maxWindowDays = 7
+    /// Strain (0–100) from which a day counts as an ACTIVE day in the PA-index: the weekly Fitness Age's rule.
+    public static let activeDayStrain = 30.0
+
+    /// The inputs of one daily estimate: what the 7 days ending on a day contributed.
+    public struct VO2maxWindow: Equatable, Sendable {
+        public let restingHR: Double   // median of the window's nightly resting heart rates, bpm
+        public let paIndex: Double     // HUNT PA-index (0–15) from the window's strain
+        public let nights: Int         // nights with a resting heart rate in the window
+        public let activeDays: Int     // days at or above `activeDayStrain`
+        public init(restingHR: Double, paIndex: Double, nights: Int, activeDays: Int) {
+            self.restingHR = restingHR; self.paIndex = paIndex
+            self.nights = nights; self.activeDays = activeDays
+        }
+    }
+
+    /// Standard error of the Nes 2011 waist model (mL/kg/min) for the sex's model (non-binary uses men's).
+    public static func vo2maxStandardError(sex: String) -> Double {
+        isFemale(sex) ? seeWomen : seeMen
+    }
+
+    /// What the 7 calendar days ending on `day` give the estimate, or nil with fewer than `minCoverageDays`
+    /// nights of resting heart rate. Days are matched by calendar date, so a day with no row is simply absent
+    /// from the window (never replaced by an older one). A day listed twice keeps its non-nil values.
+    public static func vo2maxWindow(days: [(day: String, restingHR: Double?, strain: Double?)],
+                                    endingOn day: String) -> VO2maxWindow? {
+        guard let end = dayOrdinal(day) else { return nil }
+        return window(dayInputs(days), endingOn: end)
+    }
+
+    /// One HUNT VO₂max estimate per day (mL/kg/min), oldest first: for every listed day with at least
+    /// `minCoverageDays` resting-HR nights among the 7 calendar days ending on it, the Nes estimate with that
+    /// window's median resting heart rate and strain-based PA-index. Empty without a positive age and waist.
+    /// A day with no resting HR or strain of its own may still be listed (e.g. today, before its night is
+    /// scored): it then reads the six days before it.
+    public static func dailyVO2maxSeries(days: [(day: String, restingHR: Double?, strain: Double?)],
+                                         age: Double, sex: String,
+                                         waistCm: Double) -> [(day: String, vo2max: Double)] {
+        guard age > 0, waistCm > 0 else { return [] }
+        let inputs = dayInputs(days)
+        return inputs.keys.sorted().compactMap { ordinal -> (day: String, vo2max: Double)? in
+            guard let w = window(inputs, endingOn: ordinal) else { return nil }
+            let v = estimateVO2max(age: age, sex: sex, waistCm: waistCm,
+                                   restingHR: w.restingHR, paIndex: w.paIndex)
+            guard v.isFinite else { return nil }
+            return (day: dayString(ordinal: ordinal), vo2max: v)
+        }
+    }
+
+    /// Mean of the points inside the `windowDays` calendar days ending on each point's day (the point included),
+    /// oldest first: the smoothed line drawn over the daily points. Points on an unparseable day are dropped.
+    public static func rollingMean(_ series: [(day: String, value: Double)],
+                                   windowDays: Int = 7) -> [(day: String, value: Double)] {
+        guard windowDays > 0 else { return [] }
+        let pts = series.compactMap { p -> (ordinal: Int, value: Double)? in
+            dayOrdinal(p.day).map { (ordinal: $0, value: p.value) }
+        }
+        .sorted { $0.ordinal < $1.ordinal }
+        return pts.indices.map { i in
+            var sum = 0.0, n = 0.0
+            var j = i
+            while j >= 0, pts[j].ordinal > pts[i].ordinal - windowDays {
+                sum += pts[j].value; n += 1; j -= 1
+            }
+            return (day: dayString(ordinal: pts[i].ordinal), value: sum / n)
+        }
+    }
+
+    /// The "yyyy-MM-dd" day `n` calendar days after `day` (before when negative), nil for an unparseable day.
+    public static func shiftDay(_ day: String, by n: Int) -> String? {
+        dayOrdinal(day).map { dayString(ordinal: $0 + n) }
+    }
+
+    // MARK: Calendar arithmetic on "yyyy-MM-dd" strings (no time zone involved: a day is just a date)
+
+    private struct DayInputs { var restingHR: Double?; var strain: Double? }
+
+    private static func dayInputs(_ days: [(day: String, restingHR: Double?, strain: Double?)]) -> [Int: DayInputs] {
+        var out: [Int: DayInputs] = [:]
+        for d in days {
+            guard let o = dayOrdinal(d.day) else { continue }
+            var cur = out[o] ?? DayInputs()
+            if let r = d.restingHR, r.isFinite, r > 0 { cur.restingHR = r }
+            if let s = d.strain, s.isFinite, s >= 0 { cur.strain = s }
+            out[o] = cur
+        }
+        return out
+    }
+
+    private static func window(_ inputs: [Int: DayInputs], endingOn end: Int) -> VO2maxWindow? {
+        var rhrs: [Double] = []
+        var activeStrains: [Double] = []
+        for o in (end - (vo2maxWindowDays - 1))...end {
+            guard let d = inputs[o] else { continue }
+            if let r = d.restingHR { rhrs.append(r) }
+            if let s = d.strain, s >= activeDayStrain { activeStrains.append(s) }
+        }
+        guard rhrs.count >= minCoverageDays, let rhr = VO2maxEngine.median(rhrs) else { return nil }
+        let meanActive = activeStrains.isEmpty ? 0 : activeStrains.reduce(0, +) / Double(activeStrains.count)
+        let pa = physicalActivityIndexFromStrain(activeDaysPerWeek: activeStrains.count,
+                                                 meanActiveStrain: meanActive)
+        return VO2maxWindow(restingHR: rhr, paIndex: pa, nights: rhrs.count, activeDays: activeStrains.count)
+    }
+
+    /// Days since 1970-01-01 of a proleptic-Gregorian "yyyy-MM-dd" (Hinnant's days_from_civil), nil if malformed.
+    private static func dayOrdinal(_ day: String) -> Int? {
+        let parts = day.split(separator: "-", omittingEmptySubsequences: false)
+        guard parts.count == 3, let y = Int(parts[0]), let m = Int(parts[1]), let d = Int(parts[2]),
+              (1...12).contains(m), (1...31).contains(d) else { return nil }
+        let yy = m <= 2 ? y - 1 : y
+        let era = (yy >= 0 ? yy : yy - 399) / 400
+        let yoe = yy - era * 400
+        let mp = (m + 9) % 12                       // March = 0
+        let doy = (153 * mp + 2) / 5 + d - 1
+        let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy
+        return era * 146_097 + doe - 719_468
+    }
+
+    /// The inverse of `dayOrdinal` (Hinnant's civil_from_days).
+    private static func dayString(ordinal: Int) -> String {
+        let z = ordinal + 719_468
+        let era = (z >= 0 ? z : z - 146_096) / 146_097
+        let doe = z - era * 146_097
+        let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365
+        let doy = doe - (365 * yoe + yoe / 4 - yoe / 100)
+        let mp = (5 * doy + 2) / 153
+        let d = doy - (153 * mp + 2) / 5 + 1
+        let m = mp < 10 ? mp + 3 : mp - 9
+        let y = yoe + era * 400 + (m <= 2 ? 1 : 0)
+        func pad(_ v: Int, _ width: Int) -> String {
+            let s = String(v)
+            return String(repeating: "0", count: max(0, width - s.count)) + s
+        }
+        return pad(y, 4) + "-" + pad(m, 2) + "-" + pad(d, 2)
+    }
+}
+
 // MARK: - Readiness checklist
 //
 // Transparency over a black-box number: show the user exactly which inputs we have, grouped by what
