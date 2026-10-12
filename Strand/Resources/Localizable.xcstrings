@@ -135919,6 +135919,236 @@
           }
         }
       }
+    },
+    "Heart-rate recovery": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupero del battito"
+          }
+        }
+      }
+    },
+    "Not enough heart rate after this workout ended. Keep the strap connected for a while after training.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non c'è abbastanza battito dopo la fine di questo allenamento. Tieni la fascia connessa per un po' dopo l'allenamento."
+          }
+        }
+      }
+    },
+    "How fast your heart rate falls after you stop. A bigger drop in the first minute usually goes with better fitness. Measured in everyday conditions, so cooling down walking or sitting changes it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quanto in fretta scende il battito dopo che ti fermi. Un calo più ampio nel primo minuto di solito indica una forma fisica migliore. Viene misurato nella vita di tutti i giorni, quindi raffreddarsi camminando o da seduto cambia il risultato."
+          }
+        }
+      }
+    },
+    "In 1 minute": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 1 minuto"
+          }
+        }
+      }
+    },
+    "In 2 minutes": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 2 minuti"
+          }
+        }
+      }
+    },
+    "5 min after": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo 5 min"
+          }
+        }
+      }
+    },
+    "10 min after": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo 10 min"
+          }
+        }
+      }
+    },
+    "30 min after": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo 30 min"
+          }
+        }
+      }
+    },
+    "Slow": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lento"
+          }
+        }
+      }
+    },
+    "Typical": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nella media"
+          }
+        }
+      }
+    },
+    "Fast": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Veloce"
+          }
+        }
+      }
+    },
+    "Back to 80%% of the way to resting in %lld min": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recuperato l'80%% del calo verso il battito a riposo in %lld min"
+          }
+        }
+      }
+    },
+    "Still recovering, check back in a few minutes": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sta ancora recuperando, ricontrolla tra qualche minuto"
+          }
+        }
+      }
+    },
+    "Not yet back near resting after %lld min": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non ancora vicino al battito a riposo dopo %lld min"
+          }
+        }
+      }
+    },
+    "Heart rate stopped being recorded after %lld min, too short to tell": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il battito ha smesso di essere registrato dopo %lld min, troppo poco per dirlo"
+          }
+        }
+      }
+    },
+    "Minutes after the end": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minuti dopo la fine"
+          }
+        }
+      }
+    },
+    "Recovery level": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livello di recupero"
+          }
+        }
+      }
+    },
+    "Heart rate after the workout": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battito dopo l'allenamento"
+          }
+        }
+      }
+    },
+    "1-minute recovery, recent workouts": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupero a 1 minuto, ultimi allenamenti"
+          }
+        }
+      }
+    },
+    "Drop in 1 minute": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calo in 1 minuto"
+          }
+        }
+      }
+    },
+    "%@ in 1 min": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ in 1 min"
+          }
+        }
+      }
+    },
+    "30 min after: %lld bpm": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 min dopo: %lld bpm"
+          }
+        }
+      }
+    },
+    "Dashed line: 80% of the way back to resting": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linea tratteggiata: l'80% del calo verso il battito a riposo"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

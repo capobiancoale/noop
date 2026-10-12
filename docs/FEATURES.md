@@ -130,7 +130,10 @@ The home dashboard (`TodayView.swift`, titled "Control Center"). A tight, gaples
 3. **Today's workout.** The day's latest session: its Effort, time in heart-rate zones, glucose at its start
    and end (with a note if it went below 70 during it or in the hour after) and the WOD logged for it. A
    detected session asks what it was: rename it, or mark it as not a workout. **Log WOD** (dated when the
-   session started) and **Start session** (beta) sit here too; **All workouts** opens the full list.
+   session started) and **Start session** (beta) sit here too; **All workouts** opens the full list. Once the
+   strap has recorded heart rate after the session, a **Recovery** line shows how far the heart rate fell in
+   the first minute and where it was 30 minutes after, e.g. "−28 bpm in 1 min · 30 min after: 92 bpm" (only
+   the parts that were recorded).
 
 **Details** (folded until opened, and remembered) holds the rest: live heart rate, the Heart & Glucose
 timeline, recovery vitals, key metrics, Charge vs Effort over 30 days, the week, glucose & insulin, your
@@ -314,6 +317,12 @@ Windows are taken relative to your latest recorded day and auto-widen on sparse 
   icons.
 - **All Sessions** — a uniform table: date/time, sport, duration, avg HR, kcal, distance, and a
   **source badge** (WHOOP or Apple) per row.
+- **Heart-rate recovery** (in a session's detail, and on a WOD's screen) — how fast the heart rate falls after
+  you stop: the drop after 1 and 2 minutes (with a slow / typical / fast word for the first), the heart rate
+  5, 10 and 30 minutes after, how long until it was 80 % of the way back to resting, a chart of the first hour
+  and, with at least three sessions, how the 1-minute drop moved over recent ones. It needs heart rate after
+  the session ended, so keep the strap connected for a while after training. Informational only: it depends
+  on how you cool down and is not a clinical test.
 
 ---
 

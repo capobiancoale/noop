@@ -47,6 +47,11 @@ struct WorkoutDetailView: View {
     /// True when the zones bar came from imported WHOOP percentages (vs derived from raw strap HR).
     @State private var zonesFromImport = false
     @State private var loaded = false
+    /// How the heart rate fell after the session and the 1-minute drop of recent sessions. Loaded on their own
+    /// so the screen does not wait for them; `recoveryLoaded` keeps the empty state from flashing first.
+    @State private var recovery: HeartRateRecovery?
+    @State private var recoveryHistory: [RecoveryHistoryPoint] = []
+    @State private var recoveryLoaded = false
 
     /// The GPS route captured for this session on-device (#524), if any. Decoded from `RouteStore` by the
     /// row's natural key. nil = no route was recorded (honest — the map only shows when points exist).
@@ -70,6 +75,7 @@ struct WorkoutDetailView: View {
             routeCard
             hrCurveCard
             zonesCard
+            recoveryCard
             if let strain = row.strain {
                 effortCard(strain: strain)
             }
@@ -81,9 +87,18 @@ struct WorkoutDetailView: View {
             }
         }
         .task { await load() }
+        .task { await loadRecovery() }
     }
 
     // MARK: - Load
+
+    /// Heart-rate recovery after this session: its own read, so the main load above is never held up by it.
+    /// A session that has not ended yet has none.
+    private func loadRecovery() async {
+        recovery = await repo.heartRateRecovery(start: row.startTs, end: row.endTs)
+        recoveryLoaded = true
+        recoveryHistory = await repo.recentHeartRateRecoveries()
+    }
 
     private func load() async {
         // #524: the GPS route, if this session recorded one on-device. A cheap UserDefaults read keyed
@@ -302,6 +317,12 @@ struct WorkoutDetailView: View {
     private func avgHrEditedDisclosure(traceMean: Double) -> Bool {
         guard let avg = row.avgHr, row.strain != nil || row.zonesJSON != nil else { return false }
         return abs(Double(avg) - traceMean) > 3
+    }
+
+    // MARK: - Heart-rate recovery
+
+    private var recoveryCard: some View {
+        HeartRateRecoveryCard(result: recovery, loading: !recoveryLoaded, history: recoveryHistory)
     }
 
     // MARK: - HR zones

@@ -40,6 +40,11 @@ struct WodDetailView: View {
     /// Minutes in heart-rate zones 1…5 over the WOD's span, from the strap (nil: no heart rate there).
     @State private var zoneMinutes: [Double]?
     @State private var zonesLoaded = false
+    /// How the heart rate fell after the WOD's span and the 1-minute drop of recent sessions, read once the
+    /// span is known (`wodWindow`) and on their own so the glucose figures never wait for them.
+    @State private var recovery: HeartRateRecovery?
+    @State private var recoveryHistory: [RecoveryHistoryPoint] = []
+    @State private var recoveryLoaded = false
     @AppStorage(TimelinePrefs.wodBeforeMinutes) private var chartBefore = TimelinePrefs.defaultWodBefore
     @AppStorage(TimelinePrefs.wodAfterMinutes) private var chartAfter = TimelinePrefs.defaultWodAfter
     @State private var glucoseResp: WodGlucoseResponse?
@@ -69,6 +74,7 @@ struct WodDetailView: View {
             }
             loadSection
             zonesSection
+            recoverySection
             if progressionPoints.count >= 2 { progressionSection }
             glucoseSection
         }
@@ -85,6 +91,8 @@ struct WodDetailView: View {
             await loadEffortContribution()
             await loadGlucose()
         }
+        // Re-runs when the span is (re)resolved, e.g. after an edit moves the WOD.
+        .task(id: wodWindow.map { Int($0.end) }) { await loadRecovery() }
     }
 
     // MARK: Summary
@@ -254,6 +262,25 @@ struct WodDetailView: View {
                 Text("Time in heart-rate zones")
             }
         }
+    }
+
+    /// Heart-rate recovery after the WOD's span (the recorded workout, else the logged time).
+    @ViewBuilder private var recoverySection: some View {
+        if wodWindow != nil {
+            Section {
+                HeartRateRecoveryCard(result: recovery, loading: !recoveryLoaded, history: recoveryHistory)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                    .listRowBackground(Color.clear)
+            }
+        }
+    }
+
+    private func loadRecovery() async {
+        guard let w = wodWindow else { return }
+        recoveryLoaded = false
+        recovery = await repo.heartRateRecovery(start: Int(w.start), end: Int(w.end))
+        recoveryLoaded = true
+        recoveryHistory = await repo.recentHeartRateRecoveries()
     }
 
     /// Glucose, heart rate and carbs / boluses around the WOD, zoomable down to single minutes.
