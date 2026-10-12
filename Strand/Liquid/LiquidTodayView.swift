@@ -124,6 +124,10 @@ struct LiquidTodayView: View {
     /// Nights banked toward Charge's baseline while it is still being learned (nil once Charge exists or on
     /// a past day), resolved in load(): it scans repo.days.
     @State private var chargeCalibrationNights: Int?
+    /// The "Why there's no Charge yet" sheet (opened from the note under the scores) and the heart-rate
+    /// accuracy sheet (opened from the Heart rate card).
+    @State private var showChargeWhy = false
+    @State private var showHeartRateAccuracy = false
     /// Flips true once the first load() completes. Until then the hero gauges + sky render STATIC so the
     /// launch data-churn (refresh publish + BLE/HR notifies) isn't fighting 4 live canvases + CoreMotion.
     @State private var dataLoaded = false
@@ -361,6 +365,14 @@ struct LiquidTodayView: View {
                     .liquidSheetDoneChrome { showSupport = false }
             }
         }
+        // The note under the scores while Charge is empty → what last night recorded and what to try.
+        .sheet(isPresented: $showChargeWhy) {
+            ChargeMissingSheet(onClose: { showChargeWhy = false })
+        }
+        // The Heart rate card's "Check accuracy" → the strap against its own beats and a pulse count.
+        .sheet(isPresented: $showHeartRateAccuracy) {
+            HeartRateAccuracyView(onClose: { showHeartRateAccuracy = false })
+        }
         // Live Session (silent guardian, beta): the in-session screen owns the whole display — full
         // screen on iOS (nothing should compete with the ring mid-workout), a sheet on macOS where
         // fullScreenCover doesn't exist.
@@ -513,11 +525,16 @@ struct LiquidTodayView: View {
     private var heroCard: some View {
         VStack(spacing: 14) {
             HStack(alignment: .top, spacing: 4) {
-                HeroScoreCell(label: "Charge", score: displayDay?.recovery, tint: StrandPalette.chargeColor,
+                // The small caption names what each score is in plain words (recovery / strain / sleep), so
+                // Charge reads as the recovery score it is.
+                HeroScoreCell(label: "Charge", caption: Text("recovery"), score: displayDay?.recovery,
+                              tint: StrandPalette.chargeColor,
                               pill: "WHOOP", animated: dataLoaded, onGuide: { guideSection = .charge })
-                HeroScoreCell(label: "Effort", score: displayDay?.strain, tint: StrandPalette.effortColor,
+                HeroScoreCell(label: "Effort", caption: Text("strain"), score: displayDay?.strain,
+                              tint: StrandPalette.effortColor,
                               pill: nil, animated: dataLoaded, onGuide: { guideSection = .effort })
-                HeroScoreCell(label: "Rest", score: restScore, tint: StrandPalette.restColor,
+                HeroScoreCell(label: "Rest", caption: Text("sleep"), score: restScore,
+                              tint: StrandPalette.restColor,
                               pill: "WHOOP", animated: dataLoaded, onGuide: { guideSection = .rest })
             }
             stateVerdict
@@ -581,14 +598,13 @@ struct LiquidTodayView: View {
                     .transition(.opacity)
             }
             ForEach(Array(missingScoreNotes.enumerated()), id: \.offset) { _, note in
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Image(systemName: "hourglass")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(StrandPalette.onDarkTertiary)
-                    note
-                        .font(StrandFont.caption)
-                        .foregroundStyle(StrandPalette.onDarkSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                if note.explainsCharge {
+                    // The Charge note opens the sheet that shows what last night recorded and what to try.
+                    Button { showChargeWhy = true } label: { missingNoteRow(note, opensSheet: true) }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Shows why Charge is missing and what to try")
+                } else {
+                    missingNoteRow(note, opensSheet: false)
                 }
             }
         }
@@ -682,23 +698,55 @@ struct LiquidTodayView: View {
     /// Why a score is missing on today, one line each: Charge while its baseline is still being learned (or
     /// before last night is in), Effort before the strap has recorded the day, Rest before a night is scored.
     /// Only for today: on a past day a missing score is missing data.
-    private var missingScoreNotes: [Text] {
+    private var missingScoreNotes: [MissingScoreNote] {
         guard selectedDayOffset == 0, dataLoaded else { return [] }
-        var notes: [Text] = []
+        var notes: [MissingScoreNote] = []
         if displayDay?.recovery == nil {
             if let n = chargeCalibrationNights {
-                notes.append(Text("Charge is learning your baseline: \(n) of \(Baselines.minNightsSeed) nights."))
+                notes.append(MissingScoreNote(
+                    text: Text("Charge is learning your baseline: \(n) of \(Baselines.minNightsSeed) nights."),
+                    explainsCharge: true))
             } else {
-                notes.append(Text("Charge appears once last night's sleep is in from the strap."))
+                notes.append(MissingScoreNote(
+                    text: Text("Charge appears once last night's sleep is in from the strap."),
+                    explainsCharge: true))
             }
         }
         if displayDay?.strain == nil {
-            notes.append(Text("Effort builds up as the strap records your day."))
+            notes.append(MissingScoreNote(text: Text("Effort builds up as the strap records your day."),
+                                          explainsCharge: false))
         }
         if restScore == nil {
-            notes.append(Text("Rest appears after a night's sleep with the strap."))
+            notes.append(MissingScoreNote(text: Text("Rest appears after a night's sleep with the strap."),
+                                          explainsCharge: false))
         }
         return notes
+    }
+
+    /// One line under the scores saying why a score is empty. The Charge line opens the diagnostics sheet.
+    private struct MissingScoreNote {
+        let text: Text
+        let explainsCharge: Bool
+    }
+
+    private func missingNoteRow(_ note: MissingScoreNote, opensSheet: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: "hourglass")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(StrandPalette.onDarkTertiary)
+            note.text
+                .font(StrandFont.caption)
+                .foregroundStyle(StrandPalette.onDarkSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .multilineTextAlignment(.leading)
+            if opensSheet {
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(StrandPalette.onDarkTertiary)
+            }
+        }
+        .contentShape(Rectangle())
     }
 
     // MARK: - Heart rate
@@ -711,24 +759,45 @@ struct LiquidTodayView: View {
             // "Full day" affordance so it's discoverable again. (This comment used to claim the Deep
             // Timeline already drew sleep + activity bands — it didn't at the time; the #979 spin-off
             // added that parity in FullDayChartView.)
-            NavigationLink { FullDayChartView() } label: {
-                card {
-                    VStack(spacing: 10) {
+            // The card is one tap into the full day. "Check accuracy" sits in its footer as a SEPARATE
+            // control (a button nested in a NavigationLink's label is not reliable), so the link wraps the
+            // live trace and the "Full day" cue, and the accuracy button is a sibling beside it.
+            card {
+                VStack(spacing: 10) {
+                    NavigationLink { FullDayChartView() } label: {
                         // Isolated leaf: it observes LiveState so the ~1 Hz HR notifies re-render ONLY
                         // this card, never the whole Today. Shows the current bpm live with a rolling
                         // beat-by-beat trace; falls back to today's banked 5-minute trace when idle.
                         LiquidLiveHR(tint: liquidHeart, fallback: hrValues, animated: dataLoaded)
-                        HStack(spacing: 4) {
-                            Spacer()
-                            Text("Full day").font(StrandFont.caption).foregroundStyle(StrandPalette.accent)
-                            Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(StrandPalette.accent)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(LiquidPressStyle())
+                    .accessibilityHint("Opens the full-day heart rate timeline")
+                    HStack(spacing: 4) {
+                        Button { showHeartRateAccuracy = true } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark.seal")
+                                    .font(.system(size: 11, weight: .semibold))
+                                Text("Check accuracy").font(StrandFont.caption)
+                            }
+                            .foregroundStyle(StrandPalette.accent)
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Compares the strap's heart rate with its own beats and with a pulse count")
+                        Spacer()
+                        NavigationLink { FullDayChartView() } label: {
+                            HStack(spacing: 4) {
+                                Text("Full day").font(StrandFont.caption)
+                                Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold))
+                            }
+                            .foregroundStyle(StrandPalette.accent)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
-            .buttonStyle(LiquidPressStyle())
-            .accessibilityHint("Opens the full-day heart rate timeline")
         }
     }
 
@@ -1534,8 +1603,9 @@ struct LiquidTodayView: View {
         return VStack(spacing: 8) {
             sectionHead("KEY METRICS", trailing: Text("14-day trend"))
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                // Charge and Effort are the scores' names in every language, as on the hero.
-                ktile(Text(verbatim: "Charge"), intText(displayDay?.recovery), "%", StrandPalette.chargeColor, frac(displayDay?.recovery), spark: sparks["recovery"] ?? [])
+                // Charge and Effort are the scores' names in every language, as on the hero. Charge also says
+                // "recovery" in the user's language, so it can be found by its plain name.
+                ktile(Text(verbatim: "Charge"), intText(displayDay?.recovery), "%", StrandPalette.chargeColor, frac(displayDay?.recovery), spark: sparks["recovery"] ?? [], alias: Text("recovery"))
                 ktile(Text(verbatim: "Effort"), intText(displayDay?.strain), "", StrandPalette.effortColor, frac(displayDay?.strain), spark: sparks["strain"] ?? [])
                 ktile(Text("Sleep"), sleepText, "", StrandPalette.restColor, fracOver(displayDay?.totalSleepMin, 480), spark: sparks["sleep"] ?? [])
                 ktile(Text(verbatim: "HRV"), intText(hrv), "ms", StrandPalette.metricCyan, fracOver(hrv, 120), spark: sparks["hrv"] ?? [])
@@ -1556,11 +1626,25 @@ struct LiquidTodayView: View {
     }
 
     private func ktile(_ label: Text, _ value: String, _ unit: String, _ tint: Color,
-                       _ frac: Double?, spark: [Double] = []) -> some View {
+                       _ frac: Double?, spark: [Double] = [], alias: Text? = nil) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            label.font(StrandFont.overlineScaled(9)).tracking(1.2)
-                .textCase(.uppercase)
-                .foregroundStyle(StrandPalette.textTertiary)
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                label.font(StrandFont.overlineScaled(9)).tracking(1.2)
+                    .textCase(.uppercase)
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .lineLimit(1)
+                    .layoutPriority(1)
+                if let alias {
+                    // The plain-words name beside the score's own ("Charge · recovery"), lowercase and a
+                    // touch smaller so both fit a three-column tile.
+                    Text(verbatim: "·").font(StrandFont.overlineScaled(9))
+                        .foregroundStyle(StrandPalette.textTertiary)
+                    alias.font(StrandFont.overlineScaled(8.5))
+                        .foregroundStyle(StrandPalette.textTertiary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+            }
             (Text(value).font(StrandFont.number(17))
                 + Text(unit.isEmpty ? "" : " \(unit)").font(StrandFont.caption))
                 .foregroundStyle(StrandPalette.textPrimary)
@@ -2001,6 +2085,8 @@ private struct LiquidWordmark: View {
 /// hit-transparent so the tap reaches the vessel). The label row taps through to the scoring guide.
 private struct HeroScoreCell: View {
     let label: String
+    /// What the score is in plain words ("recovery", "strain", "sleep"), a small line under the name.
+    let caption: Text?
     let score: Double?            // 0–100 (nil = no data yet)
     let tint: Color
     let pill: String?
@@ -2041,6 +2127,15 @@ private struct HeroScoreCell: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text("\(label), \(score.map { String(Int($0.rounded())) } ?? String(localized: "no data yet")). See how it is scored."))
+            if let caption {
+                // On-dark token like the label above: the hero card is pinned dark in both themes.
+                caption
+                    .font(StrandFont.caption)
+                    .foregroundStyle(StrandPalette.onDarkTertiary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .padding(.top, -4)   // tuck it under the label row
+            }
             if let pill {
                 Text(pill)
                     .font(StrandFont.overlineScaled(8.5)).tracking(1.2)
