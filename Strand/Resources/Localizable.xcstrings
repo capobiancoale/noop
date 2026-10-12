@@ -136149,6 +136149,186 @@
           }
         }
       }
+    },
+    "Detrended, significance-tested · %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al netto del trend, con test di significatività · %@"
+          }
+        }
+      }
+    },
+    "Clear link": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legame chiaro"
+          }
+        }
+      }
+    },
+    "Possible link": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legame possibile"
+          }
+        }
+      }
+    },
+    "No reliable link": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun legame affidabile"
+          }
+        }
+      }
+    },
+    "Calculated link": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legame di calcolo"
+          }
+        }
+      }
+    },
+    "One is calculated from the other, so they always move together. Not an insight.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uno è calcolato a partire dall'altro, quindi si muovono sempre insieme. Non è un'indicazione utile."
+          }
+        }
+      }
+    },
+    "Only %lld overlapping days so far. At least %lld are needed to compare these reliably.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finora solo %1$lld giorni in comune. Ne servono almeno %2$lld per confrontarli in modo affidabile."
+          }
+        }
+      }
+    },
+    "Once long-term trends are removed, one of these barely varies, so no link can be measured.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tolte le tendenze di lungo periodo, una delle due varia appena, quindi non si può misurare alcun legame."
+          }
+        }
+      }
+    },
+    "No reliable link between %@ and %@ in this period (%lld days).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun legame affidabile tra %1$@ e %2$@ in questo periodo (%3$lld giorni)."
+          }
+        }
+      }
+    },
+    "After days with more %@, %@ the next day tends to be lower.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo i giorni con più %1$@, il giorno dopo %2$@ tende a essere minore."
+          }
+        }
+      }
+    },
+    "After days with more %@, %@ the next day tends to be higher.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo i giorni con più %1$@, il giorno dopo %2$@ tende a essere maggiore."
+          }
+        }
+      }
+    },
+    "On days when %@ is higher, %@ tends to be lower.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nei giorni in cui %1$@ è maggiore, %2$@ tende a essere minore."
+          }
+        }
+      }
+    },
+    "On days when %@ is higher, %@ tends to be higher too.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nei giorni in cui %1$@ è maggiore, anche %2$@ tende a essere maggiore."
+          }
+        }
+      }
+    },
+    "For %@ that is usually a good sign.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per %@ di solito è un buon segno."
+          }
+        }
+      }
+    },
+    "For %@ that is worth keeping an eye on.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per %@ è qualcosa da tenere d'occhio."
+          }
+        }
+      }
+    },
+    "r = %@ · p = %@ · %lld days (≈ %lld independent)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "r = %1$@ · p = %2$@ · %3$lld giorni (≈ %4$lld indipendenti)"
+          }
+        }
+      }
+    },
+    "p = %@ · %lld days (≈ %lld independent)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "p = %1$@ · %2$lld giorni (≈ %3$lld indipendenti)"
+          }
+        }
+      }
+    },
+    "These are associations in your own data, not causes. Long-term trends are removed first, and consecutive days are counted as partly repeating.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sono associazioni nei tuoi dati, non cause. Le tendenze di lungo periodo vengono tolte prima, e i giorni consecutivi contano solo in parte come informazione nuova."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

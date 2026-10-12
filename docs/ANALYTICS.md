@@ -643,6 +643,40 @@ p         = 2·(1 − Φ(|t|))                  (normal approximation)
 - Φ uses the Abramowitz & Stegun 7.1.26 `erf` approximation. The normal approximation slightly **understates** p for small n (true Student-t tails are heavier) but is fully deterministic with no special-function tables.
 - `alignByDay(...)` inner-joins two `yyyy-MM-dd`-keyed series; `lagged(x:y:lagDays:)` shifts y forward by `lagDays` (UTC day arithmetic) to probe directional/delayed effects — e.g. *today's strain vs tomorrow's recovery*.
 
+#### Significance-tested association (`associationTest`)
+
+`pearson` / `lagged` are descriptive. A raw r between two **day-by-day health series** is a poor basis for a conclusion, for two reasons: (1) most series drift slowly together (fitness, season, a new strap), so two unrelated drifting series correlate (spurious correlation, Yule 1926); (2) consecutive days resemble each other, so *n* paired days hold fewer than *n* independent observations and a plain t-test is far too eager. `associationTest(x:y:lagDays:minDays:)` returns a `CorrelationTest` that handles both:
+
+```
+1. detrend      each series: OLS line over the CALENDAR day index (gaps count as their real length);
+                keep the residuals. One value per day (repeated days are averaged).
+2. pair         x[day] with y[day + lagDays]            (lagDays = 1: "today → tomorrow")
+3. r            Pearson r of the residual pairs
+4. n_eff        n · (1 − ρx·ρy) / (1 + ρx·ρy), clamped to [3, n]
+                ρx, ρy = lag-1 autocorrelations of the paired residual series
+                (Bretherton et al., J. Climate 12, 1999)
+5. p            exact two-sided Student-t, df = n_eff − 2:
+                p = I_x(df/2, 1/2),  x = df / (df + t²),  t = r·sqrt(df / (1 − r²))
+                (regularised incomplete beta, Numerical Recipes betai/betacf; Lanczos ln Γ)
+6. 95 % CI      Fisher z: tanh( atanh(r) ± 1.96 / sqrt(n_eff − 3) ), only when n_eff > 3
+```
+
+- Returns `nil` for fewer than `minDays` paired days (default **14**) or when either residual series has no variance (including a series that is exactly its own trend).
+- `studentTwoSidedP(t:df:)` is public and accepts fractional df (an effective *n*). Checked against numerically integrated reference values (t = 2.0, df = 10 → 0.0734; t = 2.228, df = 10 → 0.0500; t = 1.96, df = 1000 → 0.0503).
+- Also public: `detrended(_:)` and `lag1Autocorrelation(_:)`.
+- The existing `pearson` / `pApprox` are unchanged; `InsightsView`, `MetricExplorerView`, `MindSection`, `LabBookView` and the dose-response engine still use them.
+- Tests (`CorrelationEngineTests`): two independent series on a shared trend give raw r > 0.85 but a small, non-significant detrended r; a true day-to-day relation survives detrending; a next-day relation is found at `lagDays = 1` and not at 0; AR(1) noise gives `effectiveN` well below *n* and a Monte-Carlo run over 200 independent persistent pairs flags far fewer at p < 0.05 than the naive test; fewer than 14 days → `nil`.
+
+**How Compare uses it** (`CompareView`, section "How They Move Together"). Each selected pair gets one card, built from the real per-day values of each series (the overlay's min–max scaling is display-only):
+
+1. **Structural pairs** (one metric is calculated from the other or they overlap by definition: asleep time vs time in bed, restorative min vs %, `sleep_*` vs the Rest score, HR zones vs Effort, TIR vs TAR/TBR, systolic vs diastolic, steps vs estimated steps, VO₂max variants and fitness age, and the same metric from two sources) are **not tested**. The card says "One is calculated from the other … Not an insight." and shows no r.
+2. Otherwise the same-day test is run. If exactly one metric is a **load** (`strain`, HR-zone minutes, `strength_min`, kcal, steps, `avg_hr`, `max_hr`) and the other a **next-morning** metric (`recovery`, `hrv`, `rhr`, `resp_rate`, `skin_temp`, `stress`, `sleep_*`, overnight glucose), the load is also tested against the next day (`lagDays = 1`); whichever is significant with the larger |r| is kept.
+3. **Verdict:** *clear* when p < 0.05 and |r| ≥ 0.3; *possible* when p < 0.05 and |r| < 0.3; otherwise *no reliable link*. Pairs with fewer than 14 overlapping days (or no variation left after detrending) say so instead of showing a number.
+4. **Wording** states an association ("On days when X is higher, Y tends to be lower" / "After days with more X, Y the next day tends to be lower"), never a cause. Only a *clear* link gets a value judgement, and only from the **outcome** metric's own "higher is better" flag. Colours carry no good/bad meaning (accent for clear links, tertiary otherwise): a negative r such as HRV vs resting HR is normal and healthy.
+5. The footer shows `r`, `p`, the paired days and the effective independent days, e.g. `r = +0.42 · p = 0.01 · 38 days (≈ 21 independent)`. Cards sort clear → possible → none → unmeasurable → structural, strongest |r| first.
+
+Limits worth knowing: the next-day pairs run two tests and keep the better one, so their false-positive rate is somewhat above the nominal 5 %; gaps in a series are tolerated but shorten the paired sample; a linear detrend does not remove seasonality or step changes, and an association between two wearable-derived signals can still reflect a shared sensor or confounder.
+
 ### `BehaviorInsights`
 
 Source: `BehaviorInsights.swift`. The headline "does this behavior move an outcome?" feature. Splits days where a behavior was logged (e.g. *Alcohol*, *Late meal*, *Meditation*) from days it was not, and compares an outcome metric between the groups.
