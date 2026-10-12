@@ -720,6 +720,63 @@ Source: `ComparisonEngine.swift`. Period-over-period comparison of one daily met
 
 ---
 
+## Blood pressure and the metrics NOOP can't measure
+
+### Blood pressure is measured, never estimated
+
+NOOP shows blood pressure only when it was **measured**: a cuff that writes to Apple Health, or a reading typed into the Lab Book. It does not estimate it from the strap. Cuffless blood pressure from a wrist optical sensor is not validated without a cuff calibration: the European Society of Hypertension's statement on cuffless devices (Stergiou et al., *J Hypertens* 2022; 40:1449-1460) and ISO 81060-3:2022 (continuous non-invasive devices) both require calibration and dedicated validation protocols. And the strap does not give NOOP what such an estimate would need: it sends heart rate and beat-to-beat (R-R) intervals, not a calibrated optical waveform. A number produced from those would look precise and be wrong, so the metric stays empty instead.
+
+- **Sources.** `bp_systolic` / `bp_diastolic` read the Apple Health daily mean (the iOS bridge reads the two quantity types as a daily average) and every Lab Book reading of the same key (`labMarker` rows, one per measurement). `Repository+Vitals.swift` merges them to **one value per local day**: the mean of that day's readings. Apple Health's value is already a daily mean, so it counts as one reading in that average (the number of cuff readings behind it is not stored). The merge (`BloodPressure.mergeDaily`) is pure and tested; `exploreSeries` and `resolvedSeries` route only these two keys through it, so Explore, the metric detail and Compare all see the same series; the Apple Health page keeps reading the Apple-only series.
+- **Category.** `BloodPressure.classify(systolic:diastolic:)` returns the category of the 2023 ESH hypertension guidelines (Mancia et al., *J Hypertens* 2023; 41:1874-2071, office blood pressure):
+
+  | Category | Systolic | | Diastolic |
+  |---|---|---|---|
+  | Optimal | < 120 | and | < 80 |
+  | Normal | 120-129 | and/or | 80-84 |
+  | High-normal | 130-139 | and/or | 85-89 |
+  | Grade 1 hypertension | 140-159 | and/or | 90-99 |
+  | Grade 2 hypertension | 160-179 | and/or | 100-109 |
+  | Grade 3 hypertension | >= 180 | and/or | >= 110 |
+  | Isolated systolic hypertension | >= 140 | and | < 90 |
+
+  When the two values fall in different rows, the higher category wins. Values are rounded to whole mmHg first (cuffs report whole numbers, and a daily mean of 129.5 is shown, and so classified, as 130). The word names where the number sits in the guideline's table; one day's mean, or an average of readings taken in different conditions, is not a diagnosis. Informational only, not medical advice.
+- **Card.** The metric detail of both keys shows the latest day with both values ("128/82 mmHg"), its category word, the mean of the daily values over the last 30 days, an "Add a reading" button that opens the Lab Book editor on the blood-pressure pair, and the note that NOOP only shows measured blood pressure.
+
+### Why a metric can be empty (`MetricAvailability`)
+
+Most of the Explore catalog depends on something the user may not have. `Strand/Data/MetricAvailability.swift` is the one pure mapping from a metric to **why it can be empty and how to fill it**; the metric detail shows it in place of an empty chart, and Explore hides metrics with no data at all behind "Show metrics without data (N)" (blood pressure stays listed, because its detail has the button that fills it). The N and the hiding reuse the emptiness probe Explore already runs, so they cost no extra reads. The groups:
+
+| Metric(s) | Comes from | Empty when |
+|---|---|---|
+| Charge (`recovery`) | HRV and resting HR while asleep, vs your own baseline | fewer than 4 nights of baseline (`Baselines.minNightsSeed`) |
+| `hrv`, `rhr`, `resp_rate` | nightly R-R intervals (breathing rate by respiratory sinus arrhythmia) | no detected night of sleep with clean beat data |
+| `skin_temp` | wrist temperature vs your own baseline | fewer than 4 nights of temperature; shown as a deviation, not an absolute |
+| `spo2` (WHOOP) | WHOOP export only | always, for a strap-only user: a WHOOP 5.0/MG sends no blood-oxygen value NOOP can read, and the raw optical signal cannot be turned into a reliable percentage without WHOOP's own calibration, so NOOP leaves it empty instead of guessing |
+| `avg_hr`, `max_hr` | strap heart rate over the local day | under one hour of strap heart rate that day |
+| sleep stages, efficiency, `in_bed_min`, restorative | a night detected from the strap | no detected night |
+| `hours_vs_needed_pct`, `sleep_need_min`, `sleep_debt_min`, `sleep_consistency`, HR-zone minutes, `strength_min`, Day Stress | WHOOP export (NOOP shows its own sleep need/debt/consistency and zone times on the Sleep and Workout screens) | no export imported |
+| `fitness_age`, `vo2max_est`, `vitality`, `body_age` | weekly roll-ups | missing age/sex/waist in Settings, or under 4 nights of resting HR |
+| `vo2max_exercise` | walks and runs of at least 10 minutes and 1 km, with distance and heart rate | none recorded or imported |
+| `steps`, `active_kcal` | Apple Health; the strap's own daily total fills the days Apple Health lacks | neither has data |
+| `steps_est` | motion volume calibrated against phone steps | fewer than 3 days with both |
+| `vo2max` (Apple Health) | an Apple Watch | no Apple Watch writing it |
+| weight, body fat, lean mass, BMI, waist, water | Apple Health | nothing writes them there |
+| glucose, insulin, carbs | a CGM or automated insulin app (like Loop) writing to Apple Health | not shared with Apple Health / not allowed for NOOP to read |
+| nutrition keys | a nutrition CSV | none imported |
+| Mi Band keys | a Xiaomi band export | no Xiaomi band |
+
+### Daily values derived from what is already stored
+
+A few catalog metrics had no on-device producer even though their inputs were stored. They are now derived, always as the lowest-priority layer (an imported WHOOP value for the same day still wins):
+
+- `avg_hr`, `max_hr`: mean and maximum of the strap's heart-rate samples over the local calendar day, written by `IntelligenceEngine` under the computed source when the day has at least an hour of samples (3 600 at 1 Hz).
+- `in_bed_min`: asleep time divided by efficiency (the identity efficiency = asleep / in bed, also used by `Rest.composite(daily:)`), when the efficiency is plausible (above 0.3).
+- `restorative_min`, `restorative_pct`: deep + REM, in minutes and as a share of the night asleep.
+- `sleep_efficiency` is shown as a percent whichever scale the row was stored in (the on-device engine stores a 0-1 fraction).
+- `steps` and `active_kcal` in Explore fall back to the strap's daily total on days Apple Health has none, the same precedence Today and Compare already use.
+
+---
+
 ## The library orchestrator: `AnalyticsEngine`
 
 Source: `AnalyticsEngine.swift`. A pure function that ties the recompute engines together for one day, producing the three daily scores — **Charge** (recovery), **Effort** (strain), **Rest** (sleep). **Live:** `analyzeDay` is wired in via `Strand/Data/IntelligenceEngine.swift` — it runs every ~15 minutes while connected and on demand from the Intelligence screen, persisting the computed Charge/Effort/Rest/workouts under the `"<deviceId>-noop"` source and **merged under** imports. Where a WHOOP export covers a day, its own per-day numbers still win; the recompute fills in the days the strap offloaded but no export covers.

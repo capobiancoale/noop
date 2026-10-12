@@ -1661,6 +1661,17 @@ final class Repository: ObservableObject {
         let from = fullHistory ? "0000-01-01" : Self.dayString(now.addingTimeInterval(-Double(days) * 86_400))
         let to = fullHistory ? "9999-12-31" : Self.dayString(now.addingTimeInterval(86_400))
 
+        // Measured blood pressure merges its sources by averaging each day, not by precedence, so it has its
+        // own read (Repository+Vitals): Apple Health's daily mean plus every Lab Book reading.
+        if preferredSource == Self.appleHealthSource, Self.isBloodPressureKey(key) {
+            let merged = await bloodPressureSeries(key: key, store: store, from: from, to: to)
+            let points = merged.map {
+                ResolvedMetricPoint(day: $0.day, value: $0.value, source: Self.appleHealthSource, sourceKey: key)
+            }
+            let withLabBook = candidates + [MetricSourceCandidate(source: WhoopStore.labBookSourceId, key: key)]
+            return MetricSeriesResolution(requestedSource: preferredSource, candidates: withLabBook, points: points)
+        }
+
         // First candidate wins per day; later candidates only fill days no earlier one covered.
         var byDay: [String: ResolvedMetricPoint] = [:]
         for candidate in candidates {
@@ -1787,6 +1798,19 @@ final class Repository: ObservableObject {
     /// byte-identical. The flag is forwarded to the non-strap `series(...)` delegation below so every source
     /// path honours it.
     func exploreSeries(key: String, source: String, days: Int = 4000, fullHistory: Bool = false) async -> [(day: String, value: Double)] {
+        // Steps and Active Energy: Apple Health wins per day and the strap's own daily total fills the days
+        // Apple Health lacks (a WHOOP 5.0/MG counts steps itself; calories are estimated from heart rate),
+        // the same precedence Today and Compare already resolve through `resolvedSeries`. Without this the
+        // Explore rows read empty for a user whose phone doesn't write steps to Apple Health.
+        if source == Self.appleHealthSource, Self.noopComputedCanFillAppleMetric(key) {
+            return await resolvedSeries(key: key, source: source, days: days, fullHistory: fullHistory).values
+        }
+        // Measured blood pressure: Apple Health ∪ Lab Book readings, one value per day (Repository+Vitals).
+        // Only here and in `resolvedSeries`: `series(key:source:)` stays the verbatim single-source read the
+        // Apple Health page relies on.
+        if source == Self.appleHealthSource, Self.isBloodPressureKey(key) {
+            return await bloodPressureSeries(key: key, days: days, fullHistory: fullHistory)
+        }
         guard source == "my-whoop" else { return await series(key: key, source: source, days: days, fullHistory: fullHistory) }
         guard let store = await ensureStore() else { return [] }
         let now = Date()
@@ -1848,7 +1872,24 @@ final class Repository: ObservableObject {
         case "spo2":             return d.spo2Pct
         case "skin_temp":        return d.skinTempDevC
         case "sleep_total_min", "asleep_min": return d.totalSleepMin
-        case "sleep_efficiency": return d.efficiency
+        // Efficiency is stored as a 0-1 fraction by the on-device engine and as a percent by the WHOOP
+        // import; the Explore metric is a percent, so a fraction would have shown as "1 %". (SleepView and
+        // TodayView normalise it the same way.)
+        case "sleep_efficiency": return d.efficiency.map { $0 <= 1.0 ? $0 * 100.0 : $0 }
+        // Time in bed is the identity efficiency = asleep / in bed, solved for in-bed time, the same
+        // inversion `Rest.composite(daily:)` uses. The 0.3 floor mirrors SleepView's plausibility guard.
+        case "in_bed_min":
+            guard let asleep = d.totalSleepMin, asleep > 0, let e = d.efficiency else { return nil }
+            let fraction = e <= 1.0 ? e : e / 100.0
+            return fraction > 0.3 && fraction <= 1.0 ? asleep / fraction : nil
+        // Restorative sleep is deep + REM (the Rest composite's restorative term), as minutes and as a
+        // share of the night asleep; the WHOOP import derives the same two from the same columns.
+        case "restorative_min":
+            guard let deep = d.deepMin, let rem = d.remMin else { return nil }
+            return deep + rem
+        case "restorative_pct":
+            guard let deep = d.deepMin, let rem = d.remMin, let asleep = d.totalSleepMin, asleep > 0 else { return nil }
+            return (deep + rem) / asleep * 100.0
         case "sleep_deep_min", "deep_min": return d.deepMin
         case "sleep_rem_min", "rem_min":   return d.remMin
         case "sleep_light_min", "core_min": return d.lightMin

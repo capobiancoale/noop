@@ -162,6 +162,9 @@ struct MetricExplorerView: View {
     /// absent from the map simply has no empty-dot yet (rows never wait on it — see `MetricRow`).
     @State private var emptyByID: [String: Bool] = [:]
     @State private var probedRefreshSeq: Int?
+    /// Whether metrics with no data at all are listed. Off by default: most of the catalog needs a device or an
+    /// import the user may not have, and a long list of empty rows hides the metrics that work.
+    @AppStorage("explore.showEmptyMetrics") private var showEmptyMetrics = false
     /// True while the empty-dot probe is still running its first pass. Drives a small inline progress
     /// hint in the header, never gating the rows: the catalog is static, so every row's label/icon/unit
     /// must paint immediately even before any series read returns (#199).
@@ -218,8 +221,22 @@ struct MetricExplorerView: View {
             #endif
             .padding(.bottom, NoopMetrics.sectionGap - 20)
 
+            // Metrics known (by the probe below) to have no data are tucked away unless asked for. The count
+            // reuses the probe's results, so this costs no extra reads.
+            let hiddenCount = withoutDataCount
+            if hiddenCount > 0 || showEmptyMetrics {
+                NoopCard {
+                    Toggle(isOn: $showEmptyMetrics) {
+                        Text("Show metrics without data (\(hiddenCount))")
+                            .font(StrandFont.subhead)
+                            .foregroundStyle(StrandPalette.textPrimary)
+                    }
+                }
+                .padding(.bottom, NoopMetrics.sectionGap - 20)
+            }
+
             ForEach(MetricCatalog.categories, id: \.self) { category in
-                let metrics = MetricCatalog.inCategory(category)
+                let metrics = MetricCatalog.inCategory(category).filter { !isHidden($0) }
                 if !metrics.isEmpty {
                     VStack(alignment: .leading, spacing: NoopMetrics.gap) {
                         // Localized at the render site only; `category` itself stays the raw
@@ -264,6 +281,17 @@ struct MetricExplorerView: View {
         }
         // Rows push MetricDetailView directly (closure-based NavigationLink above) — no value/destination
         // pairing, which is what double-pushed (#38). Nothing else registers a MetricDescriptor destination.
+    }
+
+    /// A metric the probe found empty, while the "without data" switch is off. Metrics the probe hasn't
+    /// reached yet are never hidden (a row never waits on the probe, #199).
+    private func isHidden(_ metric: MetricDescriptor) -> Bool {
+        !showEmptyMetrics && emptyByID[metric.id] == true && !MetricAvailability.isAlwaysListed(metric)
+    }
+
+    /// How many catalog metrics the probe found with no data (the ones the switch reveals).
+    private var withoutDataCount: Int {
+        MetricCatalog.all.filter { emptyByID[$0.id] == true && !MetricAvailability.isAlwaysListed($0) }.count
     }
 
     /// The hero entry that opens the Deep Timeline (#575). A full-bleed card, not a list row, so it reads
@@ -314,7 +342,8 @@ struct MetricExplorerView: View {
     private func probeEmptiness(refreshSeq: Int) async {
         guard probedRefreshSeq != refreshSeq || emptyByID.isEmpty else { probing = false; return }
         probedRefreshSeq = refreshSeq
-        emptyByID = [:]
+        // Keep the previous pass's results until each metric is re-probed (they are overwritten one by one
+        // below): clearing the map here made every hidden row reappear and vanish again on each refresh.
         probing = true
         for metric in MetricCatalog.all {
             guard !Task.isCancelled else { return }
@@ -561,7 +590,11 @@ struct MetricDetailView: View {
                     // the ranges to misrepresent, and hiding the bar here would regress this
                     // "for context" intent.
                     rangeBar(effectiveRange: effRange, windowed: win, windowFellBack: fellBack)
-                    ComingSoon(what: "Import your history first. A WHOOP export in Data Sources fills every metric you can explore here in about a minute.")
+                    // Measured blood pressure: its card carries the "Add a reading" button, so it leads.
+                    if Repository.isBloodPressureKey(metric.key) {
+                        BloodPressureCard(onSaved: { await reloadSeries() })
+                    }
+                    emptyReasonCard
                 } else if !loaded {
                     rangeBar(effectiveRange: effRange, windowed: win, windowFellBack: fellBack)
                     ComingSoon(what: "Reading your \(metric.title.lowercased())…")
@@ -570,6 +603,9 @@ struct MetricDetailView: View {
                     // scores) or a big SF-Rounded headline, floated over the domain's starfield,
                     // with the range pill. Then the frosted chart / stat tiles / correlations.
                     heroHeader(effectiveRange: effRange, windowed: win, windowFellBack: fellBack)
+                    if Repository.isBloodPressureKey(metric.key) {
+                        BloodPressureCard(onSaved: { await reloadSeries() })
+                    }
                     heroChart(effectiveRange: effRange, windowed: win, windowFellBack: fellBack)
                     statRow(effectiveRange: effRange, windowed: win)
                     correlationCard
@@ -584,6 +620,37 @@ struct MetricDetailView: View {
         // Range changes the window, hence the correlation inputs — recompute the
         // cached scan rather than letting `correlationCard` run it inside body.
         .onChangeCompat(of: range) { _ in recomputeCorrelations() }
+    }
+
+    /// Re-read just this metric's series (not the whole-catalog correlation scan): after the blood-pressure
+    /// card saves a reading, which changes no dashboard cache and so does not bump `refreshSeq`.
+    private func reloadSeries() async {
+        series = await repo.exploreSeries(key: metric.key, source: metric.source)
+        loaded = true
+    }
+
+    /// Why a metric with no data at all is empty and how to fill it (MetricAvailability), in place of a bare
+    /// empty chart.
+    private var emptyReasonCard: some View {
+        let note = MetricAvailability.note(for: metric)
+        return NoopCard(tint: metricDomain(metric).color) {
+            VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Why there's no data").strandOverline()
+                    Text(note.reason)
+                        .font(StrandFont.subhead)
+                        .foregroundStyle(StrandPalette.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("How to get it").strandOverline()
+                    Text(note.howTo)
+                        .font(StrandFont.subhead)
+                        .foregroundStyle(StrandPalette.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
     }
 
     private func load() async {

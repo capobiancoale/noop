@@ -22902,7 +22902,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pressione sanguigna"
+            "value": "Pressione arteriosa"
           }
         },
         "pt-PT": {
@@ -136446,6 +136446,846 @@
           "stringUnit": {
             "state": "translated",
             "value": "A riposo: il modello di forma fisica HUNT (Nes 2011) da età, sesso, vita, frequenza cardiaca a riposo e attività, calcolato sugli ultimi 7 giorni e tenuto come un punto al giorno. È una tendenza, non una nuova misura ogni pochi minuti, e per una singola persona sbaglia in genere di 5-6 mL/kg/min."
+          }
+        }
+      }
+    },
+    "No blood pressure reading yet. A reading needs both the top (systolic) and bottom (diastolic) number.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora nessuna misurazione della pressione. Servono sia il valore massimo (sistolica) sia il minimo (diastolica)."
+          }
+        }
+      }
+    },
+    "NOOP shows measured blood pressure only: from a cuff that writes to Apple Health, or readings you add here. A wrist strap can't measure blood pressure reliably without a cuff, so NOOP doesn't estimate it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP mostra solo la pressione arteriosa misurata: da uno sfigmomanometro che scrive su Apple Health, oppure dalle misurazioni che aggiungi qui. Una fascia da polso non può misurare la pressione in modo affidabile senza bracciale, quindi NOOP non la stima."
+          }
+        }
+      }
+    },
+    "30-day average": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Media a 30 giorni"
+          }
+        }
+      }
+    },
+    "1 day with a reading": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 giorno con una misurazione"
+          }
+        }
+      }
+    },
+    "%lld days with a reading": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld giorni con una misurazione"
+          }
+        }
+      }
+    },
+    "No readings in the last 30 days.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna misurazione negli ultimi 30 giorni."
+          }
+        }
+      }
+    },
+    "Normal": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Normale"
+          }
+        }
+      }
+    },
+    "High-normal": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Normale-alta"
+          }
+        }
+      }
+    },
+    "Grade 1 hypertension": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ipertensione di grado 1"
+          }
+        }
+      }
+    },
+    "Grade 2 hypertension": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ipertensione di grado 2"
+          }
+        }
+      }
+    },
+    "Grade 3 hypertension": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ipertensione di grado 3"
+          }
+        }
+      }
+    },
+    "Isolated systolic hypertension": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ipertensione sistolica isolata"
+          }
+        }
+      }
+    },
+    "Show metrics without data (%lld)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra metriche senza dati (%lld)"
+          }
+        }
+      }
+    },
+    "Why there's no data": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perché non ci sono dati"
+          }
+        }
+      }
+    },
+    "How to get it": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Come ottenerlo"
+          }
+        }
+      }
+    },
+    "Apple Health only has a VO₂ Max when an Apple Watch (or another app) measures and writes it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Apple Health il VO₂ Max c'è solo se un Apple Watch (o un'altra app) lo misura e lo scrive."
+          }
+        }
+      }
+    },
+    "It comes from an Apple Watch. NOOP's own estimates are VO₂ Max (at rest) and VO₂ Max (from runs and walks).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arriva da un Apple Watch. Le stime di NOOP sono VO₂ Max (a riposo) e VO₂ Max (da corse e camminate)."
+          }
+        }
+      }
+    },
+    "There are no steps in Apple Health yet, and the strap hasn't counted any.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Apple Health non ci sono ancora passi e la fascia non ne ha contati."
+          }
+        }
+      }
+    },
+    "Allow NOOP to read Steps in Apple Health. A WHOOP 5.0/MG also counts steps itself, so wear it and sync.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti a NOOP di leggere i Passi in Apple Health. Anche un WHOOP 5.0/MG conta i passi da solo: indossalo e sincronizza."
+          }
+        }
+      }
+    },
+    "There is no Active Energy in Apple Health yet, and there is no strap heart rate to estimate it from.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Apple Health non c'è ancora Energia attiva e non c'è frequenza cardiaca della fascia da cui stimarla."
+          }
+        }
+      }
+    },
+    "Allow NOOP to read Active Energy in Apple Health, or wear the strap so NOOP can estimate it from heart rate.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti a NOOP di leggere l'Energia attiva in Apple Health, oppure indossa la fascia così NOOP può stimarla dalla frequenza cardiaca."
+          }
+        }
+      }
+    },
+    "NOOP has no body measurement from Apple Health yet.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP non ha ancora nessuna misura corporea da Apple Health."
+          }
+        }
+      }
+    },
+    "Add them in Apple Health, or weigh in with a smart scale that writes to Apple Health.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungile in Apple Health, oppure pesati con una bilancia smart che scrive su Apple Health."
+          }
+        }
+      }
+    },
+    "BMI is read from Apple Health, which needs both your weight and your height.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'IMC viene letto da Apple Health, che richiede sia il peso sia l'altezza."
+          }
+        }
+      }
+    },
+    "Add your weight and height in Apple Health, or weigh in with a smart scale that writes to it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi peso e altezza in Apple Health, oppure pesati con una bilancia smart che scrive su Apple Health."
+          }
+        }
+      }
+    },
+    "NOOP has no waist measurement from Apple Health yet.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP non ha ancora una misura del girovita da Apple Health."
+          }
+        }
+      }
+    },
+    "Add your waist circumference in Apple Health.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi la circonferenza vita in Apple Health."
+          }
+        }
+      }
+    },
+    "NOOP has no water intake from Apple Health yet.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP non ha ancora l'assunzione di acqua da Apple Health."
+          }
+        }
+      }
+    },
+    "Log water in Apple Health, or in an app that writes it there.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra l'acqua in Apple Health, o in un'app che la scrive lì."
+          }
+        }
+      }
+    },
+    "NOOP shows measured blood pressure only. A wrist strap can't measure it reliably without a cuff, so NOOP doesn't estimate it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP mostra solo la pressione arteriosa misurata. Una fascia da polso non può misurarla in modo affidabile senza bracciale, quindi NOOP non la stima."
+          }
+        }
+      }
+    },
+    "Measure with a cuff that writes to Apple Health, or add a reading here.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Misurala con uno sfigmomanometro che scrive su Apple Health, oppure aggiungi qui una misurazione."
+          }
+        }
+      }
+    },
+    "This needs glucose readings during a workout or in the two hours after it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servono letture di glicemia durante un allenamento o nelle due ore successive."
+          }
+        }
+      }
+    },
+    "Record a workout (strap or Apple Health) on a day your glucose sensor is writing to Apple Health.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra un allenamento (fascia o Apple Health) in un giorno in cui il sensore del glucosio scrive su Apple Health."
+          }
+        }
+      }
+    },
+    "This needs enough glucose readings in the day (overnight values need readings during the night).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servono abbastanza letture di glicemia nella giornata (i valori notturni richiedono letture durante la notte)."
+          }
+        }
+      }
+    },
+    "Needs a CGM writing to Apple Health, with NOOP allowed to read Blood Glucose.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serve un CGM che scriva su Apple Health, con NOOP autorizzato a leggere la Glicemia."
+          }
+        }
+      }
+    },
+    "Insulin comes from a pump or automated insulin app (like Loop) that writes insulin delivery to Apple Health.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'insulina arriva da un microinfusore o da un'app di somministrazione automatica (come Loop) che scrive l'erogazione di insulina su Apple Health."
+          }
+        }
+      }
+    },
+    "Let that app share Insulin Delivery in Apple Health, and allow NOOP to read it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fai condividere a quell'app l'Erogazione di insulina in Apple Health e consenti a NOOP di leggerla."
+          }
+        }
+      }
+    },
+    "Basal and bolus are split by the label the app that writes the doses gives each one; without it only the total is shown.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basale e bolo si distinguono dall'etichetta che l'app dà a ogni dose; senza di essa si vede solo il totale."
+          }
+        }
+      }
+    },
+    "Let your insulin app share Insulin Delivery in Apple Health, and allow NOOP to read it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fai condividere alla tua app dell'insulina l'Erogazione di insulina in Apple Health e consenti a NOOP di leggerla."
+          }
+        }
+      }
+    },
+    "Carbs come from an app (like Loop) that writes carbohydrates to Apple Health.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I carboidrati arrivano da un'app (come Loop) che scrive i carboidrati su Apple Health."
+          }
+        }
+      }
+    },
+    "Let that app share Carbohydrates in Apple Health, and allow NOOP to read them.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fai condividere a quell'app i Carboidrati in Apple Health e consenti a NOOP di leggerli."
+          }
+        }
+      }
+    },
+    "Glucose comes from a CGM or an automated insulin app (like Loop) that writes it to Apple Health.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La glicemia arriva da un CGM o da un'app di somministrazione automatica dell'insulina (come Loop) che la scrive su Apple Health."
+          }
+        }
+      }
+    },
+    "This comes from a Xiaomi / Mi Band.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo dato arriva da una Xiaomi / Mi Band."
+          }
+        }
+      }
+    },
+    "Only with a Xiaomi band: import its Mi Fitness export in Data Sources.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo con una fascia Xiaomi: importa il suo export di Mi Fitness in Sorgenti dati."
+          }
+        }
+      }
+    },
+    "Nutrition comes from a food-tracker export.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'alimentazione arriva dall'export di un'app per il diario alimentare."
+          }
+        }
+      }
+    },
+    "Import a nutrition CSV in Data Sources.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa un CSV di alimentazione in Sorgenti dati."
+          }
+        }
+      }
+    },
+    "Mood is the daily check-in you log yourself.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'umore è il check-in giornaliero che registri tu."
+          }
+        }
+      }
+    },
+    "Log how you feel in the Mind check-in; one entry a day is enough.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra come ti senti nel check-in di Mente; basta una volta al giorno."
+          }
+        }
+      }
+    },
+    "These are VO₂ Max values you measured and entered yourself.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sono valori di VO₂ Max che hai misurato e inserito tu."
+          }
+        }
+      }
+    },
+    "Add one on the VO₂ Max screen after a lab test, a field test or a reading from another device.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungine uno dalla schermata VO₂ Max dopo un test in laboratorio, un test sul campo o una lettura di un altro dispositivo."
+          }
+        }
+      }
+    },
+    "There is no data for this metric yet.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per questa metrica non ci sono ancora dati."
+          }
+        }
+      }
+    },
+    "Import your history in Data Sources, or wear the strap and sync.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa il tuo storico in Sorgenti dati, oppure indossa la fascia e sincronizza."
+          }
+        }
+      }
+    },
+    "Charge compares you with your own baseline, which needs at least 4 nights of heart rate variability and resting heart rate first.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charge ti confronta con la tua base personale, che richiede prima almeno 4 notti di variabilità della frequenza cardiaca e frequenza cardiaca a riposo."
+          }
+        }
+      }
+    },
+    "Wear the strap every night and sync it. Charge appears once the fourth night is in.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indossa la fascia ogni notte e sincronizza. Charge compare quando c'è la quarta notte."
+          }
+        }
+      }
+    },
+    "Heart rate variability and resting heart rate are measured while you sleep.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La variabilità della frequenza cardiaca e la frequenza cardiaca a riposo si misurano mentre dormi."
+          }
+        }
+      }
+    },
+    "Wear the strap overnight and sync it in the morning.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indossa la fascia di notte e sincronizza al mattino."
+          }
+        }
+      }
+    },
+    "Breathing rate is estimated overnight from the time between heartbeats, so it needs a night of sleep with clean beat data.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La frequenza respiratoria è stimata di notte dal tempo tra i battiti, quindi serve una notte di sonno con battiti puliti."
+          }
+        }
+      }
+    },
+    "Wear the strap overnight, snug against the skin, and sync it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indossa la fascia di notte, aderente alla pelle, e sincronizza."
+          }
+        }
+      }
+    },
+    "WHOOP 5.0/MG doesn't send blood oxygen to apps other than WHOOP's yet. NOOP shows no estimate rather than a guess.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WHOOP 5.0/MG non invia ancora l'ossigeno nel sangue ad app diverse da quella di WHOOP. NOOP non mostra nessuna stima invece di un'ipotesi."
+          }
+        }
+      }
+    },
+    "A WHOOP export imported in Data Sources carries the value WHOOP computed, and a Xiaomi band reports its own.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un export WHOOP importato in Sorgenti dati contiene il valore calcolato da WHOOP, e una fascia Xiaomi riporta il suo."
+          }
+        }
+      }
+    },
+    "Skin temperature is shown as the change from your own baseline, which needs at least 4 nights of wrist temperature.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La temperatura cutanea è mostrata come variazione rispetto alla tua base personale, che richiede almeno 4 notti di temperatura del polso."
+          }
+        }
+      }
+    },
+    "Wear the strap overnight for 4 nights and sync it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indossa la fascia di notte per 4 notti e sincronizza."
+          }
+        }
+      }
+    },
+    "Average and maximum heart rate need at least an hour of strap heart rate on the day.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La frequenza cardiaca media e massima richiedono almeno un'ora di frequenza cardiaca della fascia nella giornata."
+          }
+        }
+      }
+    },
+    "Wear the strap and sync it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indossa la fascia e sincronizza."
+          }
+        }
+      }
+    },
+    "Calories and Effort are built from the strap's heart rate over the day.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calorie ed Effort si calcolano dalla frequenza cardiaca della fascia nell'arco della giornata."
+          }
+        }
+      }
+    },
+    "Wear the strap and sync it. Your age, sex and weight in Settings make them more accurate.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indossa la fascia e sincronizza. Età, sesso e peso nelle Impostazioni li rendono più precisi."
+          }
+        }
+      }
+    },
+    "Rest figures come from a night of sleep detected from the strap.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I valori di Rest derivano da una notte di sonno rilevata dalla fascia."
+          }
+        }
+      }
+    },
+    "Wear the strap to bed and sync it in the morning.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indossa la fascia a letto e sincronizza al mattino."
+          }
+        }
+      }
+    },
+    "This figure comes from a WHOOP export. NOOP shows its own sleep need, debt and consistency on the Sleep screen.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo valore arriva da un export WHOOP. NOOP mostra il proprio fabbisogno, debito e regolarità del sonno nella schermata Sonno."
+          }
+        }
+      }
+    },
+    "Import your WHOOP export in Data Sources, or open Sleep.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa il tuo export WHOOP in Sorgenti dati, oppure apri Sonno."
+          }
+        }
+      }
+    },
+    "Zone and strength minutes come from the workouts in a WHOOP export.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I minuti nelle zone e di forza derivano dagli allenamenti di un export WHOOP."
+          }
+        }
+      }
+    },
+    "Import your WHOOP export in Data Sources. Each workout's own detail shows its time in zones.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa il tuo export WHOOP in Sorgenti dati. Il dettaglio di ogni allenamento mostra il suo tempo nelle zone."
+          }
+        }
+      }
+    },
+    "Day Stress comes from a WHOOP export. NOOP shows its own stress readings on the Stress screen.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lo stress giornaliero arriva da un export WHOOP. NOOP mostra le proprie misure di stress nella schermata Stress."
+          }
+        }
+      }
+    },
+    "Import your WHOOP export in Data Sources, or open Stress.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa il tuo export WHOOP in Sorgenti dati, oppure apri Stress."
+          }
+        }
+      }
+    },
+    "The step estimate is calibrated against steps your phone also counted, so it needs at least 3 days with both.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La stima dei passi è calibrata sui passi contati anche dal telefono, quindi servono almeno 3 giorni con entrambi."
+          }
+        }
+      }
+    },
+    "Allow NOOP to read Steps in Apple Health and carry your phone for a few days. A WHOOP 5.0/MG reports Steps directly.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti a NOOP di leggere i Passi in Apple Health e porta con te il telefono per qualche giorno. Un WHOOP 5.0/MG riporta i Passi direttamente."
+          }
+        }
+      }
+    },
+    "Fitness Age needs your age and sex, and resting heart rate on at least 4 of the last 7 nights.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'Età fitness richiede età e sesso, e la frequenza cardiaca a riposo in almeno 4 delle ultime 7 notti."
+          }
+        }
+      }
+    },
+    "Set your age and sex in Settings, wear the strap overnight and sync. It updates weekly.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imposta età e sesso nelle Impostazioni, indossa la fascia di notte e sincronizza. Si aggiorna ogni settimana."
+          }
+        }
+      }
+    },
+    "This VO₂ Max is estimated from resting heart rate, your age and your waist, so it needs all three.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo VO₂ Max è stimato da frequenza cardiaca a riposo, età e girovita, quindi servono tutti e tre."
+          }
+        }
+      }
+    },
+    "Add your waist circumference in Settings and wear the strap overnight. It updates weekly.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi la circonferenza vita nelle Impostazioni e indossa la fascia di notte. Si aggiorna ogni settimana."
+          }
+        }
+      }
+    },
+    "This VO₂ Max needs a walk or run of at least 10 minutes and 1 km, with distance and heart rate.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo VO₂ Max richiede una camminata o corsa di almeno 10 minuti e 1 km, con distanza e frequenza cardiaca."
+          }
+        }
+      }
+    },
+    "Record one with the strap, or import runs and walks from Apple Health or a GPX, TCX or FIT file in Data Sources.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrane una con la fascia, oppure importa corse e camminate da Apple Health o da un file GPX, TCX o FIT in Sorgenti dati."
+          }
+        }
+      }
+    },
+    "Vitality and Body Age need your age and a week with at least three of: resting heart rate, sleep, heart rate variability and steps.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vitality e Body Age richiedono la tua età e una settimana con almeno tre tra: frequenza cardiaca a riposo, sonno, variabilità della frequenza cardiaca e passi."
+          }
+        }
+      }
+    },
+    "Set your age in Settings, then wear the strap day and night. They update weekly.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imposta la tua età nelle Impostazioni, poi indossa la fascia giorno e notte. Si aggiornano ogni settimana."
           }
         }
       }

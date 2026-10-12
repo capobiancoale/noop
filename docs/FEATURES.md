@@ -228,6 +228,17 @@ metric opens its **detail dossier**:
 Sparse metrics (weight, body fat) auto-widen the window when the selected range holds no points,
 and flag that they did, so you always see real data instead of an empty state.
 
+Metrics with no data at all are hidden from the list by default, behind a **Show metrics without
+data (N)** switch (remembered). A metric with no data opens a **Why there's no data / How to get it**
+card instead of an empty chart, e.g. blood oxygen on a WHOOP 5.0/MG, or "Needs a CGM writing to
+Apple Health" for glucose. The text comes from `Strand/Data/MetricAvailability.swift`.
+
+**Blood pressure** (`Blood Pressure (sys)` / `(dia)`) is measured only: from a cuff that writes to
+Apple Health, plus the readings you add in the Lab Book. Both feed one value per day (the mean of
+that day's readings). Their detail shows the latest reading ("128/82 mmHg") with its ESH 2023
+category word, the 30-day averages, and an **Add a reading** button. NOOP does not estimate blood
+pressure from the strap. See [ANALYTICS.md](ANALYTICS.md#blood-pressure-and-the-metrics-noop-cant-measure).
+
 ---
 
 ## Compare
