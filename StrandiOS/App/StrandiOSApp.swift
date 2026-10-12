@@ -332,7 +332,6 @@ enum DemoScreens {
         case "storage": return AnyView(StorageView())
         case "backup": return AnyView(BackupSyncView())
         case "automations": return AnyView(AutomationsView())
-        case "notifications": return AnyView(NotificationSettingsView())
         case "datasources": return AnyView(DataSourcesView())
         case "fullday": return AnyView(FullDayChartView())
         case "hydration": return AnyView(HydrationView())
