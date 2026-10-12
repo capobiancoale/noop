@@ -82,6 +82,8 @@ struct LiquidTodayView: View {
     // heart-rate zones 1…5, the WODs logged for it and the glucose around it.
     @State private var dayWorkouts: [WorkoutRow] = []
     @State private var workoutZones: [Double]?
+    /// How the heart rate fell after that session (nil: none yet, or too little heart rate to say).
+    @State private var workoutRecovery: HeartRateRecovery?
     @State private var workoutWods: [WodLogRow] = []
     @State private var workoutGlucose: WorkoutGlucose?
     @State private var confirmDismissWorkout = false
@@ -1040,6 +1042,7 @@ struct LiquidTodayView: View {
             .buttonStyle(.plain)
             .accessibilityHint("Opens the workout")
             if let zones = workoutZones { HRZoneSplitView(minutes: zones) }
+            if let r = workoutRecovery { workoutRecoveryRow(r) }
             if let g = workoutGlucose { workoutGlucoseRow(g) }
             #if os(iOS)
             ForEach(workoutWods) { wod in wodRow(wod) }
@@ -1047,6 +1050,34 @@ struct LiquidTodayView: View {
             if detected { detectedPrompt(w) }
             workoutActions
         }
+    }
+
+    /// "Recovery: −28 bpm in 1 min · 30 min after: 92 bpm", showing only the parts the strap recorded.
+    @ViewBuilder private func workoutRecoveryRow(_ r: HeartRateRecovery) -> some View {
+        let text = Self.recoverySummary(r)
+        if !text.isEmpty {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("Recovery").font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+                Spacer(minLength: 8)
+                Text(verbatim: text)
+                    .font(StrandFont.number(15))
+                    .foregroundStyle(StrandPalette.textPrimary)
+                    .multilineTextAlignment(.trailing)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    private static func recoverySummary(_ r: HeartRateRecovery) -> String {
+        var parts: [String] = []
+        if let drop = r.hrr1 {
+            parts.append(String(localized: "\(HeartRateRecoveryCard.dropText(drop)) in 1 min"))
+        }
+        if let bpm = r.bpm(atMinutes: 30) {
+            parts.append(String(localized: "30 min after: \(Int(bpm.rounded())) bpm"))
+        }
+        return parts.joined(separator: " · ")
     }
 
     private var noWorkoutBlock: some View {
@@ -1710,9 +1741,11 @@ struct LiquidTodayView: View {
                 workoutZones = await repo.workoutZoneMinutes(from: w.startTs, to: w.endTs, maxHR: profile.hrMax)
             }
             workoutWods = Self.wods(for: w, among: allWods, workouts: workouts)
+            workoutRecovery = await repo.heartRateRecovery(start: w.startTs, end: w.endTs)
         } else {
             workoutZones = nil
             workoutWods = []
+            workoutRecovery = nil
         }
 
         // "Heart & Glucose" timeline for the selected day: workout bands are the day's sessions clipped to

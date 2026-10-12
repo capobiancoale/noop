@@ -568,6 +568,42 @@ Source: `VO2maxEngine.swift`, screen `VO2maxView`; full method, validation and r
 submaximal HR–VO₂ line reaches VO₂max at HRmax with bias +0.85, SD 5.5 mL/kg/min (SD 7.0 with an age-predicted
 HRmax), and Tanaka's HRmax is unbiased there (−0.9 bpm, SD 9.1).
 
+## Heart-rate recovery after a workout (`HeartRateRecovery`)
+
+Source: `HeartRateRecovery.swift` (`HeartRateRecoveryEngine.compute`), data in `Repository+Recovery.swift`, shown
+by `HeartRateRecoveryCard` on a workout's and a WOD's detail screen and as one line in Today's workout block.
+It answers two questions: how fast the heart rate falls once you stop, and how long it takes to get back near
+resting. It reads the strap's heart rate from the last 3 minutes of the session to up to an hour after it.
+
+- **Peak.** The highest 15-second median in the last 2 minutes of the session (the whole session when it is
+  shorter), never a single raw spike, so one glitchy sample cannot make the drop look bigger.
+- **HRR1 and HRR2.** Peak − HR at +60 s and at +120 s after the end, each the median of the samples within
+  ±10 s of that moment. HRR1 is the measure of Cole CR, Blackstone EH, Pashkow FJ, Snader CE, Lauer MS (N Engl J
+  Med 1999;341:1351–7): a fall of 12 beats/min or less in the first minute was the abnormal range in their
+  treadmill test. Shetler K et al. (J Am Coll Cardiol 2001;38:1980–7) compared recovery taken at several minute
+  marks and showed it depends on the protocol (cool-down walking vs sitting or lying down), so NOOP reports the
+  2-minute drop but does not grade it.
+- **Label for HRR1.** Slow (12 bpm or less), typical (13–24), fast (25 or more, common in trained people). It is
+  informational, measured in free living and not a clinical test, and it moves with how you cool down.
+  NOOP's bands are a plain reading of Cole's cut-off, not separately validated limits.
+- **Checkpoints.** HR at +1, +2, +5, +10, +30 and +60 minutes: the median within ±10 s (+1, +2 min) or ±30 s
+  (+5 min and later). With no sample inside the tolerance the checkpoint is left out (and HRR1 or HRR2 is
+  empty): nothing is interpolated across a gap.
+- **Back near resting.** The threshold is `resting + 0.2 × (peak − resting)`, i.e. 80 % of the drop from peak to
+  resting is done; the time is the first moment the median of the trailing 60 seconds is at or under it. This is
+  NOOP's own descriptive measure, not a published cut-off. Resting HR is the median of the last 7 nights. With
+  no resting HR, a peak less than 10 bpm above it, or a threshold not reached inside the observed window, no
+  time is shown (the card says the heart rate was still recovering, or how long it was observed).
+- **Window.** The observed window ends at the last sample, never later than now or 60 minutes after the end. It
+  counts as complete from 30 minutes observed; while the 60 minutes have not passed, more heart rate can still
+  arrive and the card says to check back.
+- **Nothing is made up.** Samples outside 30–230 bpm are dropped; with no heart rate after the end, or fewer than
+  2 samples in the last 2 minutes of the session, there is no result and the card says why.
+- **Recent sessions.** The small trend chart plots HRR1 of the newest sessions (5 minutes or longer, ended more
+  than 2 minutes ago), reading only the first 3 minutes after each.
+
+Informational only, not medical advice.
+
 ## `WorkoutDetector` + `Calories` — retroactive workout detection
 
 Source: `WorkoutDetector.swift`. Finds workouts in the stored 1 Hz HR + gravity streams (no manual logging).
