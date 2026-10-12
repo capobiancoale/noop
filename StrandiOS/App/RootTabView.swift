@@ -20,7 +20,18 @@ struct RootTabView: View {
     @State private var routedPillar: NavRouter.Destination?
     /// Selected tab — bound so tab switches can crossfade (README §Motion: ~240ms opacity swap
     /// between tab roots, calm easing). Defaults to Today.
-    @State private var selectedTab: Int = 0
+    @State private var selectedTab: Int = RootTabView.initialTab
+
+    /// The tab the shell opens on: Today, except in a DEBUG screen audit launched with `--demo-tab <n>`.
+    private static var initialTab: Int {
+        #if DEBUG
+        let args = CommandLine.arguments
+        if let i = args.firstIndex(of: "--demo-tab"), i + 1 < args.count, let n = Int(args[i + 1]) {
+            return min(3, max(0, n))
+        }
+        #endif
+        return 0
+    }
     /// Which More-tab groups are expanded (S2). Insights + Body stay open at rest; Data + App collapse to
     /// just their header until tapped. Persisted (#860 item 2): the user's open/closed choice must SURVIVE
     /// leaving and re-entering the More tab (and relaunch), not reset to the seed every visit. Backed by an

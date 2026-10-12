@@ -1,0 +1,64 @@
+# Screen audit: builds the iPhone app in Debug for the simulator and captures every screen in Italian, dark and
+# light, with the synthetic demo data, a screenful at a time (Tools/screens-audit.sh), as an artifact to look
+# through: text that doesn't read, charts that don't draw, English left in an Italian UI. Runs when the script or
+# this file changes, or by hand. No secrets, no signing.
+name: Screen audit (simulator)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude-automatic-build]
+    paths:
+      - 'Tools/screens-audit.sh'
+      - '.github/workflows/screens-audit.yml'
+
+concurrency:
+  group: screens-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shots:
+    runs-on: macos-26
+    timeout-minutes: 150
+    steps:
+      - name: Select Xcode 26
+        run: |
+          set -e
+          current=$(xcodebuild -version | head -1 | awk '{print $2}')
+          echo "Runner default: Xcode $current"
+          if [ "${current%%.*}" -lt 26 ]; then
+            newest=$(ruby -e 'puts Dir["/Applications/Xcode_26*.app"].max_by { |p| Gem::Version.new(p[/Xcode_([\d.]+)\.app\z/, 1] || "0") }')
+            if [ -z "$newest" ]; then
+              echo "::error::No Xcode 26 on this runner image."
+              exit 1
+            fi
+            sudo xcode-select --switch "$newest/Contents/Developer"
+          fi
+          xcodebuild -version
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build NOOPiOS (Debug) for the simulator
+        run: >-
+          xcodebuild -quiet -project Strand.xcodeproj -scheme NOOPiOS -configuration Debug
+          -destination 'generic/platform=iOS Simulator' -derivedDataPath build/dd
+          CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+          build
+
+      - name: Capture the screens
+        run: bash Tools/screens-audit.sh
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screens-it
+          path: shots
+          if-no-files-found: warn

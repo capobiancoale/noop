@@ -200,12 +200,21 @@ private struct iOSRootView: View {
         if let demo = DemoScreens.requested {
             // Inherit the app appearance (set via the Theme picker, or `-theme.appearance light|dark`
             // in the launch arguments) so demo/marketing shots can be taken in either scheme.
+            // `--demo-page <k>` shows the screen's k-th screenful: the screen is laid out k pages taller
+            // and shifted up, so a scrolling screen can be captured whole without touch input.
+            let page = DemoScreens.page
             return AnyView(
-                NavigationStack {
-                    demo
-                        .background(StrandPalette.surfaceBase.ignoresSafeArea())
-                        .navigationBarTitleDisplayMode(.inline)
+                GeometryReader { geo in
+                    let step = max(200, geo.size.height - 140)
+                    NavigationStack {
+                        demo
+                            .background(StrandPalette.surfaceBase.ignoresSafeArea())
+                            .navigationBarTitleDisplayMode(.inline)
+                    }
+                    .frame(width: geo.size.width, height: geo.size.height + CGFloat(page) * step, alignment: .top)
+                    .offset(y: -CGFloat(page) * step)
                 }
+                .clipped()
             )
         }
         #endif
@@ -306,8 +315,38 @@ enum DemoScreens {
         // Oura device card: the locally-adopted Oura ring card (Beta chip + per-gen honest capability copy
         // + battery + local-state note), rendered with mock data, no ring required.
         case "ouradevice": return AnyView(OuraDeviceDemoScreen())
+        // Screen audit (verification): the rest of the screens a user reaches, each on its own.
+        case "liquidtoday": return AnyView(LiquidTodayView())
+        case "wodlog": return AnyView(WodLogView())
+        case "coach": return AnyView(CoachView())
+        case "intelligence": return AnyView(IntelligenceView())
+        case "insightshub": return AnyView(InsightsHubView())
+        case "applehealth": return AnyView(AppleHealthView())
+        case "vo2max": return AnyView(VO2maxView())
+        case "weeklydigest": return AnyView(WeeklyDigestView())
+        case "coupled": return AnyView(CoupledView())
+        case "labbook": return AnyView(LabBookView())
+        case "breathing": return AnyView(BreathingView())
+        case "intervals": return AnyView(IntervalTimerView())
+        case "smartalarm": return AnyView(SmartAlarmView())
+        case "storage": return AnyView(StorageView())
+        case "backup": return AnyView(BackupSyncView())
+        case "automations": return AnyView(AutomationsView())
+        case "notifications": return AnyView(NotificationSettingsView())
+        case "datasources": return AnyView(DataSourcesView())
+        case "fullday": return AnyView(FullDayChartView())
+        case "hydration": return AnyView(HydrationView())
+        case "scoringguide": return AnyView(ScoringGuideView(initialSection: .charge, onClose: {}))
+        case "howitworks": return AnyView(HowNoopWorksView(onClose: {}))
         default:         return nil
         }
+    }
+
+    /// `--demo-page <k>`: which screenful of the screen to show (0 = the top).
+    static var page: Int {
+        let args = CommandLine.arguments
+        guard let i = args.firstIndex(of: "--demo-page"), i + 1 < args.count else { return 0 }
+        return max(0, Int(args[i + 1]) ?? 0)
     }
 }
 #endif
