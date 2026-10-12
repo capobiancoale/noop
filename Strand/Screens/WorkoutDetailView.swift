@@ -397,10 +397,11 @@ struct WorkoutDetailView: View {
 
     // MARK: - Formatting (kept local, matching WorkoutsView's rhythm)
 
+    // Shown to the user: in their language and its order.
     private static let dateFmt: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "EEEE d MMM yyyy"
+        f.locale = Locale.autoupdatingCurrent
+        f.setLocalizedDateFormatFromTemplate("EEEEdMMMyyyy")
         return f
     }()
     private static let timeFmt: DateFormatter = {

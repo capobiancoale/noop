@@ -951,7 +951,7 @@ struct TodayView: View {
     }
 
     private static let navDayFmt: DateFormatter = {
-        let f = DateFormatter(); f.dateFormat = "EEE d MMM"; f.locale = Locale(identifier: "en_US_POSIX"); return f
+        let f = DateFormatter(); f.locale = Locale.autoupdatingCurrent; f.setLocalizedDateFormatFromTemplate("EEEdMMM"); return f
     }()
 
     /// The selected day as a small locale-aware numeric date ("28/06/2026" or "6/28/2026" per region). The
@@ -4108,8 +4108,8 @@ struct TodayView: View {
 
     private var dateLine: String {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "EEEE, d MMMM"
+        f.locale = Locale.autoupdatingCurrent
+        f.setLocalizedDateFormatFromTemplate("EEEEdMMMM")
         // The selected day's date when navigated; today's banked-row date (or today) at offset 0.
         if selectedDayOffset == 0, let day = repo.today?.day, let date = Self.dayParser.date(from: day) {
             return f.string(from: date)
@@ -4133,8 +4133,8 @@ struct TodayView: View {
         case 1:  return String(localized: "Yesterday")
         default:
             let f = DateFormatter()
-            f.locale = Locale(identifier: "en_US_POSIX")
-            f.dateFormat = "EEE d MMM"
+            f.locale = Locale.autoupdatingCurrent
+            f.setLocalizedDateFormatFromTemplate("EEEdMMM")
             return f.string(from: selectedLogicalDay)
         }
     }
@@ -4254,8 +4254,8 @@ struct TodayView: View {
     /// segment was dropped: the StatTile caption is lineLimit(1) and date + range + bpm clips,     /// avg HR remains on the Workouts screen.
     private func workoutCaption(_ w: WorkoutRow) -> String {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "d MMM"
+        f.locale = Locale.autoupdatingCurrent
+        f.setLocalizedDateFormatFromTemplate("dMMM")
         let start = Date(timeIntervalSince1970: TimeInterval(w.startTs))
         let date = f.string(from: start)
         guard w.endTs > w.startTs else { return "\(date) · \(Self.hrTimeFmt.string(from: start))" }

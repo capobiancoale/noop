@@ -174,7 +174,8 @@ struct FullDayChartView: View {
     }
 
     private static let dayFmt: DateFormatter = {
-        let f = DateFormatter(); f.dateFormat = "EEE d MMM"; f.locale = Locale(identifier: "en_US_POSIX"); return f
+        // Shown to the user: in their language and its order ("Sat 27 Sep", "sab 27 set").
+        let f = DateFormatter(); f.locale = Locale.autoupdatingCurrent; f.setLocalizedDateFormatFromTemplate("EEEdMMM"); return f
     }()
 
     // MARK: Chart
