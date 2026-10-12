@@ -122,8 +122,13 @@ The home dashboard (`TodayView.swift`, titled "Control Center"). A tight, gaples
 1. **Your state.** Charge, Effort and Rest as liquid vessels, and under them a one-word verdict (Push /
    Maintain / Recover) with one sentence. Tap it for the signals behind it (HRV, resting HR, respiratory
    rate, training load, training variety), each against your own baseline. While a score is still missing
-   today, a line says why; for Charge, how many of the 4 baseline nights are in. A night-time low from your
-   CGM sits right under this block, because Charge can't see it.
+   today, a line says why; for Charge, how many of the 4 baseline nights are in, and tapping that line opens
+   **Why there's no Charge yet**: how many of the last 7 nights had a usable HRV, and for last night the hours of
+   heart rate recorded, the beat-to-beat intervals, the share of the night they cover and the usable 5-minute
+   stretches, then only the fixes that apply (keep NOOP connected overnight with Low Power Mode off and
+   Background App Refresh on, charge the strap, wear it snugly). Each score also carries its plain name under
+   it (Charge: recovery, Effort: strain, Rest: sleep), and the Key metrics tile reads "Charge · recovery". A
+   night-time low from your CGM sits right under this block, because Charge can't see it.
 2. **Glucose now** (only with CGM readings in Apple Health). The latest reading with a CGM-style trend arrow
    and its age, the last three hours against the 70–180 mg/dL band, and the day's time in range, average and
    lows. A past day shows that day's trace and figures. Informational only.
@@ -135,7 +140,8 @@ The home dashboard (`TodayView.swift`, titled "Control Center"). A tight, gaples
    the first minute and where it was 30 minutes after, e.g. "−28 bpm in 1 min · 30 min after: 92 bpm" (only
    the parts that were recorded).
 
-**Details** (folded until opened, and remembered) holds the rest: live heart rate, the Heart & Glucose
+**Details** (folded until opened, and remembered) holds the rest: live heart rate (with a *Check accuracy* link
+to the Heart-rate accuracy screen), the Heart & Glucose
 timeline, recovery vitals, key metrics, Charge vs Effort over 30 days, the week, glucose & insulin, your
 cards and data sources.
 
@@ -534,6 +540,11 @@ of history. On-device and approximate — informational only, **not** a diagnosi
 
 - **Profile** — age, sex, weight, height, and max heart rate (auto-estimated via Tanaka, or a
   manual override). These power your zones, calorie estimates and Charge baselines.
+- **Heart-rate accuracy** — opens the accuracy check (also reachable from Today's Heart rate card, *Check
+  accuracy*): how well the strap's heart rate agrees with its own beat-to-beat timing over the last 24 hours, a
+  guided 30-second pulse count against the strap (Start, count, enter the beats: "You 72 bpm · Strap 74 bpm"),
+  and your own sleeping floor, waking range and the max heart rate your zones use, with age and max heart rate
+  editable there. It checks consistency, not absolute accuracy, and is informational only.
 - **Step calibration** — tune the stride/step estimate to your own walking so step and distance
   figures read closer to reality.
 - **Units** — choose your preferred measurement units (metric / imperial) across the app.

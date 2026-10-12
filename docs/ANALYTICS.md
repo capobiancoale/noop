@@ -130,6 +130,58 @@ A banner appears only when **two or more** anomalies fire together — the class
 
 ---
 
+## Heart-rate accuracy check (`HeartRateAccuracy`)
+
+Source: `HeartRateAccuracy.swift`, behind the **Heart-rate accuracy** screen (Today → Heart rate card →
+*Check accuracy*, and Settings → Profile). A wrist strap reads the pulse optically (PPG), and nothing in a phone
+can prove its absolute accuracy: only a chest strap or an ECG can. What the data does allow, and what the
+engine computes:
+
+- **Strap against its own beat timing (`rrConsistency`).** For each second with a heart-rate sample, take the
+  R-R intervals within ±5 s, keep those of 300–2000 ms, drop any that differs by more than 20 % from the median
+  of its neighbours (the Malik et al. 1989 rule, `HRVAnalyzer.rejectEctopic`), and require at least 3 left.
+  The comparison rate is 60000 / median(R-R); the strap's bpm minus that is the difference. The result is the
+  number of seconds compared, the mean difference (positive: the strap reads higher than its beats), the mean
+  absolute difference and the share within 5 bpm; nil under 30 comparisons. Both numbers come from the same
+  optical signal, so this is a **consistency** check: it exposes seconds where motion or a loose fit disturbed
+  the signal, not a bias common to both. The median (not the mean) keeps one missed or extra beat from moving
+  the rate.
+- **Manual pulse count (`palpation`).** Counting the pulse at the wrist or neck for 30 s and doubling it is the
+  standard bedside method and is independent of the sensor. Counted rate = beats × 60 / seconds; the strap's
+  value is the mean of its samples inside the same window, and the comparison is refused when the strap
+  reported fewer than half of the window's seconds (a disconnect makes no valid comparison) or when the count
+  is not a plausible pulse (20–250 bpm). A difference within ±5 bpm is "matches": one counted beat in 30 s is
+  already 2 bpm, so a smaller tolerance would flag a normal counting error.
+- **Your own baseline (`sleeping`, `waking`).** "My heart rate is always high" is judged against the person's own
+  numbers. Sleeping floor = the lowest 5-minute mean of the night (`RecoveryScorer.restingHR`), night average =
+  the mean of the night's samples. Waking range = the 10th / 50th / 90th percentile of 5-minute mean heart rates
+  over 7 days outside every sleep block (percentiles, not min/max, so one odd window cannot define "resting" or
+  "high"; at least 2 hours of windows). The screen also shows the max heart rate the zones and Effort use (a
+  setting, else Tanaka et al., J Am Coll Cardiol 2001: 208 − 0.7 × age), because a maximum set too low makes
+  hard efforts look harder than they are.
+
+Optical wrist heart rate is accurate at rest and degrades with intense, rhythmic arm movement, when the sensor can
+lock onto the movement cadence instead of the pulse (Shcherbina et al., J Pers Med 2017;7:3; Bent et al., npj Digit
+Med 2020;3:18). That is a property of the sensor, not the app, and the screen says so. Informational only, not
+medical advice.
+
+### Why Charge is empty (`NightCoverage`)
+
+Source: `NightCoverage.swift`, behind the note under the Today scores (*Why there's no Charge yet*). Charge needs
+last night's HRV, which comes from the R-R intervals stored during sleep; on a WHOOP 5.0/MG they arrive over the
+live heart-rate stream while the phone is connected. For last night's main sleep (the longest session that ended in
+the last 18 hours) it counts, from the stored samples, the hours of heart rate, the number of R-R beats, the share
+of the night with at least one beat, and how many 5-minute windows the nightly HRV would accept. The window rule
+is exactly the nightly one (`SleepStager.sessionAvgHRV` → `HRVAnalyzer.windowQuality`: ≥ 120 s of clean beats,
+Munoz et al. 2015; ≤ 5 % corrected beats, Kubios; ≤ 36 % lost, Sheridan et al. 2020), so "usable" here means what
+the score uses. The verdict is *no heart rate* (under 20 % of the night recorded), *no beat-to-beat* (under 20
+beats), *too sparse* (no usable window) or *enough*, and the fixes shown follow from it: keep NOOP connected
+overnight, charge the strap, wear it snugly. It also counts the nights in the last 7 days whose nightly HRV is
+inside the baseline's plausibility bounds (the same predicate as `RecoveryScorer.calibrationNights`) against the 4
+that Charge needs. Nothing is estimated and no score changes.
+
+---
+
 ## `HRVAnalyzer` — RMSSD / SDNN with cleaning
 
 Source: `HRVAnalyzer.swift`. Reproduces the **Task Force (1996)** definitions over R-R / NN intervals (ms), with a deterministic cleaning pipeline.

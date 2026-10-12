@@ -137289,6 +137289,656 @@
           }
         }
       }
+    },
+    "strain": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sforzo"
+          }
+        }
+      }
+    },
+    "sleep": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sonno"
+          }
+        }
+      }
+    },
+    "Shows why Charge is missing and what to try": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra perché manca Charge e cosa provare"
+          }
+        }
+      }
+    },
+    "Check accuracy": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verifica la precisione"
+          }
+        }
+      }
+    },
+    "Compares the strap's heart rate with its own beats and with a pulse count": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confronta la frequenza cardiaca della fascia con i suoi stessi battiti e con un conteggio del polso"
+          }
+        }
+      }
+    },
+    "Why there's no Charge yet": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perché non c'è ancora Charge"
+          }
+        }
+      }
+    },
+    "Charge compares last night's heart-rate variability (HRV) with your own baseline. It needs the strap's beat-to-beat data from the night, and a few nights of it before your baseline exists.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charge confronta la variabilità della frequenza cardiaca (HRV) di stanotte con la tua linea di base. Servono i dati battito per battito registrati dalla fascia durante la notte, e alcune notti di dati prima che la tua linea di base esista."
+          }
+        }
+      }
+    },
+    "Your baseline": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua linea di base"
+          }
+        }
+      }
+    },
+    "Nights with a usable HRV, last 7 days": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notti con HRV utilizzabile, ultimi 7 giorni"
+          }
+        }
+      }
+    },
+    "Nights needed to start Charge": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notti necessarie per avviare Charge"
+          }
+        }
+      }
+    },
+    "You have enough recent nights. Charge appears after the next analysis.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai abbastanza notti recenti. Charge compare dopo la prossima analisi."
+          }
+        }
+      }
+    },
+    "Heart rate recorded": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frequenza cardiaca registrata"
+          }
+        }
+      }
+    },
+    "Beat-to-beat intervals": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intervalli battito per battito"
+          }
+        }
+      }
+    },
+    "%lld beats": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld battiti"
+          }
+        }
+      }
+    },
+    "Night covered by beats": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notte coperta da battiti"
+          }
+        }
+      }
+    },
+    "Usable 5-minute stretches": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tratti utilizzabili da 5 minuti"
+          }
+        }
+      }
+    },
+    "Last night has enough beats to compute an HRV.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stanotte ci sono abbastanza battiti per calcolare l'HRV."
+          }
+        }
+      }
+    },
+    "Some beats came through, but not enough clean stretches in a row to compute an HRV.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sono arrivati alcuni battiti, ma non abbastanza tratti puliti consecutivi per calcolare l'HRV."
+          }
+        }
+      }
+    },
+    "Heart rate was recorded, but almost no beat-to-beat data came with it. HRV, and so Charge, needs those beats.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La frequenza cardiaca è stata registrata, ma quasi nessun dato battito per battito l'ha accompagnata. L'HRV, e quindi Charge, ha bisogno di quei battiti."
+          }
+        }
+      }
+    },
+    "The strap recorded very little of the night.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La fascia ha registrato pochissimo della notte."
+          }
+        }
+      }
+    },
+    "NOOP didn't find a main sleep that ended in the last 18 hours, so there is nothing to measure yet.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP non ha trovato un sonno principale terminato nelle ultime 18 ore, quindi non c'è ancora nulla da misurare."
+          }
+        }
+      }
+    },
+    "What to try": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cosa provare"
+          }
+        }
+      }
+    },
+    "Charge the strap so it can store the night.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricarica la fascia così può memorizzare la notte."
+          }
+        }
+      }
+    },
+    "Wear the strap snugly overnight, about a finger's width above the wrist bone.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indossa la fascia ben aderente di notte, circa un dito sopra l'osso del polso."
+          }
+        }
+      }
+    },
+    "Keep NOOP connected to the strap overnight: turn off Low Power Mode and turn on Background App Refresh for NOOP (Settings → General → Background App Refresh).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tieni NOOP collegato alla fascia durante la notte: disattiva la Modalità Risparmio Energia e attiva l'Aggiornamento app in background per NOOP (Impostazioni → Generali → Aggiornamento app in background)."
+          }
+        }
+      }
+    },
+    "Keep NOOP running and your Mac awake near the strap overnight.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tieni NOOP in esecuzione e il Mac attivo vicino alla fascia durante la notte."
+          }
+        }
+      }
+    },
+    "Heart-rate accuracy": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Precisione del battito"
+          }
+        }
+      }
+    },
+    "Is your strap's heart rate consistent, and does it match your pulse?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La frequenza cardiaca della tua fascia è coerente e corrisponde al tuo polso?"
+          }
+        }
+      }
+    },
+    "Optical wrist heart rate can read high during intense, rhythmic movement, when the sensor can lock onto the movement cadence instead of the pulse. That comes from the sensor, not the app.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La frequenza cardiaca ottica al polso può risultare alta durante movimenti intensi e ritmici, quando il sensore si aggancia alla cadenza del movimento invece che al polso. Dipende dal sensore, non dall'app."
+          }
+        }
+      }
+    },
+    "Strap vs beat-to-beat (last 24 h)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fascia e battito per battito (ultime 24 h)"
+          }
+        }
+      }
+    },
+    "The strap's heart rate matches its own beat-to-beat timing within 5 bpm %@ of the time (average difference %@ bpm).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La frequenza cardiaca della fascia coincide con i suoi stessi intervalli battito per battito entro 5 bpm per il %1$@ del tempo (differenza media %2$@ bpm)."
+          }
+        }
+      }
+    },
+    "Compared over %lld seconds that had clean beats around them.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confronto su %lld secondi con battiti puliti intorno."
+          }
+        }
+      }
+    },
+    "A large difference means motion artefacts or a loose fit at those moments. Both numbers come from the same optical sensor, so this checks consistency, not absolute accuracy.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una differenza grande indica artefatti da movimento o una fascia allentata in quei momenti. Entrambi i numeri vengono dallo stesso sensore ottico, quindi questo verifica la coerenza, non la precisione assoluta."
+          }
+        }
+      }
+    },
+    "Not enough data to compare yet. This needs the strap connected for a while, so it can record heart rate and beat-to-beat intervals together.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dati ancora insufficienti per il confronto. Serve la fascia collegata per un po', così può registrare insieme frequenza cardiaca e intervalli battito per battito."
+          }
+        }
+      }
+    },
+    "Your heart rate in context": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua frequenza cardiaca nel contesto"
+          }
+        }
+      }
+    },
+    "\"High\" is best judged against your own numbers.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\"Alta\" si valuta meglio rispetto ai tuoi numeri."
+          }
+        }
+      }
+    },
+    "Sleeping floor, last night": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimo nel sonno, stanotte"
+          }
+        }
+      }
+    },
+    "Night average, last night": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Media della notte, stanotte"
+          }
+        }
+      }
+    },
+    "Calmest waking stretches": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tratti più calmi da sveglio"
+          }
+        }
+      }
+    },
+    "Typical while awake": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valore tipico da sveglio"
+          }
+        }
+      }
+    },
+    "Top of your usual range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estremo alto del tuo intervallo abituale"
+          }
+        }
+      }
+    },
+    "Over the last 7 days, from 5-minute averages outside sleep.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Negli ultimi 7 giorni, da medie di 5 minuti fuori dal sonno."
+          }
+        }
+      }
+    },
+    "Waking range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intervallo da sveglio"
+          }
+        }
+      }
+    },
+    "Needs about two hours of waking heart rate from the last 7 days.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servono circa due ore di frequenza cardiaca da sveglio negli ultimi 7 giorni."
+          }
+        }
+      }
+    },
+    "Max heart rate used for zones": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frequenza cardiaca massima usata per le zone"
+          }
+        }
+      }
+    },
+    "Max heart rate override, automatic": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Override frequenza cardiaca massima, automatica"
+          }
+        }
+      }
+    },
+    "Max heart rate override, %lld bpm": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Override frequenza cardiaca massima, %lld bpm"
+          }
+        }
+      }
+    },
+    "Automatic: 208 − 0.7 × age (Tanaka et al., J Am Coll Cardiol 2001), a population average that can be 10 bpm or more off for one person. If your real maximum is higher, hard efforts look harder than they are; set your measured maximum here. The same values live in Settings → Profile.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatica: 208 − 0,7 × età (Tanaka et al., J Am Coll Cardiol 2001), una media di popolazione che per una singola persona può sbagliare di 10 bpm o più. Se il tuo massimo reale è più alto, gli sforzi intensi sembrano più duri di quanto siano; imposta qui il massimo che hai misurato. Gli stessi valori sono in Impostazioni → Profilo."
+          }
+        }
+      }
+    },
+    "Count it yourself (30 s)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contali tu (30 s)"
+          }
+        }
+      }
+    },
+    "Find your pulse at the wrist or the side of the neck and get ready to count each beat for 30 seconds. NOOP compares your count with what the strap reports over the same 30 seconds.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trova il polso al polso o sul lato del collo e preparati a contare ogni battito per 30 secondi. NOOP confronta il tuo conteggio con quello che la fascia rileva negli stessi 30 secondi."
+          }
+        }
+      }
+    },
+    "seconds left": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "secondi rimasti"
+          }
+        }
+      }
+    },
+    "Count every beat you feel. Keep your arm still.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conta ogni battito che senti. Tieni il braccio fermo."
+          }
+        }
+      }
+    },
+    "Time's up. How many beats did you count?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo scaduto. Quanti battiti hai contato?"
+          }
+        }
+      }
+    },
+    "e.g. 36": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "es. 36"
+          }
+        }
+      }
+    },
+    "beats": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "battiti"
+          }
+        }
+      }
+    },
+    "You: %@ bpm · Strap: %@ bpm (%@)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu: %1$@ bpm · Fascia: %2$@ bpm (%3$@)"
+          }
+        }
+      }
+    },
+    "That matches: the strap is within 5 bpm of your count.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corrisponde: la fascia è entro 5 bpm dal tuo conteggio."
+          }
+        }
+      }
+    },
+    "The strap reads higher than your count by more than 5 bpm.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La fascia legge più del tuo conteggio di oltre 5 bpm."
+          }
+        }
+      }
+    },
+    "The strap reads lower than your count by more than 5 bpm.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La fascia legge meno del tuo conteggio di oltre 5 bpm."
+          }
+        }
+      }
+    },
+    "Tighten the strap so it sits snugly, wear it a finger's width above the wrist bone, and stay still while you count. Then check again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stringi la fascia in modo che aderisca bene, indossala circa un dito sopra l'osso del polso e stai fermo mentre conti. Poi ricontrolla."
+          }
+        }
+      }
+    },
+    "One beat more or less in 30 seconds moves your count by 2 bpm, so a few bpm of difference is normal.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un battito in più o in meno in 30 secondi sposta il tuo conteggio di 2 bpm, quindi qualche bpm di differenza è normale."
+          }
+        }
+      }
+    },
+    "Check again": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricontrolla"
+          }
+        }
+      }
+    },
+    "Couldn't compare. Either the strap lost the connection during the count, or the number of beats doesn't look like a pulse. Try again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile confrontare. O la fascia ha perso la connessione durante il conteggio, oppure il numero di battiti non somiglia a un polso. Riprova."
+          }
+        }
+      }
+    },
+    "Heart-rate accuracy. Opens the accuracy check.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Precisione del battito. Apre il controllo di precisione."
+          }
+        }
+      }
+    },
+    "Checks your strap's heart rate against its own beat-to-beat timing and against a pulse you count yourself, and shows your own sleeping and waking numbers.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confronta la frequenza cardiaca della fascia con i suoi stessi intervalli battito per battito e con un polso che conti tu, e mostra i tuoi valori da addormentato e da sveglio."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
