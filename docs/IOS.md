@@ -500,7 +500,7 @@ screen keeps an *Allow* button. The screen shows when NOOP last wrote and what.
   earlier samples are deleted first.
 - **Daily values:** resting heart rate, HRV, SpO₂ and respiratory rate for the last 14 days, read from the
   computed (`-noop`) and imported strap ids, and VO₂max for the last 90 (the walk/run estimate,
-  `vo2max_exercise`, else the weekly estimate at rest, `vo2max_est`; never mixed), dated at noon (or now,
+  `vo2max_exercise`, else the daily estimate at rest, `vo2max_est`; never mixed), dated at noon (or now,
   before noon: never in the future), replaced by their deterministic external UUID. Only values Health
   doesn't have from NOOP yet, or that changed since they were written (remembered per key, 120 days), are
   written: a run with nothing new deletes and rewrites nothing.

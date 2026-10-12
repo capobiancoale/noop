@@ -946,10 +946,12 @@ final class IntelligenceEngine: ObservableObject {
         if !restPoints.isEmpty { _ = try? await store.upsertMetricSeries(restPoints, deviceId: computedId) }
 
         // ── Fitness Age (Phase 2) , weekly, keyed to the week's Saturday ────────────────────────────
-        // Roll the last 7 computed days into the Nes/HUNT inputs and upsert a weekly Fitness Age (+ an
-        // optional VO₂max when a waist is set) under the same "-noop" source. Idempotent on the Saturday
-        // key, so the number refines through the week and finalises on Saturday. Engine = FitnessAgeEngine
-        // (StrandAnalytics), fully unit-tested; the body term cancels so the headline needs no body metric.
+        // Roll the last 7 computed days into the Nes/HUNT inputs and upsert a weekly Fitness Age under the
+        // "-noop" source. Idempotent on the Saturday key, so the number refines through the week and
+        // finalises on Saturday. Engine = FitnessAgeEngine (StrandAnalytics), fully unit-tested; the body term
+        // cancels so the headline needs no body metric. The VO₂max estimate that used to ride along here once a
+        // week is now its own DAILY series (`updateDailyVO2maxEstimate`, run at the end of this pass and every
+        // 10 minutes by `refreshVO2maxEstimate`).
         let fa7 = dailies.sorted { $0.day < $1.day }.suffix(7)
         let faRHRs = fa7.compactMap { $0.restingHr }.map(Double.init)
         let faActiveStrains = fa7.compactMap { $0.strain }.filter { $0 >= 30 }
@@ -968,8 +970,7 @@ final class IntelligenceEngine: ObservableObject {
                     activeDaysPerWeek: faActiveStrains.count, meanActiveStrain: faMeanActiveStrain),
                 waistCm: faWaist) {
             let satKey = IntelligenceEngine.saturdayKey(onOrBefore: newestDay)
-            var faPts = [MetricPoint(day: satKey, key: "fitness_age", value: faRes.fitnessAge)]
-            if let v = faRes.vo2max { faPts.append(MetricPoint(day: satKey, key: "vo2max_est", value: v)) }
+            let faPts = [MetricPoint(day: satKey, key: "fitness_age", value: faRes.fitnessAge)]
             _ = try? await store.upsertMetricSeries(faPts, deviceId: computedId)
         }
 
@@ -1242,10 +1243,106 @@ final class IntelligenceEngine: ObservableObject {
         // Sleep tab stops showing the removed duplicates right away.
         if !dailies.isEmpty || !healDropped.isEmpty { await repo.refresh() }
 
+        // Daily VO₂max (HUNT) over the last 120 days, from the merged rows the refresh above just published
+        // (imports win over computed, as everywhere on the dashboard), so a freshly scored night counts at once.
+        await updateDailyVO2maxEstimate(store: store, lastDays: Self.vo2maxSeriesDays)
+
         // #836: record the raw-HR fingerprint this run scored against, so a later NON-forced tick can
         // short-circuit while it's unchanged. Written ONLY here at the end of a completed run (never on an
         // early guard-return), so an interrupted/failed run can't advance the watermark past unscored data.
         if !wmKey.isEmpty { UserDefaults.standard.set(wmKey, forKey: Self.analyzeWatermarkKey) }
+    }
+
+    // MARK: - Daily VO₂max estimate (HUNT non-exercise model)
+    //
+    // VO₂max is a capacity that changes over weeks, and no validated method gives a new value every few minutes
+    // from a wrist strap without an external workload (a CrossFit class has no pace or power). So the estimate is
+    // RE-EVALUATED often (every 10 minutes and after every sync, trained or not) from the newest valid inputs, and
+    // the stored series keeps ONE point per day: that day's latest estimate, the Nes 2011 waist model on the 7
+    // calendar days ending on it (`FitnessAgeEngine.dailyVO2maxSeries`). `fitness_age` stays weekly.
+
+    /// Metric key (under the "-noop" source) of the daily HUNT estimate: one point per day.
+    static let vo2maxEstimateKey = "vo2max_est"
+    /// Days of history a full pass writes (and the stored series keeps).
+    static let vo2maxSeriesDays = 120
+
+    /// When the estimate was last re-evaluated this session (nil before the first time), changed or not: the
+    /// VO₂max screen shows it as "Updated at …".
+    @Published private(set) var vo2maxEstimateUpdatedAt: Date?
+    /// Bumped whenever a stored `vo2max_est` point changed, so the VO₂max screen reloads its chart.
+    @Published private(set) var vo2maxEstimateRevision = 0
+    /// The profile inputs (age, sex, waist) the whole stored window was last written with: when one changes, the
+    /// next refresh rewrites all 120 days instead of just today and yesterday.
+    private var vo2maxFullPassKey: String?
+    private var vo2maxProfileKey: String { "\(profile.age)|\(profile.sex)|\(profile.waistCm)" }
+
+    /// Re-evaluate today's (and yesterday's) VO₂max estimate from the merged daily rows and the profile, and
+    /// store the points that changed. Cheap: no raw heart-rate reads, one metric-series read and a few upserts at
+    /// most. Driven by a 10-minute timer in AppModel; skipped while a scoring pass runs (that pass ends with the
+    /// full-window version of this) and before the dashboard cache is loaded.
+    func refreshVO2maxEstimate() async {
+        guard !computing, repo.loaded, let store = await repo.storeHandle() else { return }
+        let fullWindow = vo2maxFullPassKey != vo2maxProfileKey
+        await updateDailyVO2maxEstimate(store: store, lastDays: fullWindow ? Self.vo2maxSeriesDays : 2)
+    }
+
+    /// Compute the daily series for the last `lastDays` days from `repo.days` and the profile, upsert the points
+    /// that are new or changed and evict stored points in that window that no longer have one (mirrors how
+    /// `vo2max_exercise` evicts). Nothing is written without an age and a waist: a missing input must never erase
+    /// the history already stored.
+    private func updateDailyVO2maxEstimate(store: WhoopStore, lastDays: Int) async {
+        guard profile.age > 0, profile.waistCm > 0 else { return }
+        let key = Self.vo2maxEstimateKey
+        let computedId = deviceId + "-noop"
+        let now = Date()
+        let today = Repository.dayString(now)
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: now)
+            .map { Repository.dayString($0) } ?? today
+        guard let windowFrom = FitnessAgeEngine.shiftDay(today, by: -(lastDays - 1)),
+              let readFrom = FitnessAgeEngine.shiftDay(windowFrom, by: -(FitnessAgeEngine.vo2maxWindowDays - 1)),
+              let tomorrow = FitnessAgeEngine.shiftDay(today, by: 1) else { return }
+
+        var inputs: [(day: String, restingHR: Double?, strain: Double?)] = []
+        for d in repo.days where d.day >= readFrom && d.day <= today {
+            inputs.append((day: d.day, restingHR: d.restingHr.map { Double($0) }, strain: d.strain))
+        }
+        // Today and yesterday are always listed, so they read the nights before them even while their own night
+        // is not scored yet (the estimate then simply rests on the week so far).
+        inputs.append((day: today, restingHR: nil, strain: nil))
+        inputs.append((day: yesterday, restingHR: nil, strain: nil))
+        let series = FitnessAgeEngine.dailyVO2maxSeries(days: inputs, age: Double(profile.age),
+                                                        sex: profile.sex, waistCm: profile.waistCm)
+        var fresh: [String: Double] = [:]
+        for p in series where p.day >= windowFrom && p.day <= today { fresh[p.day] = p.vo2max }
+
+        let stored = (try? await store.metricSeries(deviceId: computedId, key: key,
+                                                    from: windowFrom, to: tomorrow)) ?? []
+        let storedByDay = Dictionary(stored.map { ($0.day, $0.value) }, uniquingKeysWith: { a, _ in a })
+        var upserts: [MetricPoint] = []
+        for (day, value) in fresh {
+            if let old = storedByDay[day], abs(old - value) < 1e-9 { continue }
+            upserts.append(MetricPoint(day: day, key: key, value: value))
+        }
+        // Evict only days whose whole 7-day window is in the loaded rows: after a short refresh (e.g. 120 days
+        // post-sync) the oldest days lack their earlier nights, and "no point" there would be a loading artefact.
+        var staleDays: [String] = []
+        if let loadedFrom = repo.days.map(\.day).min(),
+           let firstFull = FitnessAgeEngine.shiftDay(loadedFrom, by: FitnessAgeEngine.vo2maxWindowDays - 1) {
+            staleDays = stored.map(\.day).filter { fresh[$0] == nil && $0 >= firstFull }
+        }
+
+        var changed = false
+        if !upserts.isEmpty, (try? await store.upsertMetricSeries(upserts, deviceId: computedId)) != nil {
+            changed = true
+        }
+        for day in staleDays {
+            if (try? await store.deleteMetricSeries(deviceId: computedId, key: key, from: day, to: day)) != nil {
+                changed = true
+            }
+        }
+        if lastDays >= Self.vo2maxSeriesDays { vo2maxFullPassKey = vo2maxProfileKey }
+        vo2maxEstimateUpdatedAt = Date()
+        if changed { vo2maxEstimateRevision += 1 }
     }
 
     /// UserDefaults key for the #836 idle-tick gate: the `(count:maxTs)` HR fingerprint the last completed

@@ -70,12 +70,12 @@ groups them under *"Unlocks your VO₂max"*, never under the age itself.
 - **±5-year presentation band.** The number is shown inside a **±5-year band** (`bandYears = 5.0`), not as
   a false-precision point value — honest about the model's error.
 
-The weekly results are stored in `metricSeries` under two keys, written to the computed `-noop` source:
+The results are stored in `metricSeries` under two keys, written to the computed `-noop` source:
 
 | Key            | Unit       | Meaning                                              |
 |----------------|------------|-----------------------------------------------------|
-| `fitness_age`  | years      | the headline number (drives the UI)                 |
-| `vo2max_est`   | ml/kg/min  | the explicit VO₂max estimate (only when waist given) |
+| `fitness_age`  | years      | the headline number (drives the UI), weekly on the Saturday key |
+| `vo2max_est`   | ml/kg/min  | the explicit VO₂max estimate (only when waist given), one point per day: the same model on the 7 days ending that day (`FitnessAgeEngine.dailyVO2maxSeries`) |
 
 The UI reads the **latest** `fitness_age` value. The VO₂max screen shows `vo2max_est` as the estimate
 *at rest*, beside the estimate from walks and runs and the values you enter — see

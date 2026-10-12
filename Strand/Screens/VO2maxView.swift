@@ -10,14 +10,21 @@ import StrandAnalytics
 // rate measured lying down (heart-rate ratio, Uth 2004), and the values the user measured or read elsewhere,
 // entered by hand. The estimates are never blended with each other or with the entries: the point is to see how
 // they compare. Maths: StrandAnalytics.VO2maxEngine; data: Repository+VO2max.
+//
+// The estimate at rest is recomputed every 10 minutes (IntelligenceEngine.refreshVO2maxEstimate) and stored as ONE
+// point per day, so the chart shows a real daily history. VO₂max itself moves over weeks, not minutes: the 10
+// minutes are how soon new evidence (a night, a trained day) shows up, not a new measurement.
 
 struct VO2maxView: View {
     @EnvironmentObject private var repo: Repository
     @EnvironmentObject private var profile: ProfileStore
+    @EnvironmentObject private var intelligence: IntelligenceEngine
 
     @State private var inputs: Repository.VO2maxInputs?
     @State private var entries: [Repository.VO2maxEntry] = []
-    @State private var restingWeekly: [(day: String, value: Double)] = []
+    /// The stored daily estimates at rest (one point per day; older weeks may still be weekly points).
+    @State private var restingDaily: [(day: String, value: Double)] = []
+    @State private var chartRange: ChartRange = .days90
     @State private var appleHealth: [(day: String, value: Double)] = []
     @State private var supine: [Repository.SupineRestingHR] = []
     @State private var loaded = false
@@ -46,7 +53,8 @@ struct VO2maxView: View {
                     ProgressView().frame(maxWidth: .infinity)
                 } else {
                     summaryTiles
-                    if hasChartData { chartCard }
+                    dailyEstimateCard
+                    if hasAnyChartData { chartCard }
                     exerciseCard
                     wodCard
                     restingCard
@@ -55,7 +63,8 @@ struct VO2maxView: View {
                 methodNote
             }
         }
-        .task(id: repo.refreshSeq) { await load() }
+        // Reload when the daily records change (refreshSeq) and when the 10-minute re-evaluation stored a new point.
+        .task(id: "\(repo.refreshSeq)-\(intelligence.vo2maxEstimateRevision)") { await load() }
         .keyboardDoneToolbar($focused)
         .sheet(isPresented: $showAddEntry) {
             VO2maxEntrySheet { day, value, method in
@@ -75,30 +84,32 @@ struct VO2maxView: View {
     private func load() async {
         let fresh = await repo.vo2maxInputs(age: profile.age, userSetMaxHR: profile.hrMaxOverride)
         let freshEntries = await repo.vo2maxEntries()
-        let weekly = await repo.exploreSeries(key: "vo2max_est", source: "my-whoop")
+        let daily = await repo.exploreSeries(key: IntelligenceEngine.vo2maxEstimateKey, source: "my-whoop")
         let apple = await repo.series(key: "vo2max", source: "apple-health")
         let freshSupine = await repo.supineRestingHRs()
         inputs = fresh
         entries = freshEntries
-        restingWeekly = weekly
+        restingDaily = daily
         appleHealth = apple
         supine = freshSupine
         loaded = true
     }
 
-    // MARK: - Resting estimate (live, same inputs as the weekly Fitness Age pass)
+    // MARK: - Resting estimate (live, the same 7-day window the daily series stores for today)
+
+    /// What the 7 calendar days ending today give the estimate: the median nightly resting heart rate and the
+    /// activity index from the week's strain (FitnessAgeEngine, the rule the stored daily points use), nil with
+    /// fewer than 4 nights. Reads only the newest rows of the daily cache (oldest to newest).
+    private var restingWindow: FitnessAgeEngine.VO2maxWindow? {
+        let today = Repository.dayString(Date())
+        let from = FitnessAgeEngine.shiftDay(today, by: 1 - FitnessAgeEngine.vo2maxWindowDays) ?? today
+        let rows = repo.days.suffix(21).filter { $0.day >= from && $0.day <= today }
+            .map { row in (day: row.day, restingHR: row.restingHr.map { Double($0) }, strain: row.strain) }
+        return FitnessAgeEngine.vo2maxWindow(days: rows, endingOn: today)
+    }
 
     private var restingInputs: (restingHR: Double, paIndex: Double, nights: Int)? {
-        let last7 = repo.days.suffix(7)
-        let rhrs = last7.compactMap { $0.restingHr }.map(Double.init)
-        guard rhrs.count >= FitnessAgeEngine.minCoverageDays, let rhr = VO2maxEngine.restingHeartRate(rhrs) else {
-            return nil
-        }
-        let active = last7.compactMap { $0.strain }.filter { $0 >= 30 }
-        let meanActive = active.isEmpty ? 0 : active.reduce(0, +) / Double(active.count)
-        let pa = FitnessAgeEngine.physicalActivityIndexFromStrain(activeDaysPerWeek: active.count,
-                                                                  meanActiveStrain: meanActive)
-        return (rhr, pa, rhrs.count)
+        restingWindow.map { (restingHR: $0.restingHR, paIndex: $0.paIndex, nights: $0.nights) }
     }
 
     private var resting: VO2maxEngine.RestingEstimate? {
@@ -200,7 +211,27 @@ struct VO2maxView: View {
     private var seriesEntries: String { String(localized: "Your entries") }
     private var seriesApple: String { "Apple Health" }
 
-    private var chartStart: Date { Date().addingTimeInterval(-365 * 86_400) }
+    /// How much history the chart shows; it filters every series.
+    private enum ChartRange: String, CaseIterable, Identifiable {
+        case days30, days90, year
+        var id: String { rawValue }
+        var days: Int {
+            switch self {
+            case .days30: return 30
+            case .days90: return 90
+            case .year: return 365
+            }
+        }
+        var title: String {
+            switch self {
+            case .days30: return String(localized: "Last 30 days")
+            case .days90: return String(localized: "Last 90 days")
+            case .year: return String(localized: "Last 12 months")
+            }
+        }
+    }
+
+    private var chartStart: Date { Date().addingTimeInterval(-Double(chartRange.days) * 86_400) }
 
     private var exerciseTrend: [ChartPoint] {
         VO2maxEngine.trend(estimates).map { p in
@@ -217,7 +248,13 @@ struct VO2maxView: View {
         .filter { $0.date >= chartStart }
     }
 
-    private var restPoints: [ChartPoint] { dayPoints(restingWeekly, series: seriesRest, prefix: "r") }
+    /// One dot per day: the stored daily estimate at rest.
+    private var restPoints: [ChartPoint] { dayPoints(restingDaily, series: seriesRest, prefix: "r") }
+    /// The 7-day average of the daily estimates, drawn as a line through the dots. Averaged over the whole stored
+    /// history first, so the first days of the picked range still have their full week behind them.
+    private var restAverage: [ChartPoint] {
+        dayPoints(FitnessAgeEngine.rollingMean(restingDaily), series: seriesRest, prefix: "ra")
+    }
     private var entryPoints: [ChartPoint] {
         dayPoints(entries.map { ($0.day, $0.value) }, series: seriesEntries, prefix: "m")
     }
@@ -227,67 +264,119 @@ struct VO2maxView: View {
                   series: seriesWod, prefix: "w")
     }
 
-    private var hasChartData: Bool { !chartSeries.isEmpty }
+    /// True when any series has something to plot at all (in any range), so the card, and with it the range
+    /// picker, stays on screen when the picked range happens to be empty.
+    private var hasAnyChartData: Bool {
+        !restingDaily.isEmpty || !appleHealth.isEmpty || !entries.isEmpty || !supine.isEmpty || !estimates.isEmpty
+    }
 
     /// The series that have points in the window, with their colours (the legend lists only these).
-    private var chartSeries: [(name: String, color: Color)] {
-        [(seriesExercise, StrandPalette.effortColor, !exerciseTrend.isEmpty),
-         (seriesWod, StrandPalette.metricRose, !wodPoints.isEmpty),
-         (seriesRest, StrandPalette.chargeColor, !restPoints.isEmpty),
-         (seriesEntries, StrandPalette.metricPurple, !entryPoints.isEmpty),
-         (seriesApple, StrandPalette.metricCyan, !applePoints.isEmpty)]
+    private func chartSeries(_ data: ChartData) -> [(name: String, color: Color)] {
+        [(seriesExercise, StrandPalette.effortColor, !data.exercise.isEmpty),
+         (seriesWod, StrandPalette.metricRose, !data.wod.isEmpty),
+         (seriesRest, StrandPalette.chargeColor, !data.rest.isEmpty),
+         (seriesEntries, StrandPalette.metricPurple, !data.entries.isEmpty),
+         (seriesApple, StrandPalette.metricCyan, !data.apple.isEmpty)]
             .filter { $0.2 }.map { (name: $0.0, color: $0.1) }
     }
 
+    /// Every series of the chart for the picked range, built once per render.
+    private struct ChartData {
+        let exercise: [ChartPoint]
+        let wod: [ChartPoint]
+        let rest: [ChartPoint]
+        let restAverage: [ChartPoint]
+        let entries: [ChartPoint]
+        let apple: [ChartPoint]
+        var isEmpty: Bool {
+            exercise.isEmpty && wod.isEmpty && rest.isEmpty && entries.isEmpty && apple.isEmpty
+        }
+    }
+
+    private var chartData: ChartData {
+        ChartData(exercise: exerciseTrend, wod: wodPoints, rest: restPoints, restAverage: restAverage,
+                  entries: entryPoints, apple: applePoints)
+    }
+
     private var chartCard: some View {
-        NoopCard {
+        let data = chartData
+        return NoopCard {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Last 12 months").font(StrandFont.headline)
-                Chart {
-                    ForEach(exerciseTrend) { p in
-                        LineMark(x: .value("Date", p.date), y: .value("VO₂max", p.value),
-                                 series: .value("Series", p.series))
-                            .foregroundStyle(by: .value("Series", p.series))
-                            .interpolationMethod(.monotone)
-                        PointMark(x: .value("Date", p.date), y: .value("VO₂max", p.value))
-                            .foregroundStyle(by: .value("Series", p.series))
-                            .symbolSize(18)
-                    }
-                    ForEach(wodPoints) { p in
-                        LineMark(x: .value("Date", p.date), y: .value("VO₂max", p.value),
-                                 series: .value("Series", p.series))
-                            .foregroundStyle(by: .value("Series", p.series))
-                        PointMark(x: .value("Date", p.date), y: .value("VO₂max", p.value))
-                            .foregroundStyle(by: .value("Series", p.series))
-                            .symbol(.triangle)
-                            .symbolSize(40)
-                    }
-                    ForEach(restPoints) { p in
-                        LineMark(x: .value("Date", p.date), y: .value("VO₂max", p.value),
-                                 series: .value("Series", p.series))
-                            .foregroundStyle(by: .value("Series", p.series))
-                            .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
-                    }
-                    ForEach(applePoints) { p in
-                        PointMark(x: .value("Date", p.date), y: .value("VO₂max", p.value))
-                            .foregroundStyle(by: .value("Series", p.series))
-                            .symbol(.diamond)
-                            .symbolSize(30)
-                    }
-                    ForEach(entryPoints) { p in
-                        PointMark(x: .value("Date", p.date), y: .value("VO₂max", p.value))
-                            .foregroundStyle(by: .value("Series", p.series))
-                            .symbol(.square)
-                            .symbolSize(60)
+                Text(chartRange.title).font(StrandFont.headline)
+                Picker("Range", selection: $chartRange) {
+                    Text("30 days").tag(ChartRange.days30)
+                    Text("90 days").tag(ChartRange.days90)
+                    Text("1 year").tag(ChartRange.year)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                if data.isEmpty {
+                    Text("Nothing to show in this period.")
+                        .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+                } else {
+                    chart(data)
+                    if !data.rest.isEmpty {
+                        Text("At rest: one dot per day, the line is the 7-day average.")
+                            .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
                     }
                 }
-                .chartForegroundStyleScale(domain: chartSeries.map { $0.name }, range: chartSeries.map { $0.color })
-                .chartYScale(domain: .automatic(includesZero: false))
-                .chartYAxisLabel("mL/kg/min")
-                .frame(height: 200)
-                .accessibilityLabel(Text("VO₂max over the last 12 months"))
             }
         }
+    }
+
+    private func chart(_ data: ChartData) -> some View {
+        let series = chartSeries(data)
+        let dotSize: CGFloat = data.rest.count > 120 ? 8 : 16
+        return Chart {
+            ForEach(data.exercise) { p in
+                LineMark(x: .value("Date", p.date), y: .value("VO₂max", p.value),
+                         series: .value("Series", p.series))
+                    .foregroundStyle(by: .value("Series", p.series))
+                    .interpolationMethod(.monotone)
+                PointMark(x: .value("Date", p.date), y: .value("VO₂max", p.value))
+                    .foregroundStyle(by: .value("Series", p.series))
+                    .symbolSize(18)
+            }
+            ForEach(data.wod) { p in
+                LineMark(x: .value("Date", p.date), y: .value("VO₂max", p.value),
+                         series: .value("Series", p.series))
+                    .foregroundStyle(by: .value("Series", p.series))
+                PointMark(x: .value("Date", p.date), y: .value("VO₂max", p.value))
+                    .foregroundStyle(by: .value("Series", p.series))
+                    .symbol(.triangle)
+                    .symbolSize(40)
+            }
+            ForEach(data.rest) { p in
+                PointMark(x: .value("Date", p.date), y: .value("VO₂max", p.value))
+                    .foregroundStyle(by: .value("Series", p.series))
+                    .symbolSize(dotSize)
+            }
+            ForEach(data.restAverage) { p in
+                LineMark(x: .value("Date", p.date), y: .value("VO₂max", p.value),
+                         series: .value("Series", "restAverage"))
+                    .foregroundStyle(StrandPalette.chargeColor)
+                    .lineStyle(StrokeStyle(lineWidth: 2))
+                    .interpolationMethod(.monotone)
+            }
+            ForEach(data.apple) { p in
+                PointMark(x: .value("Date", p.date), y: .value("VO₂max", p.value))
+                    .foregroundStyle(by: .value("Series", p.series))
+                    .symbol(.diamond)
+                    .symbolSize(30)
+            }
+            ForEach(data.entries) { p in
+                PointMark(x: .value("Date", p.date), y: .value("VO₂max", p.value))
+                    .foregroundStyle(by: .value("Series", p.series))
+                    .symbol(.square)
+                    .symbolSize(60)
+            }
+        }
+        .chartForegroundStyleScale(domain: series.map { $0.name }, range: series.map { $0.color })
+        .chartXScale(domain: chartStart...Date())
+        .chartYScale(domain: .automatic(includesZero: false))
+        .chartYAxisLabel("mL/kg/min")
+        .frame(height: 200)
+        .accessibilityLabel(Text("VO₂max over time"))
     }
 
     // MARK: - From runs and walks
@@ -470,6 +559,50 @@ struct VO2maxView: View {
         }
     }
 
+    // MARK: - Daily estimate
+
+    /// "14:20": when the estimate was last re-evaluated (every 10 minutes while the app runs), nil before the
+    /// first time this session.
+    private var updatedAtText: String? {
+        intelligence.vo2maxEstimateUpdatedAt.map { $0.formatted(date: .omitted, time: .shortened) }
+    }
+
+    /// The latest daily estimate at rest, above the chart. Without a waist there is no number to show, so it says
+    /// so and offers the entry: the heart-rate-ratio formula is not substituted on the nightly resting heart rate,
+    /// which reads too high for it (see the From WODs card).
+    private var dailyEstimateCard: some View {
+        NoopCard(tint: StrandPalette.chargeColor) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Latest daily estimate").strandOverline()
+                if let r = resting {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(whole(r.vo2max)).font(StrandFont.number(40)).foregroundStyle(StrandPalette.textPrimary)
+                        Text("± \(one(r.standardError)) mL/kg/min")
+                            .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+                    }
+                    if let time = updatedAtText {
+                        Text("Updated at \(time)")
+                            .font(StrandFont.caption).foregroundStyle(StrandPalette.textSecondary)
+                    }
+                } else if profile.waistCm <= 0 {
+                    Text("Add your waist circumference to get a daily VO₂max estimate: it is one of the model's inputs, and without it there is no number to show. The values from runs, walks and WODs below do not need it.")
+                        .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+                    waistEditor
+                } else if profile.age <= 0 {
+                    Text("Add your age in Settings to see this estimate: it is one of the model's inputs.")
+                        .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+                } else {
+                    Text("Needs at least \(FitnessAgeEngine.minCoverageDays) nights of resting heart rate in the last week.")
+                        .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+                }
+                Text("VO₂max is your aerobic capacity: it changes over weeks of training, not minute to minute. NOOP recalculates it every 10 minutes from your latest nights and training, so a new value appears as soon as there's new evidence, and the chart keeps one point per day.")
+                    .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                Text("Informational only, not medical advice.")
+                    .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+            }
+        }
+    }
+
     // MARK: - At rest
 
     private var restingCard: some View {
@@ -489,9 +622,13 @@ struct VO2maxView: View {
                     Text("From your age, sex, waist, resting heart rate and how much you train. Estimates made at rest are the less accurate kind: expect it to be off by more than the one from your runs and walks.")
                         .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
                 } else if profile.waistCm <= 0 {
-                    Text("Add your waist circumference to see this estimate: it is one of the model's inputs.")
+                    // The waist is entered once, in the daily estimate card above (the same inline entry).
+                    Text("Add your waist circumference in the daily estimate above to see this estimate: it is one of the model's inputs.")
                         .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
-                    waistEditor
+                } else if profile.age <= 0 {
+                    Text("Add your age in Settings to see this estimate: it is one of the model's inputs.")
+                        .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+                    waistLine
                 } else {
                     Text("Needs at least \(FitnessAgeEngine.minCoverageDays) nights of resting heart rate in the last week.")
                         .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
@@ -584,6 +721,8 @@ struct VO2maxView: View {
         waistText = ""
         editingWaist = false
         focused = nil
+        // The waist is a model input: rewrite the stored daily history with it now, not at the next 10-minute tick.
+        Task { await intelligence.refreshVO2maxEstimate() }
     }
 
     // MARK: - Your values
@@ -610,7 +749,7 @@ struct VO2maxView: View {
     private func entryRow(_ entry: Repository.VO2maxEntry) -> some View {
         let then = endOfDay(entry.day)
         let exerciseThen = then.flatMap { VO2maxEngine.summarize(estimates, asOf: $0) }
-        let restThen = restingWeekly.last { $0.day <= entry.day && daysBetween($0.day, entry.day).map { $0 <= 14 } == true }
+        let restThen = restingDaily.last { $0.day <= entry.day && daysBetween($0.day, entry.day).map { $0 <= 7 } == true }
         let wodThen = supine.first {
             $0.day <= entry.day && daysBetween($0.day, entry.day).map { $0 <= VO2maxEngine.supineValidDays } == true
         }.flatMap(wodValue(for:))
@@ -664,7 +803,7 @@ struct VO2maxView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("How this is worked out").font(StrandFont.headline)
             Text("From runs and walks: the oxygen cost of each steady session's pace (ACSM equations, level ground) is scaled up to your maximum through your heart-rate reserve, which tracks your oxygen-uptake reserve (Swain 1997, 1998). One steady stage estimated VO₂max within about 4 mL/kg/min in a lab validation (Swain 2004). The number is the median of your latest sessions.")
-            Text("At rest: the HUNT fitness model (Nes 2011) from age, sex, waist, resting heart rate and activity.")
+            Text("At rest: the HUNT fitness model (Nes 2011) from age, sex, waist, resting heart rate and activity, worked out on your latest 7 days and kept as one point per day. It is a trend, not a new measurement every few minutes, and for one person it is typically off by 5 to 6 mL/kg/min.")
             // String(localized:) like every other literal with a bare "%" in the app (no format parsing).
             Text(String(localized: "Across 14 studies, wearable estimates made during exercise had no average bias and 95% of people within about ±10 mL/kg/min; those made at rest read about 2 mL/kg/min high with a wider spread (INTERLIVE, Molina-Garcia 2022). A lab test with gas analysis stays the reference."))
             Text("Hills, heat, fatigue, a strap reading your cadence instead of your pulse, or a wrong max heart rate all push the estimate off. Set your max heart rate in Settings if you know it from a test.")
