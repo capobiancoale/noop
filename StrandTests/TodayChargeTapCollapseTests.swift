@@ -13,8 +13,8 @@ final class TodayChargeTapCollapseTests: XCTestCase {
     func testReadinessWord_mapsEveryLevel() {
         XCTAssertEqual(TodayView.readinessWord(.primed), "Push")
         XCTAssertEqual(TodayView.readinessWord(.balanced), "Maintain")
-        XCTAssertEqual(TodayView.readinessWord(.strained), "Rest")
-        XCTAssertEqual(TodayView.readinessWord(.rundown), "Rest")
+        XCTAssertEqual(TodayView.readinessWord(.strained), "Recover")
+        XCTAssertEqual(TodayView.readinessWord(.rundown), "Recover")
     }
 
     func testReadinessWord_insufficientHasNoWord() {

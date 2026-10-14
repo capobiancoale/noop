@@ -51,6 +51,14 @@ enum WorkoutSource: Equatable {
         return splitCamelCase(sport)
     }
 
+    /// `displaySport` in the user's language, for what a screen SHOWS ("Strength" -> "Forza"). The stored
+    /// label stays the English token (a translated name would split one sport into two across languages),
+    /// so this is display-only: never feed it back into a key, a filter or a saved row. A sport with no
+    /// catalog entry (a free-typed or imported name) falls back to its English text.
+    static func localizedSport(_ sport: String) -> String {
+        String(localized: String.LocalizationValue(displaySport(sport)))
+    }
+
     /// The camelCase splitter shared by the display and KEY paths. Deliberately NOT localized: the
     /// key path below must be locale-stable.
     private static func splitCamelCase(_ sport: String) -> String {
