@@ -193,23 +193,60 @@ extension FitnessAgeEngine {
         return window(dayInputs(days), endingOn: end)
     }
 
+    /// One dated waist measurement: the "yyyy-MM-dd" day it was taken and its circumference in cm.
+    public struct WaistMeasurement: Equatable, Sendable {
+        public let day: String
+        public let cm: Double
+        public init(day: String, cm: Double) { self.day = day; self.cm = cm }
+    }
+
+    /// The waist a day's estimate uses: the latest measurement taken on or before `day`, so a new
+    /// measurement counts from its own day on and never rewrites the days before it (a waist that went down
+    /// shows as an improvement instead of moving the whole history). Before the first measurement, the first
+    /// one: the model needs a waist, and the weeks before the first entry are better estimated with it than
+    /// left empty. Several measurements on one day count as their mean. nil without a positive measurement.
+    public static func waistCm(on day: String, from measurements: [WaistMeasurement]) -> Double? {
+        var byDay: [String: (sum: Double, n: Double)] = [:]
+        for m in measurements where m.cm > 0 && dayOrdinal(m.day) != nil {
+            let acc = byDay[m.day] ?? (sum: 0, n: 0)
+            byDay[m.day] = (sum: acc.sum + m.cm, n: acc.n + 1)
+        }
+        let days = byDay.keys.sorted()
+        guard let first = days.first, let firstAcc = byDay[first] else { return nil }
+        guard let latest = days.last(where: { $0 <= day }), let acc = byDay[latest] else {
+            return firstAcc.sum / firstAcc.n
+        }
+        return acc.sum / acc.n
+    }
+
     /// One HUNT VO₂max estimate per day (mL/kg/min), oldest first: for every listed day with at least
     /// `minCoverageDays` resting-HR nights among the 7 calendar days ending on it, the Nes estimate with that
-    /// window's median resting heart rate and strain-based PA-index. Empty without a positive age and waist.
-    /// A day with no resting HR or strain of its own may still be listed (e.g. today, before its night is
-    /// scored): it then reads the six days before it.
+    /// window's median resting heart rate and strain-based PA-index, and the waist measured by that day
+    /// (`waistCm(on:from:)`). Empty without a positive age and a waist measurement. A day with no resting HR or
+    /// strain of its own may still be listed (e.g. today, before its night is scored): it then reads the six
+    /// days before it.
+    public static func dailyVO2maxSeries(days: [(day: String, restingHR: Double?, strain: Double?)],
+                                         age: Double, sex: String,
+                                         waists: [WaistMeasurement]) -> [(day: String, vo2max: Double)] {
+        guard age > 0, waists.contains(where: { $0.cm > 0 }) else { return [] }
+        let inputs = dayInputs(days)
+        return inputs.keys.sorted().compactMap { ordinal -> (day: String, vo2max: Double)? in
+            let day = dayString(ordinal: ordinal)
+            guard let w = window(inputs, endingOn: ordinal),
+                  let waist = waistCm(on: day, from: waists) else { return nil }
+            let v = estimateVO2max(age: age, sex: sex, waistCm: waist,
+                                   restingHR: w.restingHR, paIndex: w.paIndex)
+            guard v.isFinite else { return nil }
+            return (day: day, vo2max: v)
+        }
+    }
+
+    /// The same series with one waist for every day.
     public static func dailyVO2maxSeries(days: [(day: String, restingHR: Double?, strain: Double?)],
                                          age: Double, sex: String,
                                          waistCm: Double) -> [(day: String, vo2max: Double)] {
-        guard age > 0, waistCm > 0 else { return [] }
-        let inputs = dayInputs(days)
-        return inputs.keys.sorted().compactMap { ordinal -> (day: String, vo2max: Double)? in
-            guard let w = window(inputs, endingOn: ordinal) else { return nil }
-            let v = estimateVO2max(age: age, sex: sex, waistCm: waistCm,
-                                   restingHR: w.restingHR, paIndex: w.paIndex)
-            guard v.isFinite else { return nil }
-            return (day: dayString(ordinal: ordinal), vo2max: v)
-        }
+        dailyVO2maxSeries(days: days, age: age, sex: sex,
+                          waists: [WaistMeasurement(day: "1970-01-01", cm: waistCm)])
     }
 
     /// Mean of the points inside the `windowDays` calendar days ending on each point's day (the point included),

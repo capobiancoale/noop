@@ -703,7 +703,7 @@ struct VO2maxView: View {
                               : String(localized: "Enter a waist between 60 and 160 cm."))
                     .font(StrandFont.caption).foregroundStyle(StrandPalette.statusWarning)
             } else {
-                Text("Standing relaxed, tape level at your navel. Saved to your profile (also in Settings).")
+                Text("Standing relaxed, tape level at your navel. Each measurement counts from the day you save it; earlier days keep the waist you had then. Saved to your profile and the Lab Book.")
                     .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
             }
         }
@@ -722,7 +722,8 @@ struct VO2maxView: View {
         waistText = ""
         editingWaist = false
         focused = nil
-        // The waist is a model input: rewrite the stored daily history with it now, not at the next 10-minute tick.
+        // The waist is a model input: file it as today's measurement and update the estimate from today on now,
+        // not at the next 10-minute tick.
         Task { await intelligence.refreshVO2maxEstimate() }
     }
 

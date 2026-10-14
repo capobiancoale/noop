@@ -134,6 +134,13 @@ validated method gives a new value every 10 minutes from a wrist strap without p
 set how soon new evidence (a night, a trained day) appears, not how often something is measured. Without a
 waist, the screen says so and offers the entry; it does not switch to another formula.
 
+**Each day uses the waist measured by then.** A waist saved on the VO₂max screen or in Settings is filed as a
+dated measurement in the Lab Book (one per day: saving again that day replaces it); Lab Book entries and Apple
+Health's waist count too. Each day's estimate uses the latest measurement taken on or before that day (the mean
+when one day has several), so a new waist moves the estimate from its own day on and the days before keep the
+waist measured then: a smaller waist shows as an improvement instead of rewriting the history. Days before the
+first measurement use the first one. Changing age or sex still recomputes the whole history.
+
 ## 3. From WODs
 
 A WOD has no measurable external work (no pace, no power), so the method of section 1 cannot use it. What it

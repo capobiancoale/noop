@@ -138469,6 +138469,16 @@
           }
         }
       }
+    },
+    "Standing relaxed, tape level at your navel. Each measurement counts from the day you save it; earlier days keep the waist you had then. Saved to your profile and the Lab Book.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In piedi e rilassato, metro all'altezza dell'ombelico. Ogni misura conta dal giorno in cui la salvi; i giorni prima restano con la circonferenza che avevi allora. Salvata nel profilo e nel Quaderno di laboratorio."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

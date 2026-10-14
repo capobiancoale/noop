@@ -615,7 +615,10 @@ Source: `VO2maxEngine.swift`, screen `VO2maxView`; full method, validation and r
   (median nightly resting HR, at least 4 nights; PA-index from the window's strain, active day = strain ≥ 30, the
   rule the weekly Fitness Age uses). `FitnessAgeEngine.dailyVO2maxSeries`; the screen draws the dots with a 7-day
   rolling mean and a 30 days / 90 days / 1 year range. The waist it needs can be typed on the VO₂max screen;
-  without it nothing is estimated (no fallback on another formula). Re-evaluated every 10 minutes, see below.
+  without it nothing is estimated (no fallback on another formula). Each day uses the waist measured by then
+  (`FitnessAgeEngine.waistCm(on:from:)`: the latest Lab Book or Apple Health measurement on or before that day,
+  the first one before any; a waist saved in the profile is filed in the Lab Book on the day it was saved), so a
+  new measurement never rewrites the days before it. Re-evaluated every 10 minutes, see below.
 - **From WODs.** Heart-rate ratio `PF · HRmax / HRrest` (PF 15.3 men, Uth et al. 2004; 14.5 women, Uth 2005)
   with the HRmax above and HRrest measured awake and supine after 15 min of rest (Castagna et al. 2022): a
   guided 15-minute capture with the strap, mean of the final 2 min (`supineRestingHR`), stored as
