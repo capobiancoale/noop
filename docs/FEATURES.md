@@ -519,9 +519,24 @@ Shortcuts run via the `shortcuts://` URL scheme — anything you can build in Sh
 
 NOOP watches for the classic early-illness/strain signature on-device. It compares your last ~2
 days against a ~28-day baseline (ending 3 days ago) for resting HR, HRV, skin-temperature
-deviation and respiration. When **two or more** anomalies appear — e.g. resting HR up ≥5 bpm,
-HRV down ≥20%, skin temp up ≥0.6 °C, respiration up — a banner appears on **Control Center**:
-*"Your body looks strained — … Consider taking it easy."*
+deviation and respiration. When **two or more** of them drift together, and nothing you logged
+explains it, a banner appears on **Control Center** and a **Heads-up** card shows in the Health hub
+(*Skin temperature*): *"Your body looks strained (RHR +6, HRV −22%). … consider taking it easy."* The wording
+follows the app language, and the card says plainly that it is an on-device estimate, not a diagnosis.
+
+**It knows when something else explains it.** Alcohol or a workout you logged, and a **low glucose at night**
+(the lowest CGM reading between midnight and 6 am under 70 mg/dL, read from Apple Health), turn the card into
+*"Probably not illness"* with an *Explained by* line. A night low disturbs the heart's autonomic control, so that
+night's heart rate and HRV say little about illness. No glucose data, no change.
+
+**Your own false-alarm rate.** Once there are 120 healthy days in your history, the alert checks how often it would
+have fired on your healthy days (days with no illness logged within a week and nothing logged that explains a
+signal) and, if needed, raises its own threshold so that it would have cried wolf at most once in 60 days. It
+never gets more sensitive than the default. The card shows the result: *"Calibrated on your last N healthy days:
+expect about 1 false alarm every X days (at most 1 every Y days, 95%)"*, or *"Calibration starts after 120 healthy
+days (N so far)"*. The same line sits under the toggle in **Automations**. What it cannot do is measure how well it
+catches a real illness: one person has too few illnesses for that, so that part comes from published studies, and
+the card says so.
 
 On a banner transition from clear to raised, NOOP also posts a **system notification** (at most
 once per local day) so the warning reaches you when the window is closed. The toggle lives in
@@ -529,6 +544,8 @@ once per local day) so the warning reaches you when the window is closed. The to
 **opt-in** (off by default — enabling it triggers the notification-permission prompt), while
 Android is **opt-out** (on by default — the watch has always run there). Needs at least 14 days
 of history. On-device and approximate — informational only, **not** a diagnosis.
+(Android has the night-low and personal-threshold fields in the engine; the glucose reading and the calibration run
+in the iPhone/Mac app.)
 
 ---
 

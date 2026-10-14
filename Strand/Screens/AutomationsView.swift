@@ -305,13 +305,22 @@ struct AutomationsView: View {
         Section2(icon: "waveform.path.ecg", title: String(localized: "Illness early-warning"),
                  blurb: String(localized: "Watches your resting HR, HRV, skin temperature and respiration against your own 28-day baseline. On-device and approximate: informational only, not a diagnosis."),
                  active: behavior.illnessWatch) {
-            ToggleRow(label: String(localized: "Watch for early-illness signs"),
-                      help: String(localized: "Needs at least 14 days of history. When two or more signals drift together you get a banner on the dashboard and a notification, at most once a day."),
-                      isOn: $behavior.illnessWatch)
-                .onChangeCompat(of: behavior.illnessWatch) { _ in
-                    model.reevaluateIllness()
-                    if behavior.illnessWatch { IllnessNotifier.requestAuthorization() }
+            VStack(alignment: .leading, spacing: 8) {
+                ToggleRow(label: String(localized: "Watch for early-illness signs"),
+                          help: String(localized: "Needs at least 14 days of history. When two or more signals drift together you get a banner on the dashboard and a notification, at most once a day."),
+                          isOn: $behavior.illnessWatch)
+                    .onChangeCompat(of: behavior.illnessWatch) { _ in
+                        model.reevaluateIllness()
+                        if behavior.illnessWatch { IllnessNotifier.requestAuthorization() }
+                    }
+                // How often the alert would have cried wolf on your own healthy days, and the honest
+                // limit of that calibration. Only meaningful while the watch runs.
+                if behavior.illnessWatch {
+                    IllnessCalibrationNote(calibration: model.illnessCalibration)
+                        .font(StrandFont.footnote)
+                        .foregroundStyle(StrandPalette.textTertiary)
                 }
+            }
         }
     }
 
