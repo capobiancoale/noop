@@ -1271,6 +1271,9 @@ final class IntelligenceEngine: ObservableObject {
         // (imports win over computed, as everywhere on the dashboard), so a freshly scored night counts at once.
         await updateDailyVO2maxEstimate(store: store, lastDays: Self.vo2maxSeriesDays)
 
+        // Nightly irregular-rhythm share over the last 14 nights (IntelligenceEngine+IrregularRhythm.swift).
+        await updateIrregularRhythmSeries(store: store, repository: repo, computedId: deviceId + "-noop")
+
         // #836: record the raw-HR fingerprint this run scored against, so a later NON-forced tick can
         // short-circuit while it's unchanged. Written ONLY here at the end of a completed run (never on an
         // early guard-return), so an interrupted/failed run can't advance the watermark past unscored data.

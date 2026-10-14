@@ -204,6 +204,10 @@ enum MetricAvailability {
             return MetricAvailabilityNote(
                 reason: String(localized: "Vitality and Body Age need your age and a week with at least three of: resting heart rate, sleep, heart rate variability and steps."),
                 howTo: String(localized: "Set your age in Settings, then wear the strap day and night. They update weekly."))
+        case "irregular_rhythm_pct":
+            return MetricAvailabilityNote(
+                reason: String(localized: "This screens the strap's beat-to-beat timing during sleep for an irregular rhythm, and needs at least an hour of clean beats in the night. A night with fewer has no value rather than a zero."),
+                howTo: String(localized: "Wear the strap snug overnight with NOOP connected, and sync it in the morning. It is a screen, not a diagnosis."))
         default:
             return generic
         }

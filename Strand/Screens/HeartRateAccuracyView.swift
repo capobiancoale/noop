@@ -12,6 +12,8 @@ import StrandAnalytics
 //      independent of the sensor;
 //   3. the wearer's own sleeping and waking numbers, so "high" is judged against their baseline, and the
 //      max heart rate the zones and Effort are built on.
+// It also hosts the "Night heart rhythm" card: the same beat-to-beat intervals, screened during sleep for an
+// irregular rhythm (HeartRhythmCard).
 // Data: Repository+HeartRateAccuracy. Informational only, not a medical device.
 
 struct HeartRateAccuracyView: View {
@@ -48,6 +50,7 @@ struct HeartRateAccuracyView: View {
     private var sections: some View {
         VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
             agreementCard
+            HeartRhythmCard()
             PulseCountCard()
             contextCard
             VStack(alignment: .leading, spacing: 6) {

@@ -352,6 +352,13 @@ Windows are taken relative to your latest recorded day and auto-widen on sparse 
 - **Live heart rate hero** — a streaming HR sparkline tinted by zone, with a zone pill, "% Max",
   your Max HR (from Settings) and a streaming/idle state. When the strap reports HR as 0, NOOP
   derives it from the latest R-R interval and notes "from R-R".
+- **Night heart rhythm** — a screen of last night's beat-to-beat intervals for a rhythm that is irregular the
+  way atrial fibrillation is (also on the Heart-rate accuracy screen). It shows last night's verdict (regular,
+  a few irregular stretches, an irregular rhythm lasting 30 minutes or more, or not enough clean beats), how
+  much of the night was analysed, the irregular share, the longest irregular stretch and a 14-night strip; the
+  share is also an Explore metric ("Irregular rhythm (night)"). It is a screen, never a diagnosis: only an ECG
+  can confirm atrial fibrillation, brief episodes and frequent extra beats can fool it, and NOOP is not a
+  medical device. Nothing is sent as a notification. See `docs/ANALYTICS.md`, "Irregular rhythm screening".
 - **Vital Signs** — a tile grid from your most recent imported day: Respiratory Rate, Blood O₂,
   Resting HR, HRV and Skin Temp, each colored by whether it sits in a healthy range ("In range" /
   "Out of range").
@@ -561,7 +568,8 @@ in the iPhone/Mac app.)
   accuracy*): how well the strap's heart rate agrees with its own beat-to-beat timing over the last 24 hours, a
   guided 30-second pulse count against the strap (Start, count, enter the beats: "You 72 bpm · Strap 74 bpm"),
   and your own sleeping floor, waking range and the max heart rate your zones use, with age and max heart rate
-  editable there. It checks consistency, not absolute accuracy, and is informational only.
+  editable there. It checks consistency, not absolute accuracy, and is informational only. The same screen also
+  carries the **Night heart rhythm** card described under Health Monitor.
 - **Step calibration** — tune the stride/step estimate to your own walking so step and distance
   figures read closer to reality.
 - **Units** — choose your preferred measurement units (metric / imperial) across the app.
