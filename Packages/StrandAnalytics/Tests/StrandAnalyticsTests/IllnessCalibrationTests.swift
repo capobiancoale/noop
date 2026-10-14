@@ -359,4 +359,13 @@ final class IllnessCalibrationTests: XCTestCase {
         XCTAssertEqual(IllnessCalibration.firstReplayIndex, 30)
         XCTAssertEqual(IllnessCalibration.recomputeAfterDays, 30)
     }
+
+    func testIllIsMatchedAsAWholeWordOnly() {
+        XCTAssertTrue(IllnessCalibration.tags(forQuestion: "Did you feel ill?").unwell)
+        XCTAssertTrue(IllnessCalibration.tags(forQuestion: "Any illness symptoms?").unwell)
+        XCTAssertTrue(IllnessCalibration.tags(forQuestion: "Feeling sick?").unwell)
+        XCTAssertFalse(IllnessCalibration.tags(forQuestion: "Did you still train?").unwell)
+        XCTAssertFalse(IllnessCalibration.tags(forQuestion: "Took a sleeping pill?").unwell)
+        XCTAssertFalse(IllnessCalibration.tags(forQuestion: "Chill evening?").unwell)
+    }
 }
