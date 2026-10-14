@@ -604,7 +604,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sforzo %@"
+            "value": "Effort %@"
           }
         },
         "pt-PT": {
@@ -4109,7 +4109,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@: %2$@ di carica"
+            "value": "%1$@: %2$@ di Charge"
           }
         },
         "pt-PT": {
@@ -8502,7 +8502,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld%% di carica"
+            "value": "%lld%% di Charge"
           }
         },
         "pt-PT": {
@@ -13038,7 +13038,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Una frequenza cardiaca a riposo più bassa di solito significa una carica più alta."
+            "value": "Una frequenza cardiaca a riposo più bassa di solito significa una Charge più alta."
           }
         },
         "pt-PT": {
@@ -13583,7 +13583,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un obiettivo semplice che si adatta al tuo sforzo. Indicazioni generali di benessere, non consigli medici."
+            "value": "Un obiettivo semplice che si adatta al tuo Effort. Indicazioni generali di benessere, non consigli medici."
           }
         },
         "pt-PT": {
@@ -13882,7 +13882,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un orologio campiona la tua variabilità della frequenza cardiaca invece di trasmetterla tutta la notte, quindi il tuo punteggio di carica ha bisogno di circa sette notti per calibrarsi. Fino ad allora NOOP mostra “servono più dati”, mai un numero indovinato."
+            "value": "Un orologio campiona la tua variabilità della frequenza cardiaca invece di trasmetterla tutta la notte, quindi il tuo punteggio di Charge ha bisogno di circa sette notti per calibrarsi. Fino ad allora NOOP mostra “servono più dati”, mai un numero indovinato."
           }
         },
         "pt-PT": {
@@ -16142,7 +16142,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aggiunge un semplice registro dei liquidi con un obiettivo giornaliero che si adatta al tuo sforzo. Tocca per aggiungere un sorso, una tazza o una bottiglia e guarda riempirsi l'anello di avanzamento. Solo su %@, niente viene sincronizzato."
+            "value": "Aggiunge un semplice registro dei liquidi con un obiettivo giornaliero che si adatta al tuo Effort. Tocca per aggiungere un sorso, una tazza o una bottiglia e guarda riempirsi l'anello di avanzamento. Solo su %@, niente viene sincronizzato."
           }
         },
         "pt-PT": {
@@ -18548,7 +18548,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le fasi del sonno di Apple guidano direttamente il riposo. È uno dei punti di forza dell'orologio."
+            "value": "Le fasi del sonno di Apple guidano direttamente il Rest. È uno dei punti di forza dell'orologio."
           }
         },
         "pt-PT": {
@@ -18846,7 +18846,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Chiedi della tua carica, dello sforzo, del riposo e degli allenamenti, basandoti sui tuoi numeri."
+            "value": "Chiedi della tua Charge, dell'Effort, del Rest e degli allenamenti, basandoti sui tuoi numeri."
           }
         },
         "pt-PT": {
@@ -20362,7 +20362,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La FC media è mostrata come digitata. Il grafico FC, le zone e lo sforzo restano quelli della sessione registrata."
+            "value": "La FC media è mostrata come digitata. Il grafico FC, le zone e l'Effort restano quelli della sessione registrata."
           }
         },
         "pt-PT": {
@@ -27937,7 +27937,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica"
+            "value": "Charge"
           }
         },
         "pt-PT": {
@@ -27983,7 +27983,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica %@%%"
+            "value": "Charge %@%%"
           }
         },
         "pt-PT": {
@@ -28023,7 +28023,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica (tutta la cronologia)"
+            "value": "Charge (tutta la cronologia)"
           }
         },
         "pt-PT": {
@@ -28063,7 +28063,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica (ultimo anno)"
+            "value": "Charge (ultimo anno)"
           }
         },
         "pt-PT": {
@@ -28109,7 +28109,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Calibrazione della linea di base della carica. %1$@, %2$@. %3$@."
+            "value": "Calibrazione della linea di base della Charge. %1$@, %2$@. %3$@."
           }
         },
         "pt-PT": {
@@ -28149,7 +28149,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ricalibrazione della linea di base della carica"
+            "value": "Ricalibrazione della linea di base della Charge"
           }
         },
         "pt-PT": {
@@ -28189,7 +28189,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La carica è bassa e il sonno è stato regolare."
+            "value": "La Charge è bassa e il sonno è stato regolare."
           }
         },
         "pt-PT": {
@@ -28229,7 +28229,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La carica è bassa e il sonno è stato scarso."
+            "value": "La Charge è bassa e il sonno è stato scarso."
           }
         },
         "pt-PT": {
@@ -28269,7 +28269,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La carica è bassa."
+            "value": "La Charge è bassa."
           }
         },
         "pt-PT": {
@@ -28309,7 +28309,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La carica è stabile e il sonno è stato regolare."
+            "value": "La Charge è stabile e il sonno è stato regolare."
           }
         },
         "pt-PT": {
@@ -28349,7 +28349,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La carica è stabile ma il sonno è stato scarso."
+            "value": "La Charge è stabile ma il sonno è stato scarso."
           }
         },
         "pt-PT": {
@@ -28389,7 +28389,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La carica è stabile."
+            "value": "La Charge è stabile."
           }
         },
         "pt-PT": {
@@ -28429,7 +28429,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La carica è alta e il sonno è stato regolare."
+            "value": "La Charge è alta e il sonno è stato regolare."
           }
         },
         "pt-PT": {
@@ -28469,7 +28469,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La carica è alta ma il sonno è stato scarso."
+            "value": "La Charge è alta ma il sonno è stato scarso."
           }
         },
         "pt-PT": {
@@ -28509,7 +28509,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La carica è alta."
+            "value": "La Charge è alta."
           }
         },
         "pt-PT": {
@@ -28549,7 +28549,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Modello di carica"
+            "value": "Modello di Charge"
           }
         },
         "pt-PT": {
@@ -28589,7 +28589,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Andamento della carica"
+            "value": "Andamento della Charge"
           }
         },
         "pt-PT": {
@@ -28629,7 +28629,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La carica pondera la tua HRV rispetto alla tua linea di base personale (~55%%), la frequenza cardiaca a riposo (~20%%), la qualità del riposo (~15%%), la respirazione (~5%%) e la deviazione della temperatura cutanea (~5%%). Lo sforzo è un carico cardiovascolare da 0 a %@ basato sul tempo nelle zone di frequenza cardiaca. Il riposo è suddiviso in fasi a partire dal movimento e dalla frequenza cardiaca. Tutto viene calcolato qui dai dati grezzi della fascia, funziona per qualsiasi giorno in cui NOOP ha raccolto i flussi grezzi."
+            "value": "La Charge pondera la tua HRV rispetto alla tua linea di base personale (~55%%), la frequenza cardiaca a riposo (~20%%), la qualità del Rest (~15%%), la respirazione (~5%%) e la deviazione della temperatura cutanea (~5%%). L'Effort è un carico cardiovascolare da 0 a %@ basato sul tempo nelle zone di frequenza cardiaca. Il Rest è suddiviso in fasi a partire dal movimento e dalla frequenza cardiaca. Tutto viene calcolato qui dai dati grezzi della fascia, funziona per qualsiasi giorno in cui NOOP ha raccolto i flussi grezzi."
           }
         },
         "pt-PT": {
@@ -28669,7 +28669,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica · %@ punti"
+            "value": "Charge · %@ punti"
           }
         },
         "pt-PT": {
@@ -28709,7 +28709,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica · sforzo · riposo"
+            "value": "Charge · Effort · Rest"
           }
         },
         "pt-PT": {
@@ -28749,7 +28749,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica → carica del giorno dopo"
+            "value": "Charge → Charge del giorno dopo"
           }
         },
         "pt-PT": {
@@ -28789,7 +28789,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica, sforzo e riposo, e in che cosa differiscono da WHOOP."
+            "value": "Charge, Effort e Rest, e in che cosa differiscono da WHOOP."
           }
         },
         "pt-PT": {
@@ -28829,7 +28829,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica, sforzo e riposo vengono calcolati sul tuo dispositivo dai dati della fascia. La carica richiede circa quattro notti di sonno per imparare la tua linea di base (è la \"Calibrazione\", contata come notti su 4 sull'anello) e continua ad affinarsi durante le prime due settimane. Su un WHOOP 5 o MG la fascia salva poca cronologia, quindi quel conteggio può restare a 0 su 4 finché non l'avrai indossata per qualche notte. È il limite di sincronizzazione della fascia, non un difetto. Prima che ci sia un numero, NOOP mostra quello che può senza inventarne uno."
+            "value": "Charge, Effort e Rest vengono calcolati sul tuo dispositivo dai dati della fascia. La Charge richiede circa quattro notti di sonno per imparare la tua linea di base (è la \"Calibrazione\", contata come notti su 4 sull'anello) e continua ad affinarsi durante le prime due settimane. Su un WHOOP 5 o MG la fascia salva poca cronologia, quindi quel conteggio può restare a 0 su 4 finché non l'avrai indossata per qualche notte. È il limite di sincronizzazione della fascia, non un difetto. Prima che ci sia un numero, NOOP mostra quello che può senza inventarne uno."
           }
         },
         "pt-PT": {
@@ -28869,7 +28869,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica, sforzo e riposo diventano personalizzati dopo qualche notte di utilizzo."
+            "value": "Charge, Effort e Rest diventano personalizzati dopo qualche notte di utilizzo."
           }
         },
         "pt-PT": {
@@ -28909,7 +28909,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica, sforzo e riposo si costruiscono nelle tue prossime notti di utilizzo."
+            "value": "Charge, Effort e Rest si costruiscono nelle tue prossime notti di utilizzo."
           }
         },
         "pt-PT": {
@@ -28949,7 +28949,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica, sforzo, riposo, HRV, frequenza cardiaca a riposo e in diretta e batteria della fascia a colpo d'occhio."
+            "value": "Charge, Effort, Rest, HRV, frequenza cardiaca a riposo e in diretta e batteria della fascia a colpo d'occhio."
           }
         },
         "pt-PT": {
@@ -28989,7 +28989,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica: quanto sei recuperato?"
+            "value": "Charge: quanto sei recuperato?"
           }
         },
         "pt-PT": {
@@ -29785,7 +29785,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scegli come vengono mostrati distanze, pesi, altezze, temperature e sforzo. I tuoi dati vengono sempre memorizzati allo stesso modo, questo cambia solo la visualizzazione."
+            "value": "Scegli come vengono mostrati distanze, pesi, altezze, temperature ed Effort. I tuoi dati vengono sempre memorizzati allo stesso modo, questo cambia solo la visualizzazione."
           }
         },
         "pt-PT": {
@@ -34933,7 +34933,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica attuale"
+            "value": "Charge attuale"
           }
         },
         "pt-PT": {
@@ -39931,7 +39931,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "SFORZO"
+            "value": "EFFORT"
           }
         },
         "pt-PT": {
@@ -39971,7 +39971,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "SFORZO IN CREAZIONE"
+            "value": "EFFORT IN CREAZIONE"
           }
         },
         "pt-PT": {
@@ -41083,7 +41083,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sforzo"
+            "value": "Effort"
           }
         },
         "pt-PT": {
@@ -41129,7 +41129,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sforzo (0–100)"
+            "value": "Effort (0–100)"
           }
         },
         "pt-PT": {
@@ -41169,7 +41169,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scala dello sforzo"
+            "value": "Scala dell'Effort"
           }
         },
         "pt-PT": {
@@ -41249,7 +41249,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sforzo: quanto ha lavorato il tuo cuore?"
+            "value": "Effort: quanto ha lavorato il tuo cuore?"
           }
         },
         "pt-PT": {
@@ -42260,7 +42260,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Stima basata sullo sforzo di oggi, sul tuo sonno tipico e sulla tua linea di base di recupero di %lld notti, non è una misurazione. La tua carica reale viene calcolata dall'HRV di domani al risveglio."
+            "value": "Stima basata sull'Effort di oggi, sul tuo sonno tipico e sulla tua linea di base di recupero di %lld notti, non è una misurazione. La tua Charge reale viene calcolata dall'HRV di domani al risveglio."
           }
         },
         "pt-PT": {
@@ -48309,7 +48309,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "FC %@ · Sforzo %@"
+            "value": "FC %@ · Effort %@"
           }
         },
         "pt-PT": {
@@ -49305,7 +49305,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "HRV ↔ Carica"
+            "value": "HRV ↔ Charge"
           }
         },
         "pt-PT": {
@@ -50708,7 +50708,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La variabilità della frequenza cardiaca come motore del tuo punteggio di carica."
+            "value": "La variabilità della frequenza cardiaca come motore del tuo punteggio di Charge."
           }
         },
         "pt-PT": {
@@ -51816,7 +51816,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Come viene calcolata la carica"
+            "value": "Come viene calcolata la Charge"
           }
         },
         "pt-PT": {
@@ -51862,7 +51862,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Come si calcola la carica. Il metodo dietro il punteggio."
+            "value": "Come si calcola la Charge. Il metodo dietro il punteggio."
           }
         },
         "pt-PT": {
@@ -51902,7 +51902,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Come vengono calcolati Carica, Sforzo e Riposo, e in che cosa differiscono da WHOOP."
+            "value": "Come vengono calcolati Charge, Effort e Rest, e in che cosa differiscono da WHOOP."
           }
         },
         "pt-PT": {
@@ -51954,7 +51954,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Come viene calcolato lo sforzo"
+            "value": "Come viene calcolato l'Effort"
           }
         },
         "pt-PT": {
@@ -52092,7 +52092,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Come viene calcolato il riposo"
+            "value": "Come viene calcolato il Rest"
           }
         },
         "pt-PT": {
@@ -52415,7 +52415,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quanto una buona notte si riflette sulla carica del mattino dopo."
+            "value": "Quanto una buona notte si riflette sulla Charge del mattino dopo."
           }
         },
         "pt-PT": {
@@ -52455,7 +52455,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quanto la carica di un giorno si trascina in quello successivo."
+            "value": "Quanto la Charge di un giorno si trascina in quello successivo."
           }
         },
         "pt-PT": {
@@ -53051,7 +53051,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Come sta andando la mia carica?"
+            "value": "Come sta andando la mia Charge?"
           }
         },
         "pt-PT": {
@@ -54866,7 +54866,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Importa la tua cronologia di allenamento con i pesi da un'esportazione CSV di Hevy o JSON di Liftosaur. Ogni allenamento diventa una sessione di Forza con una stima del volume di allenamento (peso × ripetizioni). È un dato di volume, non un carico misurato. Non modifica mai il tuo Sforzo."
+            "value": "Importa la tua cronologia di allenamento con i pesi da un'esportazione CSV di Hevy o JSON di Liftosaur. Ogni allenamento diventa una sessione di Forza con una stima del volume di allenamento (peso × ripetizioni). È un dato di volume, non un carico misurato. Non modifica mai il tuo Effort."
           }
         },
         "pt-PT": {
@@ -57671,7 +57671,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dettaglio dell'ultima Carica"
+            "value": "Dettaglio dell'ultima Charge"
           }
         },
         "pt-PT": {
@@ -59255,7 +59255,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Guidata dalla tua variabilità della frequenza cardiaca (HRV) misurata rispetto alla tua linea di base personale, più frequenza cardiaca a riposo, il Riposo della scorsa notte, la frequenza respiratoria e un segnale di temperatura cutanea (un campanello precoce di malattia o sovraccarico). Un'HRV più alta rispetto alla tua linea di base significa più Carica. NOOP ha bisogno prima di qualche notte per imparare la tua linea di base. Fino ad allora vedrai “Calibrazione”."
+            "value": "Guidata dalla tua variabilità della frequenza cardiaca (HRV) misurata rispetto alla tua linea di base personale, più frequenza cardiaca a riposo, il Rest della scorsa notte, la frequenza respiratoria e un segnale di temperatura cutanea (un campanello precoce di malattia o sovraccarico). Un'HRV più alta rispetto alla tua linea di base significa più Charge. NOOP ha bisogno prima di qualche notte per imparare la tua linea di base. Fino ad allora vedrai “Calibrazione”."
           }
         },
         "pt-PT": {
@@ -60528,7 +60528,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dati della macchina in diretta via Bluetooth FTMS. Niente sonno, recupero, temperatura cutanea o SpO₂. Lo Sforzo richiede la frequenza cardiaca della macchina; senza, la sessione registra solo le metriche della macchina."
+            "value": "Dati della macchina in diretta via Bluetooth FTMS. Niente sonno, recupero, temperatura cutanea o SpO₂. L'Effort richiede la frequenza cardiaca della macchina; senza, la sessione registra solo le metriche della macchina."
           }
         },
         "pt-PT": {
@@ -61436,7 +61436,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Registra i comportamenti qui sopra, dopo alcuni giorni di risposte, NOOP classifica come ciascuno influisce sulla tua carica, HRV e riposo. Importare un'esportazione WHOOP (che include il suo diario) riempie istantaneamente la cronologia."
+            "value": "Registra i comportamenti qui sopra. Dopo alcuni giorni di risposte, NOOP classifica come ciascuno influisce su Charge, HRV e Rest. Importando un'esportazione WHOOP (che include il suo diario) la cronologia si riempie subito."
           }
         },
         "pt-PT": {
@@ -66541,7 +66541,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica NOOP"
+            "value": "Charge NOOP"
           }
         },
         "pt-PT": {
@@ -66621,7 +66621,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "NOOP può funzionare solo con un Apple Watch, senza bisogno di una fascia toracica. L'orologio è il sensore; NOOP fa i calcoli sul tuo telefono, calcolando carica, riposo, sforzo e la tua Età di forma fisica dai tuoi dati Health, tutto sul dispositivo."
+            "value": "NOOP può funzionare solo con un Apple Watch, senza bisogno di una fascia toracica. L'orologio è il sensore; NOOP fa i calcoli sul tuo telefono, calcolando Charge, Rest, Effort e la tua Età di forma fisica dai tuoi dati Health, tutto sul dispositivo."
           }
         },
         "pt-PT": {
@@ -66781,7 +66781,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "NOOP ti offre tre punteggi giornalieri, carica, sforzo e riposo, ciascuno su una scala da 0 a 100. Sono costruiti a partire dai segnali grezzi della tua fascia usando scienza dello sport pubblicata e sottoposta a revisione paritaria, e calcolati interamente sul tuo dispositivo. NON sono i punteggi di WHOOP: non disponiamo degli algoritmi privati di WHOOP e non fingiamo di averli. Puntano alle stesse tre domande usando scienza aperta, quindi di solito seguiranno quelli di WHOOP come direzione, ma non corrisponderanno numero per numero, ed è proprio questo il punto."
+            "value": "NOOP ti offre tre punteggi giornalieri, Charge, Effort e Rest, ciascuno su una scala da 0 a 100. Sono costruiti a partire dai segnali grezzi della tua fascia usando scienza dello sport pubblicata e sottoposta a revisione paritaria, e calcolati interamente sul tuo dispositivo. NON sono i punteggi di WHOOP: non disponiamo degli algoritmi privati di WHOOP e non fingiamo di averli. Puntano alle stesse tre domande usando scienza aperta, quindi di solito seguiranno quelli di WHOOP come direzione, ma non corrisponderanno numero per numero, ed è proprio questo il punto."
           }
         },
         "pt-PT": {
@@ -67630,7 +67630,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "NOOP calcola da sé la tua carica, lo sforzo e il riposo, sul dispositivo, niente cloud."
+            "value": "NOOP calcola da sé la tua Charge, l'Effort e il Rest, sul dispositivo, niente cloud."
           }
         },
         "pt-PT": {
@@ -68072,7 +68072,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica, Sforzo e Riposo calcolati da NOOP sul tuo dispositivo a partire da metodi pubblicati."
+            "value": "Charge, Effort e Rest calcolati da NOOP sul tuo dispositivo a partire da metodi pubblicati."
           }
         },
         "pt-PT": {
@@ -69484,7 +69484,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ancora nessun dettaglio della carica"
+            "value": "Ancora nessun dettaglio della Charge"
           }
         },
         "pt-PT": {
@@ -69982,7 +69982,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ancora nessun carico cardio. Lo Sforzo si accumula quando la tua frequenza cardiaca sale nella tua zona di sforzo (circa il 50% della tua riserva di frequenza cardiaca). Una giornata tranquilla, onestamente, resta vicino allo zero."
+            "value": "Ancora nessun carico cardio. L'Effort si accumula quando la tua frequenza cardiaca sale nella tua zona di sforzo (circa il 50% della tua riserva di frequenza cardiaca). Una giornata tranquilla, onestamente, resta vicino allo zero."
           }
         },
         "pt-PT": {
@@ -70022,7 +70022,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Niente fascia toracica? Nessun problema. NOOP può funzionare solo con il tuo Apple Watch. Legge i dati del tuo orologio tramite Apple Health e calcola la tua carica, il tuo riposo, lo sforzo e l'Età di forma fisica direttamente sul tuo telefono. Tutto resta sul dispositivo."
+            "value": "Niente fascia toracica? Nessun problema. NOOP può funzionare solo con il tuo Apple Watch. Legge i dati del tuo orologio tramite Apple Health e calcola la tua Charge, il tuo Rest, l'Effort e l'Età di forma fisica direttamente sul tuo telefono. Tutto resta sul dispositivo."
           }
         },
         "pt-PT": {
@@ -75715,7 +75715,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "On, la tua carica, il riposo, l'HRV e gli Allenamenti vengono condivisi con il provider per un coaching su misura."
+            "value": "Attivo: Charge, Rest, HRV e allenamenti vengono condivisi con il provider per un coaching su misura."
           }
         },
         "pt-PT": {
@@ -79546,7 +79546,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scegli uno sport, NOOP registra FC, picco, media e sforzo dal feed in diretta."
+            "value": "Scegli uno sport, NOOP registra FC, picco, media ed Effort dal feed in diretta."
           }
         },
         "pt-PT": {
@@ -79586,7 +79586,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scegli un segnale del dispositivo indossabile (FC a riposo, HRV, sonno, carica, peso…) da confrontare con questo marcatore. NOOP calcola la media del segnale sul %@ prima di ogni lettura."
+            "value": "Scegli un segnale del dispositivo indossabile (FC a riposo, HRV, sonno, Charge, peso…) da confrontare con questo marcatore. NOOP calcola la media del segnale sul %@ prima di ogni lettura."
           }
         },
         "pt-PT": {
@@ -80324,7 +80324,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Alimenta Carica, Sforzo, Riposo e Sonno"
+            "value": "Alimenta Charge, Effort, Rest e Sonno"
           }
         },
         "pt-PT": {
@@ -80364,7 +80364,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Alimenta Carica, Sforzo, Riposo, Sonno + Monitor salute"
+            "value": "Alimenta Charge, Effort, Rest, Sonno + Monitor salute"
           }
         },
         "pt-PT": {
@@ -80404,7 +80404,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Alimenta subito Sforzo; Carica e Riposo una volta confermate abbastanza notti e la decodifica"
+            "value": "Alimenta subito Effort; Charge e Rest una volta confermate abbastanza notti e la decodifica"
           }
         },
         "pt-PT": {
@@ -80444,7 +80444,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Alimenta Riposo, Sforzo, Età fitness e passi, più Carica quando il recupero si calibra"
+            "value": "Alimenta Rest, Effort, Età fitness e passi, più Charge quando il recupero si calibra"
           }
         },
         "pt-PT": {
@@ -80484,7 +80484,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Alimenta la console in diretta + Sforzo. Niente Carica, Riposo o Sonno"
+            "value": "Alimenta la console in diretta + Effort. Niente Charge, Rest o Sonno"
           }
         },
         "pt-PT": {
@@ -82869,7 +82869,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "In classifica, con attenzione al ritardo: quali delle tue abitudini influiscono davvero sulla tua carica, più la tua risposta personale alla dose di alcol/caffeina."
+            "value": "In classifica, con attenzione al ritardo: quali delle tue abitudini influiscono davvero sulla tua Charge, più la tua risposta personale alla dose di alcol/caffeina."
           }
         },
         "pt-PT": {
@@ -82949,7 +82949,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Riancora alle tue notti recenti ogni linea di base che alimenta la carica. Nessun giorno memorizzato viene eliminato."
+            "value": "Riancora alle tue notti recenti ogni linea di base che alimenta la Charge. Nessun giorno memorizzato viene eliminato."
           }
         },
         "pt-PT": {
@@ -84517,7 +84517,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ricalibra la linea di base della carica"
+            "value": "Ricalibra la linea di base della Charge"
           }
         },
         "pt-PT": {
@@ -84557,7 +84557,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ricalibrare la linea di base della tua carica?"
+            "value": "Ricalibrare la linea di base della tua Charge?"
           }
         },
         "pt-PT": {
@@ -85411,7 +85411,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Registra un allenamento su macchina in diretta, con punteggio Sforzo dalla FC quando la macchina la riporta"
+            "value": "Registra un allenamento su macchina in diretta, con punteggio Effort dalla FC quando la macchina la riporta"
           }
         },
         "pt-PT": {
@@ -85509,7 +85509,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Recupero / Carica"
+            "value": "Recupero / Charge"
           }
         },
         "pt-PT": {
@@ -85648,7 +85648,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Il recupero, il punteggio carica di NOOP, è guidato dalla variabilità della tua frequenza cardiaca misurata rispetto alla tua linea di base personale. Una fascia toracica trasmette dati battito per battito in modo fitto per tutta la notte, così può imparare velocemente quella linea di base. Un Apple Watch invece campiona l'HRV, qualche lettura durante il giorno più la notte, quindi il segnale è reale ma più rado."
+            "value": "Il recupero, il punteggio Charge di NOOP, è guidato dalla variabilità della tua frequenza cardiaca misurata rispetto alla tua linea di base personale. Una fascia toracica trasmette dati battito per battito in modo fitto per tutta la notte, così può imparare velocemente quella linea di base. Un Apple Watch invece campiona l'HRV, qualche lettura durante il giorno più la notte, quindi il segnale è reale ma più rado."
           }
         },
         "pt-PT": {
@@ -88006,7 +88006,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Riposo"
+            "value": "Rest"
           }
         },
         "pt-PT": {
@@ -88052,7 +88052,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Linea di base del riposo"
+            "value": "Linea di base del Rest"
           }
         },
         "pt-PT": {
@@ -88092,7 +88092,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Qualità del riposo"
+            "value": "Qualità del Rest"
           }
         },
         "pt-PT": {
@@ -88172,7 +88172,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Riposo ↔ Carica"
+            "value": "Rest ↔ Charge"
           }
         },
         "pt-PT": {
@@ -88212,7 +88212,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Riposo: quanto è stato rigenerante il tuo sonno?"
+            "value": "Rest: quanto è stato rigenerante il tuo sonno?"
           }
         },
         "pt-PT": {
@@ -88310,7 +88310,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Riavvia da stanotte la costruzione di circa 4 notti per la carica e la tua linea di base HRV. Usalo se una prima settimana storta ha sballato la tua linea di base. La tua cronologia resta."
+            "value": "Riavvia da stanotte la costruzione di circa 4 notti per la Charge e la tua linea di base HRV. Usalo se una prima settimana storta ha sballato la tua linea di base. La tua cronologia resta."
           }
         },
         "pt-PT": {
@@ -88448,7 +88448,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "FC a riposo ↔ Carica"
+            "value": "FC a riposo ↔ Charge"
           }
         },
         "pt-PT": {
@@ -92904,7 +92904,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scopri come vengono calcolati carica, sforzo e riposo, e in cosa differiscono da WHOOP."
+            "value": "Scopri come vengono calcolati Charge, Effort e Rest, e in cosa differiscono da WHOOP."
           }
         },
         "pt-PT": {
@@ -92984,7 +92984,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scopri cosa ha plasmato la tua carica"
+            "value": "Scopri cosa ha plasmato la tua Charge"
           }
         },
         "pt-PT": {
@@ -95873,7 +95873,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sonno e Riposo"
+            "value": "Sonno e Rest"
           }
         },
         "pt-PT": {
@@ -95913,7 +95913,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sonno / Riposo"
+            "value": "Sonno / Rest"
           }
         },
         "pt-PT": {
@@ -96648,7 +96648,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Stabilità del sonno: il riposo è variato di ±%@ pti da una notte all'altra."
+            "value": "Stabilità del sonno: il Rest è variato di ±%@ pti da una notte all'altra."
           }
         },
         "pt-PT": {
@@ -98282,7 +98282,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Avvia un allenamento quando lo streaming conta. NOOP registra l'intervallo, la FC, il picco, la media e lo sforzo dallo stesso feed in diretta."
+            "value": "Avvia un allenamento quando lo streaming conta. NOOP registra l'intervallo, la FC, il picco, la media e l'Effort dallo stesso feed in diretta."
           }
         },
         "pt-PT": {
@@ -99302,7 +99302,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Passi, energia attiva e allenamenti registrati alimentano lo Sforzo. Dati densi e affidabili."
+            "value": "Passi, energia attiva e allenamenti registrati alimentano l'Effort. Dati densi e affidabili."
           }
         },
         "pt-PT": {
@@ -99342,7 +99342,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Passi, energia attiva e allenamenti registrati alimentano il tuo Sforzo. Dati densi e affidabili."
+            "value": "Passi, energia attiva e allenamenti registrati alimentano il tuo Effort. Dati densi e affidabili."
           }
         },
         "pt-PT": {
@@ -102988,7 +102988,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "SFORZO TIPICO"
+            "value": "EFFORT TIPICO"
           }
         },
         "pt-PT": {
@@ -104242,7 +104242,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ecco perché una carica basata solo sull'orologio inizia in “Calibrazione”. NOOP ha bisogno di circa sette notti della tua HRV per imparare com'è la normalità per te. Finché non le ha, trattiene il punteggio anziché tirare a indovinare. Una volta impostata la linea di base, la tua carica appare con la sua affidabilità, sulla stessa scala 0–100 di una fascia."
+            "value": "Ecco perché una Charge basata solo sull'orologio inizia in “Calibrazione”. NOOP ha bisogno di circa sette notti della tua HRV per imparare com'è la normalità per te. Finché non le ha, trattiene il punteggio anziché tirare a indovinare. Una volta impostata la linea di base, la tua Charge appare con la sua affidabilità, sulla stessa scala 0–100 di una fascia."
           }
         },
         "pt-PT": {
@@ -104322,7 +104322,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La media qui sopra è stata modificata. Il grafico, le zone e lo Sforzo restano quelli della sessione registrata."
+            "value": "La media qui sopra è stata modificata. Il grafico, le zone e l'Effort restano quelli della sessione registrata."
           }
         },
         "pt-PT": {
@@ -105663,7 +105663,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Questo si costruisce dalla fascia man mano che si sincronizza. Sforzo e riposo appaiono dopo che l'hai indossata e hai dormito una notte. La carica ha bisogno di circa quattro notti di sonno per imparare la tua linea di base (fino ad allora vedrai \"Calibrazione\"), e continua ad affinarsi nelle tue prime due settimane. Su un WHOOP 5 o MG la fascia conserva poca cronologia, quindi il conteggio delle notti può salire lentamente o restare a 0 di 4 finché non l'hai indossata per alcune notti. È il suo limite di sincronizzazione, non un difetto. Importa la tua esportazione WHOOP per saltare l'attesa."
+            "value": "Questo si costruisce dalla fascia man mano che si sincronizza. Effort e Rest appaiono dopo che l'hai indossata e hai dormito una notte. La Charge ha bisogno di circa quattro notti di sonno per imparare la tua linea di base (fino ad allora vedrai \"Calibrazione\"), e continua ad affinarsi nelle tue prime due settimane. Su un WHOOP 5 o MG la fascia conserva poca cronologia, quindi il conteggio delle notti può salire lentamente o restare a 0 di 4 finché non l'hai indossata per alcune notti. È il suo limite di sincronizzazione, non un difetto. Importa la tua esportazione WHOOP per saltare l'attesa."
           }
         },
         "pt-PT": {
@@ -106429,7 +106429,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Questo riavvia la costruzione di circa 4 notti per la carica e la tua linea di base HRV. La tua cronologia rimane."
+            "value": "Questo riavvia la costruzione di circa 4 notti per la Charge e la tua linea di base HRV. La tua cronologia rimane."
           }
         },
         "pt-PT": {
@@ -106469,7 +106469,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Questo riavvia la costruzione di circa 4 notti per la carica e la tua linea di base HRV. La tua cronologia rimane. Usalo se una prima settimana storta, come indossarla mentre eri malato, ha sballato la tua linea di base."
+            "value": "Questo riavvia la costruzione di circa 4 notti per la Charge e la tua linea di base HRV. La tua cronologia rimane. Usalo se una prima settimana storta, come indossarla mentre eri malato, ha sballato la tua linea di base."
           }
         },
         "pt-PT": {
@@ -106549,7 +106549,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Il contributo di questa sessione allo sforzo della giornata, come rilevato durante l'allenamento."
+            "value": "Il contributo di questa sessione all'Effort della giornata, come rilevato durante l'allenamento."
           }
         },
         "pt-PT": {
@@ -108069,7 +108069,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica di domani"
+            "value": "Charge di domani"
           }
         },
         "pt-PT": {
@@ -108115,7 +108115,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Stima della carica di domani %1$lld più o meno %2$lld"
+            "value": "Stima della Charge di domani %1$lld più o meno %2$lld"
           }
         },
         "pt-PT": {
@@ -108627,7 +108627,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Traccia un allenamento manualmente, registra frequenza cardiaca e sforzo finché non lo termini."
+            "value": "Traccia un allenamento manualmente, registra frequenza cardiaca ed Effort finché non lo termini."
           }
         },
         "pt-PT": {
@@ -111283,7 +111283,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "W"
+            "value": "S"
           }
         },
         "pt-PT": {
@@ -114908,7 +114908,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cosa ha plasmato la tua carica"
+            "value": "Cosa ha plasmato la tua Charge"
           }
         },
         "pt-PT": {
@@ -117848,7 +117848,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Probabilmente ti sveglierai intorno a %1$lld ± %2$lld di carica se dormi circa %3$@ stanotte."
+            "value": "Probabilmente ti sveglierai intorno a %1$lld ± %2$lld di Charge se dormi circa %3$@ stanotte."
           }
         },
         "pt-PT": {
@@ -118032,7 +118032,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sei connesso. NOOP sta leggendo ora i dati del tuo Apple Watch. Il tuo punteggio di carica passerà la prima settimana circa a calibrarsi, poi si stabilizzerà."
+            "value": "Sei connesso. NOOP sta leggendo ora i dati del tuo Apple Watch. Il tuo punteggio di Charge passerà la prima settimana circa a calibrarsi, poi si stabilizzerà."
           }
         },
         "pt-PT": {
@@ -118358,7 +118358,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La tua Carica (recupero) sul quadrante, con Sforzo e Riposo nella scheda rettangolare."
+            "value": "La tua Charge (recupero) sul quadrante, con Effort e Rest nella scheda rettangolare."
           }
         },
         "pt-PT": {
@@ -118398,7 +118398,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Il tuo punteggio di carica impara una linea di base personale dalla tua variabilità della frequenza cardiaca, dalla FC a riposo e altro nel tempo. Se una prima settimana storta l'ha sballato, puoi farglielo reimparare a partire da stanotte. La tua cronologia rimane."
+            "value": "Il tuo punteggio di Charge impara una linea di base personale dalla tua variabilità della frequenza cardiaca, dalla FC a riposo e altro nel tempo. Se una prima settimana storta l'ha sballato, puoi farglielo reimparare a partire da stanotte. La tua cronologia rimane."
           }
         },
         "pt-PT": {
@@ -119256,7 +119256,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La tua frequenza cardiaca in diretta funziona dalla fascia, e carica, sforzo e riposo si costruiscono a partire da essa nelle prossime notti di utilizzo, affinandosi man mano che impara la tua linea di base. Vuoi tutta la tua cronologia all'istante? Importa la tua esportazione WHOOP nelle Sorgenti dati e la completerà in circa un minuto."
+            "value": "La tua frequenza cardiaca in diretta funziona dalla fascia, e Charge, Effort e Rest si costruiscono a partire da essa nelle prossime notti di utilizzo, affinandosi man mano che impara la tua linea di base. Vuoi tutta la tua cronologia all'istante? Importa la tua esportazione WHOOP nelle Sorgenti dati e la completerà in circa un minuto."
           }
         },
         "pt-PT": {
@@ -122369,7 +122369,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "sforzo %@"
+            "value": "Effort %@"
           }
         },
         "pt-PT": {
@@ -129895,7 +129895,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sforzo"
+            "value": "Effort"
           }
         }
       }
@@ -130375,7 +130375,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sforzo medio"
+            "value": "Effort medio"
           }
         }
       }
@@ -130855,7 +130855,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carica vs Recovery"
+            "value": "Charge vs Recovery"
           }
         }
       }
@@ -130865,7 +130865,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sforzo vs Day Strain"
+            "value": "Effort vs Day Strain"
           }
         }
       }
@@ -130885,7 +130885,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Il Day Strain 0–21 di WHOOP viene convertito sulla scala Sforzo 0–100 di NOOP all'importazione; le due scale sono costruite in modo diverso."
+            "value": "Il Day Strain 0–21 di WHOOP viene convertito sulla scala Effort 0–100 di NOOP all'importazione; le due scale sono costruite in modo diverso."
           }
         }
       }
@@ -130915,7 +130915,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aggiunto allo Sforzo del giorno"
+            "value": "Aggiunto all'Effort del giorno"
           }
         }
       }
@@ -130925,7 +130925,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La frequenza cardiaca rispecchia già questa sessione, quindi non aggiunge altro allo Sforzo."
+            "value": "La frequenza cardiaca rispecchia già questa sessione, quindi non aggiunge altro all'Effort."
           }
         }
       }
@@ -130935,7 +130935,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nessun dato di frequenza cardiaca quel giorno, quindi lo Sforzo non è calcolabile."
+            "value": "Nessun dato di frequenza cardiaca quel giorno, quindi l'Effort non è calcolabile."
           }
         }
       }
@@ -130945,7 +130945,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La frequenza cardiaca non vede gran parte del carico muscolare di sollevamenti e WOD. Il carico session-RPE (RPE × minuti, Foster 2001) si aggiunge allo Sforzo solo dove la frequenza cardiaca ha registrato meno di quanto pesi una sessione così dura (Tibana 2018)."
+            "value": "La frequenza cardiaca non vede gran parte del carico muscolare di sollevamenti e WOD. Il carico session-RPE (RPE × minuti, Foster 2001) si aggiunge all'Effort solo dove la frequenza cardiaca ha registrato meno di quanto pesi una sessione così dura (Tibana 2018)."
           }
         }
       }
@@ -130955,7 +130955,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aggiungi un RPE e un tempo (risultato o time cap) per contare il carico muscolare di questo WOD nello Sforzo."
+            "value": "Aggiungi un RPE e un tempo (risultato o time cap) per contare il carico muscolare di questo WOD nell'Effort."
           }
         }
       }
@@ -134205,7 +134205,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Charge pesa il tuo HRV rispetto alla tua linea di base personale (~55%%), la frequenza cardiaca a riposo (~20%%), la qualità del riposo (~15%%), la respirazione (~5%%) e la deviazione della temperatura cutanea (~5%%). Effort è un carico cardiovascolare 0-%@ calcolato dal tempo nelle zone di frequenza cardiaca. Rest viene suddiviso in fasi a partire da movimento e frequenza cardiaca. Tutto viene calcolato qui dai dati grezzi della fascia. Funziona per qualsiasi giorno in cui NOOP ha raccolto flussi grezzi."
+            "value": "Charge pesa il tuo HRV rispetto alla tua linea di base personale (~55%%), la frequenza cardiaca a riposo (~20%%), la qualità del Rest (~15%%), la respirazione (~5%%) e la deviazione della temperatura cutanea (~5%%). Effort è un carico cardiovascolare 0-%@ calcolato dal tempo nelle zone di frequenza cardiaca. Rest viene suddiviso in fasi a partire da movimento e frequenza cardiaca. Tutto viene calcolato qui dai dati grezzi della fascia. Funziona per qualsiasi giorno in cui NOOP ha raccolto flussi grezzi."
           }
         }
       }
@@ -135215,7 +135215,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Recupero, sforzo e sonno a colpo d'occhio"
+            "value": "Charge, Effort e Rest a colpo d'occhio"
           }
         }
       }
@@ -137956,6 +137956,516 @@
           "stringUnit": {
             "state": "translated",
             "value": "Salva %lld WOD"
+          }
+        }
+      }
+    },
+    "Data": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dati"
+          }
+        }
+      }
+    },
+    "App": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App"
+          }
+        }
+      }
+    },
+    "%@ is up %@ week over week (avg %lld vs %lld)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ è in aumento: +%2$@ rispetto alla settimana scorsa (media %3$lld contro %4$lld)"
+          }
+        }
+      }
+    },
+    "%@ is down %@ week over week (avg %lld vs %lld)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ è in calo: −%2$@ rispetto alla settimana scorsa (media %3$lld contro %4$lld)"
+          }
+        }
+      }
+    },
+    "%@ is flat %@ week over week (avg %lld vs %lld)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ è stabile: %2$@ rispetto alla settimana scorsa (media %3$lld contro %4$lld)"
+          }
+        }
+      }
+    },
+    "%@ pts": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ pti"
+          }
+        }
+      }
+    },
+    "Only 1 day into this week so far, too early to call a week-over-week trend yet.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo 1 giorno in questa settimana finora, troppo presto per parlare di un andamento rispetto alla settimana scorsa."
+          }
+        }
+      }
+    },
+    "Only %lld days into this week so far, too early to call a week-over-week trend yet.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo %lld giorni in questa settimana finora, troppo presto per parlare di un andamento rispetto alla settimana scorsa."
+          }
+        }
+      }
+    },
+    "Last week only had 1 day of data, so week-over-week changes are rough, not a trend.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La settimana scorsa ha solo 1 giorno di dati, quindi i cambiamenti da una settimana all'altra sono approssimativi, non un andamento."
+          }
+        }
+      }
+    },
+    "Last week only had %lld days of data, so week-over-week changes are rough, not a trend.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La settimana scorsa ha solo %lld giorni di dati, quindi i cambiamenti da una settimana all'altra sono approssimativi, non un andamento."
+          }
+        }
+      }
+    },
+    "A steady week: Rest held even (±%@ pts) and nothing moved much.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settimana stabile: il Rest è rimasto regolare (±%@ pti) e nulla si è mosso granché."
+          }
+        }
+      }
+    },
+    "A steady week: no metric moved meaningfully from last week.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settimana stabile: nessuna metrica è cambiata in modo significativo rispetto alla scorsa."
+          }
+        }
+      }
+    },
+    "Your Effort outpaced your Charge this week: you leaned into the red. Watch for a recovery dip.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa settimana il tuo Effort ha superato la tua Charge: hai spinto al limite. Attenzione a un calo del recupero."
+          }
+        }
+      }
+    },
+    "Effort and Charge tracked together this week: a sustainable load.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effort e Charge sono andati di pari passo questa settimana: un carico sostenibile."
+          }
+        }
+      }
+    },
+    "You carried more Charge than you spent this week: there's room to push if you want it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa settimana avevi più Charge di quanta ne hai spesa: c'è margine per spingere, se vuoi."
+          }
+        }
+      }
+    },
+    "Not enough Effort and Charge days this week to read your balance.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa settimana non ci sono abbastanza giorni di Effort e Charge per leggere il tuo equilibrio."
+          }
+        }
+      }
+    },
+    "Effort this week": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effort questa settimana"
+          }
+        }
+      }
+    },
+    "Effort this month": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effort questo mese"
+          }
+        }
+      }
+    },
+    "Effort this quarter": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effort questo trimestre"
+          }
+        }
+      }
+    },
+    "Effort this year": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effort quest'anno"
+          }
+        }
+      }
+    },
+    "Effort this log": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effort in tutto il registro"
+          }
+        }
+      }
+    },
+    "result outside what a person can reach (15 to 90 mL/kg/min), so the distance or heart rate is probably off": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "risultato fuori da ciò che una persona può raggiungere (da 15 a 90 mL/kg/min): distanza o frequenza cardiaca probabilmente errate"
+          }
+        }
+      }
+    },
+    "Open-water swim": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuoto in acque libere"
+          }
+        }
+      }
+    },
+    "Pool swim": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuoto in piscina"
+          }
+        }
+      }
+    },
+    "Treadmill run": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corsa sul tapis roulant"
+          }
+        }
+      }
+    },
+    "Treadmill walk": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camminata sul tapis roulant"
+          }
+        }
+      }
+    },
+    "Indoor cycle": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ciclismo indoor"
+          }
+        }
+      }
+    },
+    "Row machine": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vogatore"
+          }
+        }
+      }
+    },
+    "Elliptical": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ellittica"
+          }
+        }
+      }
+    },
+    "Strength": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forza"
+          }
+        }
+      }
+    },
+    "Weightlifting": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pesistica"
+          }
+        }
+      }
+    },
+    "Functional Fitness": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allenamento funzionale"
+          }
+        }
+      }
+    },
+    "Cross Fit": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CrossFit"
+          }
+        }
+      }
+    },
+    "Traditional Strength Training": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allenamento di forza tradizionale"
+          }
+        }
+      }
+    },
+    "Functional Strength Training": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allenamento di forza funzionale"
+          }
+        }
+      }
+    },
+    "High Intensity Interval Training": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allenamento a intervalli ad alta intensità"
+          }
+        }
+      }
+    },
+    "Core Training": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allenamento del core"
+          }
+        }
+      }
+    },
+    "Cross Training": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cross training"
+          }
+        }
+      }
+    },
+    "Mixed Cardio": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cardio misto"
+          }
+        }
+      }
+    },
+    "Cooldown": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Defaticamento"
+          }
+        }
+      }
+    },
+    "Flexibility": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flessibilità"
+          }
+        }
+      }
+    },
+    "Boxing": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pugilato"
+          }
+        }
+      }
+    },
+    "Basketball": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basket"
+          }
+        }
+      }
+    },
+    "Soccer": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calcio"
+          }
+        }
+      }
+    },
+    "Table tennis": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tennis da tavolo"
+          }
+        }
+      }
+    },
+    "Volleyball": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pallavolo"
+          }
+        }
+      }
+    },
+    "Martial arts": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arti marziali"
+          }
+        }
+      }
+    },
+    "Dancing": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Danza"
+          }
+        }
+      }
+    },
+    "Climbing": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrampicata"
+          }
+        }
+      }
+    },
+    "Skiing": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sci"
+          }
+        }
+      }
+    },
+    "Snowboarding": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snowboard"
           }
         }
       }
