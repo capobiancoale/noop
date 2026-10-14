@@ -138709,6 +138709,276 @@
           }
         }
       }
+    },
+    "Night heart rhythm": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ritmo cardiaco notturno"
+          }
+        }
+      }
+    },
+    "No night to look at yet. Wear the strap to bed with NOOP connected, then sync it in the morning.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non c'è ancora nessuna notte da esaminare. Indossa la fascia a letto con NOOP collegato, poi sincronizzala al mattino."
+          }
+        }
+      }
+    },
+    "Latest night: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultima notte: %@"
+          }
+        }
+      }
+    },
+    "Regular rhythm": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ritmo regolare"
+          }
+        }
+      }
+    },
+    "A few irregular stretches": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qualche tratto irregolare"
+          }
+        }
+      }
+    },
+    "Irregular rhythm": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ritmo irregolare"
+          }
+        }
+      }
+    },
+    "The strap recorded under an hour of clean beats, too little to say anything. Either it was not worn for most of the night, or too many beats were noisy. Wear it snug, a finger's width above the wrist bone, all night, and sync it in the morning.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La fascia ha registrato meno di un'ora di battiti puliti, troppo poco per dire qualcosa. O non è stata indossata per gran parte della notte, oppure troppi battiti erano disturbati. Indossala ben aderente, a un dito di distanza dall'osso del polso, per tutta la notte, e sincronizzala al mattino."
+          }
+        }
+      }
+    },
+    "The beats were regular, with no irregular stretch, over the part of the night the strap recorded cleanly.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I battiti erano regolari, senza nessun tratto irregolare, nella parte della notte che la fascia ha registrato in modo pulito."
+          }
+        }
+      }
+    },
+    "Some stretches of the night had irregular beats, but never for 30 minutes in a row. Extra heartbeats and movement can cause this.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alcuni tratti della notte avevano battiti irregolari, ma mai per 30 minuti di fila. I battiti extra e il movimento possono causarlo."
+          }
+        }
+      }
+    },
+    "A pattern like atrial fibrillation: the beats were irregular and unpredictable for %lld minutes in a row.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un andamento simile alla fibrillazione atriale: i battiti sono stati irregolari e imprevedibili per %lld minuti di fila."
+          }
+        }
+      }
+    },
+    "If it happens again, or you notice palpitations, breathlessness or dizziness, talk to your doctor. With severe symptoms such as chest pain or fainting, call emergency services.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se succede di nuovo, o se noti palpitazioni, mancanza di fiato o capogiri, parlane con il tuo medico. Con sintomi gravi come dolore al petto o svenimento, chiama i soccorsi."
+          }
+        }
+      }
+    },
+    "Clean beats analysed": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battiti puliti analizzati"
+          }
+        }
+      }
+    },
+    "Irregular share of the analysed night": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quota irregolare della notte analizzata"
+          }
+        }
+      }
+    },
+    "Longest irregular stretch": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tratto irregolare più lungo"
+          }
+        }
+      }
+    },
+    "%lld h": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld h"
+          }
+        }
+      }
+    },
+    "%lld h %lld min": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld h %2$lld min"
+          }
+        }
+      }
+    },
+    "Nights analysed: %lld. Nights with an irregular rhythm: %lld.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notti analizzate: %1$lld. Notti con un ritmo irregolare: %2$lld."
+          }
+        }
+      }
+    },
+    "Irregular rhythm, last 14 nights": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ritmo irregolare, ultime 14 notti"
+          }
+        }
+      }
+    },
+    "Irregular rhythm for 30 minutes or more": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ritmo irregolare per 30 minuti o più"
+          }
+        }
+      }
+    },
+    "A bar is the share of the analysed night with an irregular rhythm. A dot is a regular night; an open circle is a night without enough clean beats.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una barra è la quota della notte analizzata con un ritmo irregolare. Un punto è una notte regolare; un cerchio vuoto è una notte senza abbastanza battiti puliti."
+          }
+        }
+      }
+    },
+    "Night": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notte"
+          }
+        }
+      }
+    },
+    "Irregular share": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quota irregolare"
+          }
+        }
+      }
+    },
+    "Not a diagnosis: only an ECG can confirm atrial fibrillation. NOOP is not a medical device.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è una diagnosi: solo un ECG può confermare la fibrillazione atriale. NOOP non è un dispositivo medico."
+          }
+        }
+      }
+    },
+    "This looks at the timing of your heartbeats while you sleep. Frequent extra beats and movement can cause false alarms, and brief episodes can be missed. The method was checked on ECG recordings, not on this strap.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo esamina i tempi dei tuoi battiti mentre dormi. Battiti extra frequenti e il movimento possono causare falsi allarmi, e gli episodi brevi possono sfuggire. Il metodo è stato verificato su registrazioni ECG, non su questa fascia."
+          }
+        }
+      }
+    },
+    "Irregular rhythm (night)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ritmo irregolare (notte)"
+          }
+        }
+      }
+    },
+    "This screens the strap's beat-to-beat timing during sleep for an irregular rhythm, and needs at least an hour of clean beats in the night. A night with fewer has no value rather than a zero.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esamina i tempi tra un battito e l'altro della fascia durante il sonno per cercare un ritmo irregolare, e richiede almeno un'ora di battiti puliti nella notte. Una notte con meno battiti non ha alcun valore, non uno zero."
+          }
+        }
+      }
+    },
+    "Wear the strap snug overnight with NOOP connected, and sync it in the morning. It is a screen, not a diagnosis.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indossa la fascia ben aderente durante la notte con NOOP collegato e sincronizzala al mattino. È uno screening, non una diagnosi."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
