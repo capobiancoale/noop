@@ -604,8 +604,12 @@ Source: `VO2maxEngine.swift`, screen `VO2maxView`; full method, validation and r
   %HRR = %VO₂R (Swain & Leutholtz 1997; Swain et al. 1998): `VO₂max = 3.5 + (VO₂ − 3.5) / %HRR` — validated
   from one steady stage at r 0.89, SEE 4.0 mL/kg/min, no bias (Swain et al. 2004). Heart rate is the strap's
   per-minute mean after the first 3 minutes; resting HR the 14-night median; HRmax the user's setting, else the
-  second-highest believable workout peak of the year, else Tanaka. The number is the median of the newest
-  ≤ 5 sessions of 90 days, stored per session day as `vo2max_exercise`.
+  second-highest believable workout peak of the year, else Tanaka. A session whose extrapolated value falls
+  outside 15–90 mL/kg/min is dropped as `implausible` (a distance or heart-rate error: a fast pace at a low
+  share of the reserve can read 130; the top of the range sits just under the highest values ever measured,
+  about 97, Joyner & Coyle 2008, Lundby & Robach 2015; the bottom above the ~14 of severe impairment,
+  Mancini et al. 1991). The number is the median of the newest ≤ 5 sessions of 90 days, stored per session
+  day as `vo2max_exercise`.
 - **At rest.** The HUNT non-exercise model (Nes et al. 2011) ± its SEE (5.70 men, 5.14 women mL/kg/min), as a
   **daily series** `vo2max_est`: one point per day, the Nes estimate on the 7 calendar days ending that day
   (median nightly resting HR, at least 4 nights; PA-index from the window's strain, active day = strain ≥ 30, the

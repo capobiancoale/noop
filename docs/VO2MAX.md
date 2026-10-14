@@ -57,6 +57,7 @@ wearables: across 14 validation studies, bias −0.09 mL/kg/min with 95% limits 
 | Intensity | 50–85% of heart-rate reserve | below 50% the extrapolation gets long (a few bpm of error move the result > 5%); above 85% the effort is no longer steady |
 | Heart rate | the strap's per-minute means from minute 3 to the end, covering ≥ 80% of that span (else the workout's own average) | skips the rise to steady state; SQL-aggregated, no raw samples loaded |
 | Resting HR | median of the nightly resting HR of the 14 days up to the session | one short or feverish night does not shift it |
+| Plausible result | the session's VO₂max must land in 15–90 mL/kg/min, else it is dropped (`implausible`) | a fast pace at a low share of the reserve multiplies a small distance or heart-rate error by 1/%HRR and can read 130. The top is just under the highest values ever measured (elite endurance athletes ≈ 80–90, the record ≈ 97: Joyner & Coyle, J Physiol 2008; Lundby & Robach, Physiology 2015); the bottom is above the ≈ 14 mL/kg/min of severe impairment in heart-failure assessment (Mancini et al., Circulation 1991), which nobody completing 10+ minutes at 50–85% of reserve has |
 
 **HRmax** is the one input that moves the estimate most (an HRmax 10 bpm too high reads ≈ 7% high). In
 order: your own setting (Settings → Max heart rate, e.g. from a test); else the **second-highest workout peak
