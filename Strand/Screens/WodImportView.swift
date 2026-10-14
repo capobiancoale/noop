@@ -9,9 +9,11 @@ import StrandImport
 //
 // The low-friction path for logging WODs: the athlete gets the workout as a PHOTO, hands the photo to
 // any capable AI with the prompt from `WodTextImport.aiPrompt` ("Copy AI prompt"), pastes the AI's
-// reply here, taps Analyze, checks the preview and saves — one or many WODs, with movements, the
-// prescribed (RX) and actually-lifted loads all filled in. No field-by-field typing. Parsing is the
-// pure `WodTextImport` in WhoopStore; this screen is just the paste box, preview and save.
+// reply here, checks the preview and saves — one or many WODs, with movements, the prescribed (RX) and
+// actually-lifted loads all filled in. No field-by-field typing. The text is read as it is typed or
+// pasted, so the preview and Save follow the box with no extra tap (an Analyze button under the box
+// sat behind the keyboard, and Save stayed off until it was tapped). Parsing is the pure
+// `WodTextImport` in WhoopStore; this screen is just the paste box, preview and save.
 
 struct WodImportView: View {
     @EnvironmentObject private var repo: Repository
@@ -24,6 +26,9 @@ struct WodImportView: View {
     @State private var didParse = false
     @State private var saving = false
     @State private var csvNote: String?
+    /// Whether the preview came from a spreadsheet, which an empty paste box must not clear.
+    @State private var fromCsv = false
+    @FocusState private var editorFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -32,10 +37,29 @@ struct WodImportView: View {
                     TextEditor(text: $text)
                         .frame(minHeight: 150)
                         .font(.callout)
+                        .focused($editorFocused)
                 } header: {
                     Text("Paste WOD text")
                 } footer: {
                     Text("One block per WOD; separate several with a line of “---”. Labels like Name, Movements, RX and Result are understood in English and Italian.")
+                }
+
+                if !parsed.isEmpty {
+                    Section("Preview") {
+                        ForEach(parsed) { w in WodPreviewRow(wod: w) }
+                    }
+                    Section {
+                        Button { saveAll() } label: {
+                            Label(saveTitle, systemImage: "checkmark.circle.fill")
+                                .font(.headline)
+                        }
+                        .disabled(saving)
+                    }
+                } else if didParse && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Section {
+                        Text("Couldn't find a WOD in that text. Check the format, or tap “Copy AI prompt” and let an AI convert your photo.")
+                            .foregroundStyle(.secondary).font(.subheadline)
+                    }
                 }
 
                 Section {
@@ -45,10 +69,6 @@ struct WodImportView: View {
                     Button { copyAIPrompt() } label: {
                         Label("Copy AI prompt (for your photo)", systemImage: "sparkles")
                     }
-                    Button { analyze() } label: {
-                        Label("Analyze", systemImage: "wand.and.stars")
-                    }
-                    .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
 
                 Section {
@@ -68,19 +88,8 @@ struct WodImportView: View {
                     }
                 }
 
-                if didParse {
-                    if parsed.isEmpty {
-                        Section {
-                            Text("Couldn't find a WOD in that text. Check the format, or tap “Copy AI prompt” and let an AI convert your photo.")
-                                .foregroundStyle(.secondary).font(.subheadline)
-                        }
-                    } else {
-                        Section("Preview") {
-                            ForEach(parsed) { w in WodPreviewRow(wod: w) }
-                        }
-                    }
-                }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Import WODs")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -89,18 +98,41 @@ struct WodImportView: View {
                     Button("Save all") { saveAll() }
                         .disabled(parsed.isEmpty || saving)
                 }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { editorFocused = false }
+                }
+            }
+            // Read the box shortly after typing pauses; a new keystroke cancels the pending read.
+            .task(id: text) {
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                guard !Task.isCancelled else { return }
+                analyze()
             }
         }
     }
 
+    private var saveTitle: String {
+        parsed.count == 1
+            ? String(localized: "Save WOD")
+            : String(localized: "Save \(parsed.count) WODs")
+    }
+
     private func analyze() {
+        // An empty box leaves a spreadsheet import's preview alone.
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            if !fromCsv { parsed = [] }
+            return
+        }
         parsed = WodTextImport.parse(text)
+        fromCsv = false
         didParse = true
     }
 
     private func pasteFromClipboard() {
         if let s = UIPasteboard.general.string, !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             text = s
+            editorFocused = false
             analyze()
         }
     }
@@ -129,6 +161,7 @@ struct WodImportView: View {
                 return
             }
             parsed = result.wods
+            fromCsv = true
             didParse = true
             if result.wods.isEmpty {
                 csvNote = String(localized: "No WODs found — check the columns (date, name, movement…).")
@@ -179,6 +212,11 @@ private struct WodPreviewRow: View {
             ForEach(Array(wod.movements.enumerated()), id: \.offset) { _, m in
                 Text("• " + WodFormat.movement(m))
                     .font(.caption).foregroundStyle(.secondary)
+            }
+            if let notes = wod.notes, !notes.isEmpty {
+                Text(notes)
+                    .font(.caption).foregroundStyle(.tertiary)
+                    .lineLimit(3)
             }
         }
         .padding(.vertical, 2)

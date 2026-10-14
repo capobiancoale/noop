@@ -205,4 +205,76 @@ final class WodTextImportTests: XCTestCase {
         XCTAssertEqual(w.resultKind, .time)
         XCTAssertEqual(w.resultSeconds, 392)
     }
+
+    // MARK: A reply copied from a chat app
+
+    func testAReplyWhoseLineBreaksWereLostStillParses() throws {
+        // As pasted from a chat app that showed the AI's reply as Markdown: the header fields are one
+        // paragraph, so one line, and the Note joined the last movement.
+        let text = """
+        Data: 2026-10-12 Tipo: CrossFit Nome: HPC & Burpees Intervals Formato: Intervals Time cap: 16 RX: rx Risultato: 6 reps per round Movimenti:
+
+        * Power Clean; reps 6 ogni 90″; done; rx; me 35-45-55
+        * Hang Power Clean; reps 8 per round; done 6 per round; rx 40; me 45
+        * Burpees laterali; reps max per round; done; rx; me Note: Skill PC: 2x55%, 2x65%, 2x75%. WOD: 8 round, 1′ lavoro / 1′ riposo.
+        """
+        let rows = WodTextImport.parse(text, now: now, calendar: cal)
+        XCTAssertEqual(rows.count, 1)
+        let w = try XCTUnwrap(rows.first)
+        XCTAssertEqual(w.day, "2026-10-12")
+        XCTAssertEqual(w.type, "CrossFit")
+        XCTAssertEqual(w.title, "HPC & Burpees Intervals")
+        XCTAssertEqual(w.format, "Intervals")
+        XCTAssertEqual(w.timeCapS, 16 * 60)
+        XCTAssertEqual(w.rx, true)
+        XCTAssertEqual(w.resultKind, .reps)
+        XCTAssertEqual(w.resultReps, 6)
+        XCTAssertEqual(w.notes, "Skill PC: 2x55%, 2x65%, 2x75%. WOD: 8 round, 1′ lavoro / 1′ riposo.")
+        XCTAssertEqual(w.movements.map(\.name), ["Power Clean", "Hang Power Clean", "Burpees laterali"])
+        XCTAssertEqual(w.movements[0].scheme, "6 ogni 90″")
+        XCTAssertEqual(w.movements[0].weightKg, 55)               // the top of the 35-45-55 ladder
+        XCTAssertEqual(w.movements[0].notes, "35-45-55 kg")
+        XCTAssertEqual(w.movements[1].repsDone, 6)
+        XCTAssertEqual(w.movements[1].rxWeightKg, 40)
+        XCTAssertEqual(w.movements[1].weightKg, 45)
+        XCTAssertNil(w.movements[2].weightKg)                     // "me" with nothing after it
+    }
+
+    func testCodeFenceBoldLabelsAndNumberedMovements() throws {
+        let text = """
+        ```
+        **Nome:** Cindy
+        **Formato:** AMRAP
+        **Risultato:** 18+5
+        **Movimenti:**
+        1. Pull-up; reps 5
+        2) Push-up; reps 10
+        ```
+        """
+        let w = try XCTUnwrap(WodTextImport.parse(text, now: now, calendar: cal).first)
+        XCTAssertEqual(w.title, "Cindy")
+        XCTAssertEqual(w.format, "AMRAP")
+        XCTAssertEqual(w.resultRounds, 18)
+        XCTAssertEqual(w.resultReps, 5)
+        XCTAssertEqual(w.movements.map(\.name), ["Pull-up", "Push-up"])
+        XCTAssertEqual(w.movements[1].reps, 10)
+    }
+
+    func testALabelInsideANoteStaysInTheNote() throws {
+        let text = """
+        Nome: Fran
+        - Thruster; reps 21-15-9; rx 43
+        Note: skill first
+        WOD: 21-15-9 for time
+        """
+        let w = try XCTUnwrap(WodTextImport.parse(text, now: now, calendar: cal).first)
+        XCTAssertEqual(w.title, "Fran")
+        XCTAssertEqual(w.notes, "skill first\nWOD: 21-15-9 for time")
+    }
+
+    func testAMidLineNoteIsNotSplitAgain() {
+        XCTAssertEqual(WodTextImport.unflattened("Nome: Fran Note: RX: 43 Tipo: x"), ["Nome: Fran", "Note: RX: 43 Tipo: x"])
+        XCTAssertEqual(WodTextImport.unflattened("- Thruster; reps 21; RX: 43"), ["- Thruster; reps 21; RX: 43"])
+        XCTAssertEqual(WodTextImport.unflattened("Formato: For Time Time cap: 10"), ["Formato: For Time", "Time cap: 10"])
+    }
 }
