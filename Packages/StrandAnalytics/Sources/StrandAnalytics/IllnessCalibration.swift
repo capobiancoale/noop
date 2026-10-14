@@ -93,10 +93,13 @@ public enum IllnessCalibration {
 
     public static func tags(forQuestion question: String) -> QuestionTags {
         let q = question.lowercased()
+        // "ill" as a whole word only: as a substring it also matched "still", "pill", "fill" and "chill",
+        // so a question like "Did you still train?" read as feeling unwell.
+        let words = Set(q.split(whereSeparator: { !$0.isLetter }).map(String.init))
         return QuestionTags(
             alcohol: q.contains("alcohol") || q.contains("drink"),
             workout: q.contains("workout") || q.contains("train") || q.contains("exercise"),
-            unwell: q.contains("sick") || q.contains("ill") || q.contains("unwell"))
+            unwell: q.contains("sick") || q.contains("unwell") || words.contains("ill") || q.contains("illness"))
     }
 
     /// Per-day confounder flags and the days logged as unwell, from journal answers (a "yes" only) and

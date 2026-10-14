@@ -138479,6 +138479,236 @@
           }
         }
       }
+    },
+    "RHR +%lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FC riposo +%lld"
+          }
+        }
+      }
+    },
+    "HRV −%lld%%": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HRV −%lld%%"
+          }
+        }
+      }
+    },
+    "skin temp +%@ °C": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "temp. cutanea +%@ °C"
+          }
+        }
+      }
+    },
+    "respiration up": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "respirazione in aumento"
+          }
+        }
+      }
+    },
+    "alcohol": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "alcol"
+          }
+        }
+      }
+    },
+    "stress": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "stress"
+          }
+        }
+      }
+    },
+    "sauna": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sauna"
+          }
+        }
+      }
+    },
+    "a hard or late workout": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "un allenamento intenso o a tarda ora"
+          }
+        }
+      }
+    },
+    "travel": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "un viaggio"
+          }
+        }
+      }
+    },
+    "a low glucose at night": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "una glicemia bassa durante la notte"
+          }
+        }
+      }
+    },
+    "%@ and %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ e %2$@"
+          }
+        }
+      }
+    },
+    "several of your signals": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "diversi dei tuoi segnali"
+          }
+        }
+      }
+    },
+    "Your body looks strained (%@). Nothing like alcohol, a hard workout or a low glucose at night explains it, so consider taking it easy.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo corpo sembra sotto sforzo (%@). Niente come alcol, un allenamento intenso o una glicemia bassa durante la notte lo spiega: valuta di andarci piano."
+          }
+        }
+      }
+    },
+    "Some signals are up (%@), but there is a plainer explanation: %@. Likely that, not illness.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alcuni segnali sono in aumento (%1$@), ma c'è una spiegazione più semplice: %2$@. Probabilmente è questo, non una malattia."
+          }
+        }
+      }
+    },
+    "A few signals are mildly up (%@). Nothing alarming: worth a calmer day.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alcuni segnali sono leggermente in aumento (%@). Niente di allarmante: meglio una giornata più tranquilla."
+          }
+        }
+      }
+    },
+    "You logged feeling unwell, and your numbers agree. Rest up and take it easy today.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai segnato di non sentirti bene e i tuoi valori lo confermano. Riposati e vacci piano oggi."
+          }
+        }
+      }
+    },
+    "You logged feeling unwell. Take it easy today.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai segnato di non sentirti bene. Vacci piano oggi."
+          }
+        }
+      }
+    },
+    "Nothing notable: your signals look like your normal range.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niente di rilevante: i tuoi segnali rientrano nella tua norma."
+          }
+        }
+      }
+    },
+    "Calibration starts after %lld healthy days (%lld so far).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La calibrazione parte dopo %1$lld giorni in salute (finora %2$lld)."
+          }
+        }
+      }
+    },
+    "Calibrated on your last %lld healthy days: expect about 1 false alarm every %lld days (at most 1 every %lld days, 95%%).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calibrato sui tuoi ultimi %1$lld giorni in salute: aspettati circa 1 falso allarme ogni %2$lld giorni (al massimo 1 ogni %3$lld giorni, 95%%)."
+          }
+        }
+      }
+    },
+    "Calibrated on your last %lld healthy days: no false alarms (at most 1 every %lld days, 95%%).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calibrato sui tuoi ultimi %1$lld giorni in salute: nessun falso allarme (al massimo 1 ogni %2$lld giorni, 95%%)."
+          }
+        }
+      }
+    },
+    "Even the strictest setting gives more than 1 false alarm every %lld days on your data.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anche con l'impostazione più severa, sui tuoi dati ci sono più di 1 falso allarme ogni %lld giorni."
+          }
+        }
+      }
+    },
+    "Whether it catches a real illness can't be calibrated on your data: that comes from published studies.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quanto bene riconosca una vera malattia non si può calibrare sui tuoi dati: dipende dagli studi pubblicati."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
