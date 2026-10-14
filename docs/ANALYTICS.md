@@ -976,3 +976,160 @@ Apple Health XML ──┘                                         │
 - **Cold-start honesty.** When a baseline isn't trustworthy yet, the recovery scorer returns `nil` rather than a fabricated number.
 - **Not a medical device.** None of this is diagnostic or medical advice. The illness early-warning is a wellness nudge from your own baselines, not a clinical screen.
 - **Not affiliated with WHOOP.** NOOP interoperates with hardware and exports you already own, entirely on-device. Protocol decoding builds on community reverse-engineering of the WHOOP 4.0 (project *my-whoop*, `johnmiddleton12/my-whoop`) and WHOOP 5.0 (project *goose*, `b-nnett/goose`) protocols.
+
+---
+
+## Irregular rhythm screening
+
+Source: `IrregularRhythm.swift` (`IrregularRhythm.screen`), data in `Repository+IrregularRhythm.swift`, the nightly
+Explore series in `IntelligenceEngine+IrregularRhythm.swift`, shown by `HeartRhythmCard` in the Health tab and on
+the Heart-rate accuracy screen. It screens the strap's beat-to-beat (R-R) intervals during sleep for a rhythm that
+is **irregularly irregular**, the way atrial fibrillation (AF) is, and reports how much of the night it covered.
+It is a **screen, never a diagnosis**: only an ECG can confirm AF, NOOP is not a medical device, the wording says
+"irregular rhythm" and "a pattern like atrial fibrillation", and a night without enough clean beats says so
+instead of showing a reassuring zero.
+
+Wrist-sensor studies showed this kind of screen is worth doing: Apple Heart Study (Perez et al., N Engl J Med
+2019;381:1909–1917: 84 % of notifications concordant with AF on a simultaneous ECG patch, positive predictive
+value 0.84, 95 % CI 0.76–0.92), Huawei Heart Study (Guo et al., J Am Coll Cardiol 2019;74:2365–2375: PPV 91.6 %)
+and the Fitbit Heart Study (Lubitz et al., Circulation 2022;146:1415–1424: overlapping 5-minute tachograms, a
+notification only after 11 consecutive irregular ones, about 30 minutes, PPV 98.2 %, 95 % CI 95.5–99.5).
+Accuracy still differs between devices and inconclusive tracings are common (Mannhart et al., JACC Clin
+Electrophysiol 2023;9:232–242, BASEL Wearable Study: sensitivity 58–85 %, specificity 69–79 %, 17–26 %
+inconclusive).
+
+### Segments and quality gates
+
+A false alarm is worse than a miss here, and beats from an optical sensor are noisier than an ECG's, so:
+
+- **Physiologic R-R only**: 300–2000 ms (the range `HRVAnalyzer` accepts). An interval outside it ends the stretch
+  of beats it sits in. A gap of more than 5 s between consecutive beats' timestamps ends a stretch too.
+- **A segment is 128 consecutive beats of one stretch** (Dash et al. 2009), cut from the start of the stretch
+  without overlap; fewer than 128 left over are not analysed.
+- **Coverage**: the R-R inside a segment must add up to 90–110 % of the wall-clock time between its first and last
+  beat. Dropped beats or a hole in the recording break that, so the intervals would no longer be neighbours: the
+  segment is rejected. (Timestamps are whole seconds and several beats can share one, so the ratio is only exact
+  to about a second per segment.)
+
+### Features and the rule
+
+Three features come from Dash S, Chon KH, Lu S, Raeder EA. Automatic real time detection of atrial fibrillation.
+Ann Biomed Eng 2009;37(9):1701–1709, and a fourth is NOOP's own addition:
+
+1. **RMSSD / mean R-R**, after the 8 longest and 8 shortest intervals of the segment are removed (as in the paper).
+2. **Shannon entropy** of the same trimmed intervals on a 16-bin histogram, normalised to 0–1.
+3. **Turning-point ratio**: the share of interior beats that are a local maximum or minimum of the interval series.
+   A random series has 2(N−2)/3 turning points with variance (16N−29)/90 (Kendall), so it is expressed as a
+   z-score. A smooth series (respiratory sinus arrhythmia) has fewer turning points than chance, a strict
+   long-short alternation (bigeminy) has more, AF looks like chance.
+4. **No repeating pattern** (not in the paper): the largest absolute autocorrelation of the mean-removed intervals
+   at lags 2 to 10 beats. An irregularly irregular rhythm has none; breathing does.
+
+A segment is **irregular only when all four hold**: RMSSD/mean ≥ 0.10, entropy ≥ 0.87, turning-point z-score between
+−5.0 and +6.0 (for 128 beats: 61 to 112 turning points out of 126, a TPR of 0.48–0.89) and largest |autocorrelation|
+≤ 0.35. The AND is what keeps regular patterns out: bigeminy and trigeminy (regular patterns of ectopic beats) have
+a high RMSSD but only a few distinct interval values, hence a low entropy and a turning-point count far from random;
+a fit sleeper's respiratory sinus arrhythmia has a high RMSSD but a smooth, wave-like series.
+
+**Why the fourth check.** At about three beats per breath (a heart rate of 50 and 15 breaths a minute) a smooth
+respiratory wave has as many turning points as a random series, and a strong one has a high RMSSD and a high
+entropy, so the three paper features alone call it irregular for as long as it lasts, night after night. A
+synthetic fit sleeper (heart rate 43–60, a swing of ±60–120 ms, breathing 11–19 a minute with a wandering rate and
+amplitude; no recording of a real fit sleeper's night was available here) was called irregular in about 7 % of segments
+by the three features alone (up to 43 % at heart rate 50 and ±120 ms), and in 0.1 % with the fourth check:
+
+| Mean R-R | Respiratory swing | RMSSD (median) | Three paper features | With the fourth check |
+|---|---|---|---|---|
+| 1000 ms | ±90 ms | 93 ms | 2.4 % | 0.0 % |
+| 1000 ms | ±120 ms | 123 ms | 21.5 % | 0.0 % |
+| 1000 ms | ±150 ms | 154 ms | 30.8 % | 0.0 % |
+| 1200 ms | ±90 ms | 106 ms | 0.2 % | 0.0 % |
+| 1200 ms | ±120 ms | 140 ms | 43.4 % | 0.0 % |
+| 1200 ms | ±150 ms | 176 ms | 89.6 % | 0.2 % |
+| 1400 ms | ±90 ms | 116 ms | 0.0 % | 0.0 % |
+| 1400 ms | ±120 ms | 152 ms | 13.4 % | 1.0 % |
+| 1400 ms | ±150 ms | 191 ms | 78.1 % | 4.1 % |
+
+It also helped on real ECG recordings (below): fewer false alarms in the Arrhythmia database's ectopic-beat
+segments, and room to relax the entropy and turning-point bounds, so it costs no sensitivity there.
+
+### How the thresholds were chosen
+
+Not guessed. PhysioNet ECG databases (Goldberger AL et al., Circulation 2000;101:e215–e220) were cut into 128-beat
+segments with the gates above, R-R rounded to whole milliseconds and timestamps to whole seconds as the strap
+delivers them, and labelled by the rhythm that covers most of the segment's beats. A grid over the four thresholds
+picked the best **sensitivity** (AF segments of the MIT-BIH Atrial Fibrillation Database called irregular) that
+keeps **every** non-AF set at **98.9 % specificity or better** (the AF database's "(N" and "(J" segments, the
+MIT-BIH Normal Sinus Rhythm Database, and the young and the elderly volunteers of the Fantasia database) and the
+synthetic fit sleeper at 98 % or better. (A 98.5 % target would give 91.9 % sensitivity but leave 0.01 point of
+margin on the AF database.) The MIT-BIH Arrhythmia Database was used only to check, not to choose. The numbers below come from running the Swift engine
+itself on the databases (25 195 segments; the Python twin used for the sweep agrees on every segment's features
+and call).
+
+| Database | What | Result (95 % Wilson interval) |
+|---|---|---|
+| MIT-BIH Atrial Fibrillation (Moody GB, Mark RG, Comput Cardiol 1983;10:227–230), 25 records, beats from the automatic detector | AF segments | **sensitivity 90.0 %** (3441/3824; 89.0–90.9) |
+| same | non-AF segments | **specificity 98.9 %** (5059/5115; 98.6–99.2) |
+| MIT-BIH Normal Sinus Rhythm, 18 healthy adults, 24 h | all segments | specificity 99.7 % (13158/13194) |
+| Fantasia (Iyengar N et al., Am J Physiol 1996;271:R1078–R1084), 2 h supine at rest | young 21–34 y | specificity 99.6 % (1133/1138) |
+| same | elderly 68–85 y | specificity 99.9 % (1048/1049) |
+| MIT-BIH Arrhythmia (Moody GB, Mark RG, IEEE Eng Med Biol Mag 2001;20(3):45–50), 30 min per record, many ectopic beats; check only | AF segments | sensitivity 92.4 % (73/79; 84.4–96.5) |
+| same | non-AF segments | specificity 98.3 % (687/699); 99.8 % (490/491) counting only segments of a single rhythm |
+
+For comparison Dash et al. reported 94.4 % / 95.1 % (sensitivity / specificity) on the AF database and
+90.2 % / 91.2 % on the Arrhythmia database. None of the 25 Arrhythmia-database segments of bigeminy, trigeminy and
+similar regular ectopic or tachycardic rhythms was called irregular. Atrial flutter, which this screen is not meant
+for: 0 of 88 segments flagged in the AF database, 5 of 9 in the Arrhythmia database.
+
+Choosing and testing on the same data overstates performance. Choosing the thresholds on half of the records and
+testing on the other half (40 folds) gave sensitivity 82.5 % ± 9.9 and specificity 98.1 % ± 1.7 (AF database),
+99.6 % (normal sinus rhythm), 99.4 % (young Fantasia) and 99.9 % (elderly Fantasia): expect the in-sample numbers
+to be a little optimistic.
+
+**Frequent ectopic beats can still cause irregular segments** (premature atrial or ventricular beats in a few
+records of the Arrhythmia database), which is why a single irregular segment is never a verdict.
+
+### Episodes and the nightly result
+
+Irregular segments that follow one another with no regular segment between them form an **episode** when together
+they span **30 minutes or more** (the Fitbit Heart Study's persistence idea). A rejected, low-quality segment
+neither breaks nor extends an episode, but an episode needs at least 80 % of its span analysed; a run that is
+mostly holes is split at its biggest hole and each half is judged alone. Each sleep window is analysed on its own
+(an episode never bridges two sleeps). At this level, running the engine over the databases, it found **no
+30-minute episode in 374 h of normal sinus rhythm, 78 h of Fantasia, 22 h of Arrhythmia-database recordings, or in
+the non-AF stretches of the AF database**, and **18 of the 20 AF stretches of 45 minutes or more** overlapped one.
+
+A night gives: analysed minutes, irregular minutes, **burden %** (irregular / analysed), longest episode, episode
+count and a verdict: `notEnoughData` (under 60 analysed minutes: no verdict), `regular`, `someIrregularSegments`
+(irregular segments but no episode; usually ectopic beats, movement or noise) or `irregularEpisode`.
+
+### In the app
+
+- **Night**: the longest sleep session of each wake day, 2 hours or more (a nap is not a night), over the last 14
+  days. The beats inside the session's window are read from the store and screened off the main actor.
+- **Explore / Compare**: `irregular_rhythm_pct` ("Irregular rhythm (night)", %, Heart), the night's burden, stored
+  under the "-noop" source. A night under 60 analysed minutes has no value (not a zero). The last two nights are
+  re-screened on every scoring pass; an older night only when it has no stored value.
+- **Card**: last night's verdict, clean beats analysed, irregular share, longest irregular stretch, and a 14-night
+  strip (a bar per night with an irregular share, a dot for a regular night, an open circle for a night without
+  enough clean beats; nights with an episode carry an icon and a legend line, not colour alone). On
+  `irregularEpisode` it says to talk to a doctor if it happens again or with palpitations, breathlessness or
+  dizziness, and to call emergency services with severe symptoms such as chest pain or fainting. On
+  `notEnoughData` it says why (strap not worn at night, too many noisy beats) and what to change (snug fit, worn
+  overnight). No notification is sent.
+
+### Limits
+
+- **Not measured on this strap.** The thresholds come from ECG R-R intervals. Optical beat timing is noisier,
+  movement and a loose fit can mimic irregularity, and a missed beat looks like an irregular interval. The
+  coverage gate and the 30-minute rule are the guard rails, not a guarantee.
+- **The fit-sleeper check is a model.** No recording of a very fit sleeper's night was available; the false-alarm
+  figures for respiratory sinus arrhythmia above come from a synthetic series, not from measured data.
+- **Frequent ectopic beats** (premature atrial or ventricular beats) can look like AF in R-R alone and cause false
+  alarms; brief episodes (under 30 minutes) are missed on purpose.
+- **Sleep only.** Resting beats are the cleanest; the awake day is not screened.
+- **Not a diagnosis.** Only an ECG can confirm atrial fibrillation. Informational only, not medical advice.
+
+The existing `RhythmScreener` (the Poincaré view) is separate and descriptive: it makes no screening call.
+
+Reproduce the threshold sweep and the numbers above with `Tools/irregular-rhythm-validation`.
