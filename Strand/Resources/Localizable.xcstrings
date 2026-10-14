@@ -137939,6 +137939,26 @@
           }
         }
       }
+    },
+    "Save WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva il WOD"
+          }
+        }
+      }
+    },
+    "Save %lld WODs": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva %lld WOD"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

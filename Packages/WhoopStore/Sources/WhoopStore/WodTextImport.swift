@@ -22,6 +22,11 @@ import Foundation
 //   A bare load with no keyword is read as the PRESCRIBED (RX) load — a WOD photo shows the
 //   prescription; the athlete's own load is the one tagged `me`/`io`/`mio`.
 //
+// A chat app shows the AI's reply as Markdown, and copying it from there loses what Markdown hides: the
+// single line breaks between "Data: …", "Tipo: …", "Nome: …" (one paragraph in Markdown, so they arrive
+// as ONE line) and the break before the "Note:" that follows the last movement. `normalized` puts those
+// breaks back and drops Markdown marks (code fences, bold, headings) before parsing.
+//
 // Kept pure (no GRDB, no UIKit) so it lives beside the model and is unit-tested on its own.
 
 public enum WodTextImport {
@@ -30,7 +35,8 @@ public enum WodTextImport {
     /// and any docs share one source of truth.
     public static let aiPrompt = """
     Sei un assistente che trascrive allenamenti (WOD) da una foto per l'app NOOP. Leggi la foto e \
-    restituisci SOLO testo nel formato qui sotto, senza commenti. Un blocco per allenamento; se ce ne \
+    restituisci SOLO testo nel formato qui sotto, senza commenti, tutto dentro UN unico blocco di \
+    codice (tra ```), così gli a capo restano quando lo copio. Un blocco per allenamento; se ce ne \
     sono più di uno, separali con una riga "---".
 
     Data: AAAA-MM-GG
@@ -50,13 +56,70 @@ public enum WodTextImport {
     - Usa sempre i kg. "rx" = peso PRESCRITTO dal WOD; "me" = peso che HO usato io (se non lo sai, vuoto).
     - "reps" = ripetizioni prescritte o schema; "done" = quelle davvero completate (utile per AMRAP o serie non finite).
     - Metti SEMPRE il Nome (inventane uno breve se manca). Ometti gli altri campi che non conosci.
+    - Una sola informazione per riga, come nel formato; ogni movimento su una riga che inizia con "-".
     - Non scrivere nulla fuori dal formato.
     """
 
     /// Parse pasted text into zero or more WODs, ready to save. `now` and `calendar` are injected so
     /// the parser is deterministic and testable (a block without a date is stamped `now`).
     public static func parse(_ text: String, now: Date = Date(), calendar: Calendar = .current) -> [WodLogRow] {
-        splitBlocks(text).compactMap { parseBlock($0, now: now, calendar: calendar) }
+        splitBlocks(normalized(text)).compactMap { parseBlock($0, now: now, calendar: calendar) }
+    }
+
+    // MARK: Clean-up of a copied chat reply
+
+    /// The labels of the format in `aiPrompt`, Italian and English. Only these get their line break back:
+    /// not every synonym `parseBlock` accepts, so "WOD:" or "Tempo:" inside a note stays where it is.
+    static let formatLabels = ["data", "date", "tipo", "type", "nome", "name", "formato", "format",
+                               "time cap", "rx", "risultato", "result", "rpe",
+                               "movimenti", "movements", "note", "notes"]
+
+    /// One of `formatLabels` with its colon, after a space, mid-line: where a lost line break was.
+    private static let labelBreak: NSRegularExpression? = {
+        let names = formatLabels.map { $0.replacingOccurrences(of: " ", with: "\\s*") }.joined(separator: "|")
+        return try? NSRegularExpression(pattern: "\\s+((?:\(names))\\s*:)", options: [.caseInsensitive])
+    }()
+
+    /// The paste with Markdown marks removed and the line breaks a Markdown view joined put back.
+    static func normalized(_ text: String) -> String {
+        var out: [String] = []
+        for raw in text.components(separatedBy: .newlines) {
+            let trimmed = raw.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("```") { continue }                     // a code fence around the reply
+            var line = raw.replacingOccurrences(of: "**", with: "").replacingOccurrences(of: "__", with: "")
+            if trimmed.hasPrefix("#") {                                   // a Markdown heading
+                line = String(trimmed.drop(while: { $0 == "#" })).trimmingCharacters(in: .whitespaces)
+            }
+            out.append(contentsOf: unflattened(line))
+        }
+        return out.joined(separator: "\n")
+    }
+
+    /// Split one line before each format label found mid-line. Nothing is split after a "Note:" (a note
+    /// is free text and may say "RX: 40"), and in a movement line only before a label other than "rx",
+    /// which is also a movement keyword ("rx 43").
+    static func unflattened(_ line: String) -> [String] {
+        guard let labelBreak else { return [line] }
+        if let (label, _) = splitLabel(line.trimmingCharacters(in: .whitespaces)),
+           label == "note" || label == "notes" { return [line] }
+        let isMovement = stripBullet(line.trimmingCharacters(in: .whitespaces)) != nil
+        let ns = line as NSString
+        var cuts: [Int] = []
+        for m in labelBreak.matches(in: line, range: NSRange(location: 0, length: ns.length)) {
+            let label = ns.substring(with: m.range(at: 1)).lowercased()
+            if isMovement && label.hasPrefix("rx") { continue }
+            cuts.append(m.range(at: 1).location)
+            if label.hasPrefix("note") { break }
+        }
+        guard !cuts.isEmpty else { return [line] }
+        var parts: [String] = []
+        var start = 0
+        for cut in cuts {
+            parts.append(ns.substring(with: NSRange(location: start, length: cut - start)))
+            start = cut
+        }
+        parts.append(ns.substring(from: start))
+        return parts.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
 
     // MARK: Blocks
@@ -119,8 +182,10 @@ public enum WodTextImport {
                 continue
             }
 
-            // Label: value
-            if let (label, value) = splitLabel(line) {
+            // Label: value. Inside a note only a label of the format ends it: "WOD: 8 round" or
+            // "Skill PC: 2x55%" there is note text, not a new title.
+            if let (label, value) = splitLabel(line),
+               !(collectingNotes && !formatLabels.contains(label)) {
                 collectingNotes = false
                 inMovements = false
                 switch label {
@@ -160,7 +225,7 @@ public enum WodTextImport {
 
             // A non-label, non-bullet line. Inside a Movements section, read it as a movement (so an
             // AI that drops the bullets still works); otherwise it's a note, or the bare title.
-            if inMovements, let m = parseMovement(line) {
+            if inMovements, let m = parseMovement(stripNumbering(line)) {
                 movements.append(m)
             } else if collectingNotes {
                 notesParts.append(line)
@@ -241,14 +306,18 @@ public enum WodTextImport {
             rxLoad = sep.value
         }
 
+        var ladders: [String] = []
+
         for seg in segments.dropFirst() {
             let lower = seg.lowercased()
             if lower.hasPrefix("rx") || lower.hasPrefix("prescr") {
-                rxLoad = firstDouble(seg) ?? rxLoad
+                if let l = loadLadder(seg) { rxLoad = l.top; ladders.append("RX \(l.text) kg") }
+                else { rxLoad = firstDouble(seg) ?? rxLoad }
             } else if lower.hasPrefix("done") || lower.hasPrefix("fatte") || lower.hasPrefix("completat") {
                 repsDone = firstDouble(seg).map { Int($0) } ?? repsDone
             } else if lower.hasPrefix("me") || lower.hasPrefix("io") || lower.hasPrefix("mio") || lower.hasPrefix("mine") {
-                myLoad = firstDouble(seg) ?? myLoad
+                if let l = loadLadder(seg) { myLoad = l.top; ladders.append("\(l.text) kg") }
+                else { myLoad = firstDouble(seg) ?? myLoad }
             } else if lower.hasPrefix("reps") || lower.hasPrefix("rep") || lower.hasPrefix("ripet") || lower.hasPrefix("schema") || lower.hasPrefix("scheme") {
                 let (r, s) = parseReps(stripLeadingWord(seg))
                 reps = r; scheme = s
@@ -264,7 +333,31 @@ public enum WodTextImport {
         name = name.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return nil }
         return WodMovement(name: name, reps: reps, scheme: scheme, repsDone: repsDone,
-                           weightKg: myLoad, rxWeightKg: rxLoad)
+                           weightKg: myLoad, rxWeightKg: rxLoad,
+                           notes: ladders.isEmpty ? nil : ladders.joined(separator: " · "))
+    }
+
+    /// A ladder of loads in a `rx`/`me` segment, one per set or round ("me 35-45-55"): its top load, the
+    /// one a lift log keeps as the weight, and the ladder as written, kept in the movement's notes. nil
+    /// for a single load.
+    static func loadLadder(_ seg: String) -> (top: Double, text: String)? {
+        let value = stripLeadingWord(seg).lowercased()
+            .replacingOccurrences(of: "kg", with: "").trimmingCharacters(in: .whitespaces)
+        let steps = value.components(separatedBy: "-").map { $0.trimmingCharacters(in: .whitespaces) }
+        guard steps.count >= 2 else { return nil }
+        let loads = steps.compactMap { Double($0.replacingOccurrences(of: ",", with: ".")) }
+        guard loads.count == steps.count, let top = loads.max() else { return nil }
+        return (top, steps.joined(separator: "-"))
+    }
+
+    /// A numbered list item ("1. Thruster", "2) Pull-up") without its number.
+    static func stripNumbering(_ line: String) -> String {
+        let digits = line.prefix(while: \.isNumber)
+        guard !digits.isEmpty, digits.count <= 2 else { return line }
+        let rest = line.dropFirst(digits.count)
+        guard let mark = rest.first, mark == "." || mark == ")",
+              rest.dropFirst().first?.isWhitespace == true else { return line }
+        return String(rest.dropFirst()).trimmingCharacters(in: .whitespaces)
     }
 
     /// Split a "name … trailing-load-with-unit" string into (name, load), e.g. "Back Squat 100 kg" →
