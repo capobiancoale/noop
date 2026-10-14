@@ -110,23 +110,96 @@ On crossing **into zone 5** it buzzes three times ("ease off"); on dropping back
 
 ### 4. Illness / strain early-warning (`evaluateIllness`)
 
-This is the live, app-side version of the baseline-comparison idea. It recomputes whenever the daily history changes (`repo.$days`). It compares the **last ~2 days** against a **~28-day baseline ending 3 days ago** (so the recent window doesn't contaminate its own baseline):
+The live heads-up is the confounder-suppressed `IllnessSignalEngine` (StrandAnalytics; the Android twin
+`IllnessSignalEngine.kt` mirrors its constants). `AppModel.evaluateIllness` re-runs it whenever the daily history
+changes (`repo.$days`); it needs `behavior.illnessWatch` on and at least 14 days of history, and everything stays
+on-device. Approximate and informational: it never names a condition and is never a diagnosis.
+
+**Window.** `IllnessSignalEngine.inputs(history:endingAt:)` is the single place the window is built (the live alert
+and the calibration replay below both call it, so they cannot disagree). It uses only days up to the one being
+scored: the **last 2 entries** are the recent window and the baseline is the **~28 entries ending 3 entries earlier**
+(so the recent window doesn't contaminate its own baseline):
 
 ```swift
-let recent = Array(days.suffix(2))
-let base   = Array(days.suffix(31).dropLast(3))   // ~28 days ending 3 days ago
+let recent = Array(history.suffix(2))
+let base   = Array(history.suffix(31).dropLast(3))   // ~28 days ending 3 days ago
 ```
 
-It then flags anomalies against simple, explainable thresholds using `DailyMetric` fields:
+**Signals.** Each signal is z-scored against the personal baseline (`Baselines.foldHistory` + `Baselines.deviation`,
+z = (value − baseline) / (1.253 × spread)) and oriented illness-ward: resting HR, respiration and skin temperature
+pass their z, HRV passes the **negated** z. Skin temperature is already a stored deviation (°C), so it is z-scored
+against a zero-centred 0.3 °C spread. A signal **fires** at z ≥ 2 and adds min(40, 22 × (z − 2)) to the composite
+score; the composite is the sum, clamped to 0–100. The pattern (resting HR ↑, HRV ↓, respiration ↑, skin
+temperature ↑ moving together before symptoms) is the published multi-parameter signature; NOOP re-derives it
+against the user's own baseline, never a population cut-off.
 
-| Signal | Field(s) | Anomaly condition |
-|---|---|---|
-| Resting HR ↑ | `restingHr` | recent mean ≥ baseline mean **+ 5 bpm** |
-| HRV ↓ | `avgHrv` | recent mean ≤ baseline mean **× 0.80** (−20%) |
-| Skin temp ↑ | `skinTempDevC` | recent mean deviation **≥ +0.6 °C** |
-| Respiration ↑ | `respRateBpm` | recent mean ≥ baseline mean **+ 1.5 bpm** |
+| Gate | Value |
+|---|---|
+| Corroboration | at least **2** signals fire (one noisy night never raises) |
+| Mild | score ≥ 25: detail view only, no banner |
+| Raise | score ≥ **50**, or the user's own calibrated threshold when that is higher (see below): banner and one notification per day |
+| Baseline | resting-HR or HRV baseline trusted (≥ 14 valid nights), else the engine stays silent |
+| Already unwell | the user logged feeling unwell: a gentle "rest up", whatever the score |
+| Confounder | score × 0.45 and the level drops to *suppressed* ("probably not illness") |
 
-A banner appears only when **two or more** anomalies fire together — the classic early-illness signature is *RHR up + HRV down + skin-temp up*. Requires `behavior.illnessWatch` on and at least 14 days of history. On-device only; the message is a plain-English summary like *"Your body looks strained — resting HR +6 bpm, HRV −22%. Consider taking it easy."*
+**Confounders.** Same-day (last two days) journal answers: alcohol, a workout, and, for the last two nights, **a low
+glucose at night**. A confounder doesn't hide the signals; it adds a named reason ("Explained by: alcohol") and
+dampens the score.
+
+*Night low.* Nocturnal hypoglycaemia activates the sympatho-adrenal system (neurogenic symptoms such as sweating
+and palpitations; Cryer PE, N Engl J Med 2013;369:362–372; Seaquist ER et al., Diabetes Care 2013;36:1384–1395)
+and changes the heart's autonomic control while the strap is recording the night's heart rate and HRV. In adults
+with type 1 diabetes recorded with a CGM and an ECG, spontaneous nocturnal lows lowered the low-frequency power of
+HRV, read as sympathetic activation (Koivikko ML et al., Diabetes Care 2012;35:1585–1590), raised the heart rate
+from 65 to 85 bpm in a small series (Koivikko ML et al., Acta Diabetol 2017;54:251–256), and produced more
+bradycardia and a longer QTc (Novodvorsky P et al., Diabetes Care 2017;40:655–662). The direction of the heart-rate
+change is therefore not the same in every study; what is consistent is that the night's heart-rate and HRV readings
+are perturbed by the low, so illness is not the only, or the plainest, explanation for a deviation. A night counts as
+having a low when the Apple Health metric `glucose_overnight_min` (the lowest CGM reading between 00:00 and 06:00
+local, `DiabetesMetrics`) is **below 70 mg/dL**, level 1 hypoglycaemia (Battelino T et al., Diabetes Care
+2019;42:1593–1603; Battelino T et al., Lancet Diabetes Endocrinol 2023;11:42–57). No glucose data means no flag and
+the behaviour is exactly as before. Sweating is a classic part of that response (Seaquist 2013 lists it among the
+autonomic symptoms), but no study was found that measures the skin-temperature change in a spontaneous night low, so
+no direction is claimed for it.
+
+**Wording.** The engine's own English `copy` is never shown. The card, the banner and the notification build one
+sentence in the app (`IllnessCopy`) from the level, the fired signals and the suppression reasons, so it follows
+the UI language.
+
+#### Personal false-alarm calibration (`IllnessCalibration`)
+
+What can be calibrated on one person's data is the **false-alarm rate** (the specificity); the **sensitivity** to a
+real illness cannot be: a person is ill one to three times a year, far too few events to estimate how often a
+detector catches one. Every healthy day, on the other hand, is a data point on how often it would have cried wolf.
+So NOOP fixes the false-alarm rate on the user's own history and keeps the detector: a Neyman–Pearson style choice
+(Neyman J, Pearson ES, Philos Trans R Soc A 1933;231:289–337), and the same logic as Temple DS et al. (J Infect Dis
+2023;227:864–872), who set the alarm threshold so that no alarm fired on the 170 healthy baseline days of a wearable
+influenza-challenge study.
+
+1. **Replay** every past day that has the full 31-entry window behind it (day *d* uses only days ≤ *d*; no
+   look-ahead), with the same `inputs(history:endingAt:)` and `composite` the live alert runs.
+2. **Healthy days** are replayed days with a trusted baseline, at least 2 of the 4 signals present, no confounder on
+   the day or the one before it (alcohol, a workout, a night low: the confounders the live alert itself reads), and
+   not within ±7 calendar days of a day the user logged feeling unwell.
+3. An **alarm episode** is a run of consecutive calendar days that would each raise (≥ 2 firing signals and a score at
+   or above the threshold). Episodes are counted, not days.
+4. Choose the **smallest personal raise threshold T in [50, 100]** (1-point grid, **never below the shipped 50**)
+   whose episode rate on the healthy days is **at most 1 per 60 days**. If even T = 100 misses that target, 100 is
+   used and the achieved rate is reported as it is.
+5. Report the number of healthy days *N*, the episodes *k* at T, the empirical rate *k / N* and the **95 % one-sided
+   Clopper–Pearson upper bound** of the per-day alarm rate (Clopper CJ, Pearson ES, Biometrika 1934;26:404–413): the
+   *p* with P(X ≤ *k* | *N*, *p*) = 0.05, i.e. the 95th percentile of Beta(*k* + 1, *N* − *k*); for *k* = 0 that is
+   1 − 0.05^(1/*N*) ≈ 3 / *N* (170 healthy days and no episode: at most about 1 alarm every 57 days). Days are treated as independent trials,
+   which neighbouring days are not quite, so the bound is approximate.
+6. **Active only with at least 120 healthy replayable days.** Before that the shipped thresholds apply and the card
+   says how many days are still missing.
+
+The engine takes the result as `Context.personalRaiseThreshold`; the raise check uses
+`max(raiseThreshold, personalRaiseThreshold ?? raiseThreshold)`, so calibration can only make the alert stricter. The
+app recomputes it off the main actor when the history has grown by 30+ days or a month has passed, from the full
+journal (`repo.journalEntries()`) and the full `glucose_overnight_min` history, and persists it in UserDefaults with
+its date (never computed in `body`). The card states the limit in one line: whether it catches a real illness can't
+be calibrated on your data; that comes from published studies.
 
 ---
 

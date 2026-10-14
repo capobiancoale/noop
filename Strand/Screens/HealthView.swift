@@ -1292,7 +1292,8 @@ private struct SkinTempSection: View {
 
             // 1. Illness heads-up — only when the engine returned something worth surfacing.
             if let illness = model.illnessSignal, illness.level != .quiet {
-                HeadsUpCard(result: illness, distance: model.illnessDistance)
+                HeadsUpCard(result: illness, distance: model.illnessDistance,
+                            calibration: model.illnessCalibration)
             }
 
             // 2. Body clock — shows nil-state copy via the engine's own confidence handling.
