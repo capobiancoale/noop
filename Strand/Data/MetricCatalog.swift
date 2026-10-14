@@ -116,6 +116,10 @@ enum MetricCatalog {
           "square.and.pencil", 1, true),
         d("vitality", String(localized: "Vitality"), "Heart", "", "my-whoop", "sparkles", 0, true),
         d("body_age", String(localized: "Body Age"), "Heart", "yrs", "my-whoop", "figure.stand", 0, false),
+        // Share of the night's analysed beats that formed an irregular rhythm (a screen for a pattern like atrial
+        // fibrillation, StrandAnalytics.IrregularRhythm). Empty on a night without enough clean beats, never zero.
+        d("irregular_rhythm_pct", String(localized: "Irregular rhythm (night)"), "Heart", "%", "my-whoop",
+          "waveform.path.ecg", 1, false),
 
         // ── Charge (was Recovery)
         d("recovery", String(localized: "Charge"), "Charge", "%", "my-whoop", "heart.circle", 0, true,

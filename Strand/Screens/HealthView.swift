@@ -65,6 +65,9 @@ private struct HealthSectionsStack: View {
             // so the ~1Hz HR stream re-renders only this subtree — the static
             // vitals grid below does not re-render on each HR tick.
             HeartRateSection()
+            // Night heart rhythm: last night's beats screened for an irregular rhythm, and the last 14 nights.
+            // A card with its own loading, depending only on `repo`, so the live HR stream never re-renders it.
+            HeartRhythmCard()
             // Fitness Age (weekly, computed by IntelligenceEngine and read back from the
             // "fitness_age" metricSeries). Its own view depending only on `repo`/`profile`,
             // so the live HR stream never re-renders it.
