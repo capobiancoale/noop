@@ -102,6 +102,10 @@ public enum VO2maxEngine {
         case tooEasy
         /// Above 85% of heart-rate reserve: no longer a steady submaximal effort.
         case tooHard
+        /// The extrapolated VO2max falls outside `plausibleVO2max`: not a value a person can have, so the pace
+        /// (a distance or GPS error) or the heart rate behind it is wrong. A fast pace at a low share of the
+        /// reserve is the usual cause: the 1/%HRR extrapolation multiplies a small error several times over.
+        case implausible
     }
 
     /// A session that passed the gates, with the numbers that produced its VO2max.
@@ -119,6 +123,13 @@ public enum VO2maxEngine {
     public static let minDistanceM: Double = 1_000
     public static let minHRRFraction = 0.50
     public static let maxHRRFraction = 0.85
+    /// What a person's VO2max can be, mL/kg/min. The top is just under the highest values ever measured: elite
+    /// endurance athletes reach roughly 80–90 and the record is about 97 (Joyner & Coyle, J Physiol 2008;
+    /// Lundby & Robach, Physiology 2015). The bottom is above the ~14 mL/kg/min that marks severe impairment
+    /// in heart-failure assessment (Mancini et al., Circulation 1991), which nobody covering 1 km in 10 minutes
+    /// or more at 50–85% of heart-rate reserve has. A session estimate outside it is a measurement error, not
+    /// fitness, and is dropped rather than shown or averaged into the median.
+    public static let plausibleVO2max: ClosedRange<Double> = 15.0...90.0
     /// ACSM walking holds for 50–100 m/min (3–6 km/h); a little headroom for brisk walkers.
     public static let walkingSpeedKmh: ClosedRange<Double> = 3.0...6.5
     /// Continuous running: from 7 km/h (the walk–run transition is about 7.2 km/h; ACSM's running equation
@@ -143,6 +154,7 @@ public enum VO2maxEngine {
         guard f <= maxHRRFraction else { return .failure(.tooHard) }
         let vo2 = oxygenCost(s.gait, speedKmh: speed)
         guard let v = vo2max(vo2: vo2, hrrFraction: f) else { return .failure(.missingData) }
+        guard plausibleVO2max.contains(v) else { return .failure(.implausible) }
         return .success(SessionEstimate(session: s, restingHR: restingHR, maxHR: maxHR, vo2: vo2,
                                         hrrFraction: f, vo2max: v))
     }

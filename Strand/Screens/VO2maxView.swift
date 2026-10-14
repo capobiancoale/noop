@@ -487,6 +487,7 @@ struct VO2maxView: View {
         case .paceOutOfRange: return String(localized: "pace outside the range the equations cover")
         case .tooEasy: return String(localized: "too easy (under 50% of heart-rate reserve)")
         case .tooHard: return String(localized: "too hard to be steady (over 85% of heart-rate reserve)")
+        case .implausible: return String(localized: "result outside what a person can reach (15 to 90 mL/kg/min), so the distance or heart rate is probably off")
         }
     }
 

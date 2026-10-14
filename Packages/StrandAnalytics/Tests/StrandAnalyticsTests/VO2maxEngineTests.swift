@@ -73,6 +73,39 @@ final class VO2maxEngineTests: XCTestCase {
         XCTAssertNil(reason(run(km: 6, minutes: 30, hr: 169)), "85% HRR is in")
     }
 
+    func testImplausibleResultsAreRejected() {
+        func outcome(_ s: VO2maxEngine.Session) -> Result<VO2maxEngine.SessionEstimate, VO2maxEngine.Rejection> {
+            VO2maxEngine.evaluate(s, restingHR: 50, maxHR: 190)
+        }
+        // 4.7 km in 15 min is 18.8 km/h (VO2 66.2) at 50% of reserve (120 bpm): every gate passes, yet the
+        // extrapolation gives 3.5 + 62.67 / 0.5 = 128.8 mL/kg/min, which no human has. It must not be used.
+        if case .failure(let r) = outcome(run(km: 4.7, minutes: 15, hr: 120)) {
+            XCTAssertEqual(r, .implausible)
+        } else {
+            XCTFail("a 129 mL/kg/min estimate must be rejected")
+        }
+        // The same pace at 85% of reserve (169 bpm) reads 3.5 + 62.67 / 0.85 = 77.2: fast but possible, kept.
+        let fast = try? outcome(run(km: 4.7, minutes: 15, hr: 169)).get()
+        XCTAssertEqual(fast?.vo2max ?? 0, 77.225490, accuracy: 1e-5)
+        // A walk at 3 km/h for 20 min at 85% of reserve: 3.5 + 5 / 0.85 = 9.4, below any healthy adult.
+        if case .failure(let r) = outcome(run(km: 1.0, minutes: 20, hr: 169, gait: .walking)) {
+            XCTAssertEqual(r, .implausible)
+        } else {
+            XCTFail("a 9 mL/kg/min estimate must be rejected")
+        }
+        // The bounds themselves are in: 15 and 90 are plausible, a hair outside is not.
+        XCTAssertTrue(VO2maxEngine.plausibleVO2max.contains(15))
+        XCTAssertTrue(VO2maxEngine.plausibleVO2max.contains(90))
+        XCTAssertFalse(VO2maxEngine.plausibleVO2max.contains(14.9))
+        XCTAssertFalse(VO2maxEngine.plausibleVO2max.contains(90.1))
+        // The order of the gates is unchanged: a too-short session is still "too short", never "implausible".
+        if case .failure(let r) = outcome(run(km: 1.8, minutes: 9, hr: 120)) {
+            XCTAssertEqual(r, .tooShort)
+        } else {
+            XCTFail("a 9-minute session is too short")
+        }
+    }
+
     func testGaitFromSportName() {
         XCTAssertEqual(VO2maxEngine.gait(forSport: "Running"), .running)
         XCTAssertEqual(VO2maxEngine.gait(forSport: "Treadmill run"), .running)
