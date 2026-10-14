@@ -186,12 +186,15 @@ struct TrendsView: View {
     @ViewBuilder
     private func changeChip(_ pts: [TrendPoint], higherIsBetter: Bool?, fmt: @escaping (Double) -> String) -> some View {
         if let d = periodChange(pts), abs(d) > 0.0001 {
-            let sign = d >= 0 ? "+" : "−"
+            // A change that formats as zero carries no sign ("−0" read as a drop): "±" claims no direction.
+            let shown = fmt(abs(d))
+            let isZero = shown == fmt(0)
+            let sign = isZero ? "±" : (d >= 0 ? "+" : "−")
             let color: Color = {
-                guard let better = higherIsBetter else { return StrandPalette.textTertiary }
+                guard let better = higherIsBetter, !isZero else { return StrandPalette.textTertiary }
                 return (d > 0) == better ? StrandPalette.statusPositive : StrandPalette.metricRose
             }()
-            TrendChip(text: "\(sign)\(fmt(abs(d)))", color: color)
+            TrendChip(text: "\(sign)\(shown)", color: color)
         }
     }
 
@@ -509,9 +512,14 @@ struct TrendsView: View {
         let isWide = recovery.widened
         return VStack(alignment: .leading, spacing: NoopMetrics.space2) {
             HStack {
+                // The pills claim their width first; the trailing subtitle is the one that gives way
+                // (shrinks, then truncates), so no segment label is squeezed onto a second line.
                 SegmentedPillControl(Range.allCases, selection: $range) { $0.label }
-                Spacer()
+                    .layoutPriority(1)
+                Spacer(minLength: NoopMetrics.space2)
                 Text(rangeSubtitle).strandOverline()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
             Text(cap)
                 .font(StrandFont.footnote)

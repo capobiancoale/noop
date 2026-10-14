@@ -390,7 +390,10 @@ struct RootTabView: View {
                 }
             } label: {
                 HStack(spacing: 6) {
-                    Text(title).strandOverline()
+                    // `title` is also the persistence key (English, stable across languages), so it is looked
+                    // up in the catalog here rather than shown raw: a bare `Text(title)` takes a String and
+                    // never localizes, which left INSIGHTS / BODY / DATA / APP in English on an Italian UI.
+                    Text(LocalizedStringKey(title)).strandOverline()
                     Spacer(minLength: 8)
                     Image(systemName: "chevron.down")
                         .font(.system(size: 11, weight: .semibold))
@@ -401,7 +404,7 @@ struct RootTabView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text(title))
+            .accessibilityLabel(Text(LocalizedStringKey(title)))
             .accessibilityValue(Text(isOpen ? String(localized: "Expanded") : String(localized: "Collapsed")))
             .accessibilityHint(Text(isOpen ? String(localized: "Double tap to collapse") : String(localized: "Double tap to expand")))
 

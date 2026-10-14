@@ -398,16 +398,10 @@ struct TrendsReportPage: View {
         String(format: "%.1f", (x * 10).rounded() / 10)
     }
 
-    /// "Jun 15" from "2026-06-15", via a pure ISO parse (no Calendar/locale). Reuses the
-    /// public WeeklyDigestEngine parser — both engines emit identical "yyyy-MM-dd" keys.
+    /// "Jun 15" / "15 giu" from "2026-06-15": the month names and their order come from the user's locale
+    /// (`WeeklyDigestText.dayMonth`), not from a hand-built "month day" that reads backwards in Italian.
     private func prettyDate(_ ymd: String) -> String {
-        guard let (_, m, d) = WeeklyDigestEngine.parseYMD(ymd) else { return ymd }
-        let months = [String(localized: "Jan"), String(localized: "Feb"), String(localized: "Mar"),
-                      String(localized: "Apr"), String(localized: "May"), String(localized: "Jun"),
-                      String(localized: "Jul"), String(localized: "Aug"), String(localized: "Sep"),
-                      String(localized: "Oct"), String(localized: "Nov"), String(localized: "Dec")]
-        let name = (1...12).contains(m) ? months[m - 1] : "\(m)"
-        return "\(name) \(d)"
+        WeeklyDigestText.dayMonth(ymd)
     }
 }
 

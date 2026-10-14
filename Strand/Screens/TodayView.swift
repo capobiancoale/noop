@@ -670,7 +670,7 @@ struct TodayView: View {
         RecoveryScorer.skinTempRelative(deviationC: chargeBreakdownRow?.skinTempDevC)
     }
 
-    /// #205 (one-word readiness read kept on the hero: Push / Maintain / Rest). PURE mapping of the
+    /// #205 (one-word readiness read kept on the hero: Push / Maintain / Recover). PURE mapping of the
     /// existing `ReadinessEngine.Level` so the hero keeps a glanceable verdict even though the full
     /// Readiness card folds into the Charge breakdown sheet (S4). `insufficient` returns nil (the hero then
     /// shows no readiness word, matching the old card hiding itself). Mirror EXACTLY in Kotlin.
@@ -678,8 +678,10 @@ struct TodayView: View {
         switch level {
         case .primed:       return String(localized: "Push")
         case .balanced:     return String(localized: "Maintain")
-        case .strained:     return String(localized: "Rest")
-        case .rundown:      return String(localized: "Rest")
+        // "Recover", not "Rest": Rest is the sleep score's name and stays "Rest" in every language, so the
+        // verdict word has to be a different catalog key (the Liquid Today hero says "Recover" too).
+        case .strained:     return String(localized: "Recover")
+        case .rundown:      return String(localized: "Recover")
         case .insufficient: return nil
         }
     }
