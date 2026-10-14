@@ -177,4 +177,36 @@ final class DailyVO2maxSeriesTests: XCTestCase {
         XCTAssertNil(FitnessAgeEngine.shiftDay("not-a-day", by: 1))
         XCTAssertNil(FitnessAgeEngine.shiftDay("2026-13-01", by: 1))
     }
+
+    // MARK: Dated waist measurements
+
+    func testANewWaistCountsFromItsDayAndLeavesThePastAlone() {
+        let rows = constantRows(20)
+        let days = rows.map(\.day)
+        let before = FitnessAgeEngine.dailyVO2maxSeries(days: rows, age: 40, sex: "male", waistCm: 90)
+        let waists = [FitnessAgeEngine.WaistMeasurement(day: days[0], cm: 90),
+                      FitnessAgeEngine.WaistMeasurement(day: days[15], cm: 86)]
+        let after = FitnessAgeEngine.dailyVO2maxSeries(days: rows, age: 40, sex: "male", waists: waists)
+        XCTAssertEqual(before.count, after.count)
+        for (b, a) in zip(before, after) {
+            if a.day < days[15] {
+                XCTAssertEqual(a.vo2max, b.vo2max, accuracy: 1e-9, "\(a.day) must keep the waist measured then")
+            } else {
+                XCTAssertEqual(a.vo2max - b.vo2max, 4 * FitnessAgeEngine.menWC, accuracy: 1e-9)
+            }
+        }
+    }
+
+    func testTheWaistForADay() {
+        let m = [FitnessAgeEngine.WaistMeasurement(day: "2026-03-10", cm: 90),
+                 FitnessAgeEngine.WaistMeasurement(day: "2026-04-01", cm: 87),
+                 FitnessAgeEngine.WaistMeasurement(day: "2026-04-01", cm: 85),
+                 FitnessAgeEngine.WaistMeasurement(day: "2026-05-01", cm: 0)]
+        XCTAssertEqual(FitnessAgeEngine.waistCm(on: "2026-01-01", from: m), 90)   // before the first: the first
+        XCTAssertEqual(FitnessAgeEngine.waistCm(on: "2026-03-31", from: m), 90)
+        XCTAssertEqual(FitnessAgeEngine.waistCm(on: "2026-04-01", from: m), 86)   // two on one day: their mean
+        XCTAssertEqual(FitnessAgeEngine.waistCm(on: "2026-06-01", from: m), 86)   // a zero is no measurement
+        XCTAssertNil(FitnessAgeEngine.waistCm(on: "2026-06-01", from: []))
+        XCTAssertTrue(FitnessAgeEngine.dailyVO2maxSeries(days: constantRows(10), age: 40, sex: "male", waists: []).isEmpty)
+    }
 }

@@ -1295,27 +1295,72 @@ final class IntelligenceEngine: ObservableObject {
     @Published private(set) var vo2maxEstimateUpdatedAt: Date?
     /// Bumped whenever a stored `vo2max_est` point changed, so the VO₂max screen reloads its chart.
     @Published private(set) var vo2maxEstimateRevision = 0
-    /// The profile inputs (age, sex, waist) the whole stored window was last written with: when one changes, the
-    /// next refresh rewrites all 120 days instead of just today and yesterday.
+    /// The inputs (age, sex, every dated waist) the whole stored window was last written with: when one changes,
+    /// the next refresh rewrites all 120 days instead of just today and yesterday. With dated waists that rewrite
+    /// leaves the days before a new measurement as they were.
     private var vo2maxFullPassKey: String?
-    private var vo2maxProfileKey: String { "\(profile.age)|\(profile.sex)|\(profile.waistCm)" }
+    private func vo2maxInputsKey(_ waists: [FitnessAgeEngine.WaistMeasurement]) -> String {
+        let w = waists.map { "\($0.day)=\($0.cm)" }.sorted().joined(separator: ",")
+        return "\(profile.age)|\(profile.sex)|\(w)"
+    }
+
+    /// UserDefaults key: the profile waist (cm) last filed as a dated measurement.
+    private static let filedWaistKey = "vo2max.filedWaistCm"
 
     /// Re-evaluate today's (and yesterday's) VO₂max estimate from the merged daily rows and the profile, and
-    /// store the points that changed. Cheap: no raw heart-rate reads, one metric-series read and a few upserts at
-    /// most. Driven by a 10-minute timer in AppModel; skipped while a scoring pass runs (that pass ends with the
+    /// store the points that changed. Cheap: no raw heart-rate reads, a few small reads and upserts at most.
+    /// Driven by a 10-minute timer in AppModel; skipped while a scoring pass runs (that pass ends with the
     /// full-window version of this) and before the dashboard cache is loaded.
     func refreshVO2maxEstimate() async {
         guard !computing, repo.loaded, let store = await repo.storeHandle() else { return }
-        let fullWindow = vo2maxFullPassKey != vo2maxProfileKey
-        await updateDailyVO2maxEstimate(store: store, lastDays: fullWindow ? Self.vo2maxSeriesDays : 2)
+        await updateDailyVO2maxEstimate(store: store, lastDays: 2)
     }
 
-    /// Compute the daily series for the last `lastDays` days from `repo.days` and the profile, upsert the points
-    /// that are new or changed and evict stored points in that window that no longer have one (mirrors how
-    /// `vo2max_exercise` evicts). Nothing is written without an age and a waist: a missing input must never erase
-    /// the history already stored.
-    private func updateDailyVO2maxEstimate(store: WhoopStore, lastDays: Int) async {
+    /// File the profile's waist as a dated Lab Book measurement when it was set since it was last filed: on the
+    /// day it was set, at local noon, so setting it again that day updates the same row instead of adding one.
+    /// From then on it counts like any other waist measurement (`waistMeasurements`).
+    private func fileProfileWaistIfNew(store: WhoopStore) async {
+        let cm = profile.waistCm
+        guard cm > 0, UserDefaults.standard.double(forKey: Self.filedWaistKey) != cm else { return }
+        let setAt = profile.waistSetAt ?? Date()
+        let day = Repository.dayString(setAt)
+        let noon = Calendar.current.date(bySettingHour: 12, minute: 0, second: 0, of: setAt) ?? setAt
+        let row = LabMarkerRow(id: "waist-profile-\(day)", deviceId: repo.deviceId, markerKey: "waist",
+                               category: "bodyMeasurement", day: day, takenAt: Int(noon.timeIntervalSince1970),
+                               value: cm, valueText: nil, unit: "cm", source: "profile",
+                               note: nil, referenceText: nil)
+        if (try? await store.upsertLabMarkers([row])) != nil {
+            UserDefaults.standard.set(cm, forKey: Self.filedWaistKey)
+        }
+    }
+
+    /// Every dated waist measurement: the Lab Book's (the profile's are filed there too) and Apple Health's
+    /// daily waist.
+    private func waistMeasurements(store: WhoopStore) async -> [FitnessAgeEngine.WaistMeasurement] {
+        let lab = (try? await store.labMarkers(deviceId: repo.deviceId, markerKey: "waist")) ?? []
+        let apple = (try? await store.metricSeries(deviceId: Repository.appleHealthSource, key: "waist",
+                                                   from: "0000-01-01", to: "9999-12-31")) ?? []
+        var out: [FitnessAgeEngine.WaistMeasurement] = []
+        for r in lab {
+            if let cm = r.value { out.append(FitnessAgeEngine.WaistMeasurement(day: r.day, cm: cm)) }
+        }
+        for p in apple { out.append(FitnessAgeEngine.WaistMeasurement(day: p.day, cm: p.value)) }
+        return out
+    }
+
+    /// Compute the daily series for the last `lastDays` days (all 120 when an input changed since the last full
+    /// pass) from `repo.days`, the profile and the dated waists, upsert the points that are new or changed and
+    /// evict stored points in that window that no longer have one (mirrors how `vo2max_exercise` evicts). Each
+    /// day uses the waist measured by then, so a new waist moves the estimate from its own day on and the past
+    /// stays as it was. Nothing is written without an age and a waist: a missing input must never erase the
+    /// history already stored.
+    private func updateDailyVO2maxEstimate(store: WhoopStore, lastDays requested: Int) async {
         guard profile.age > 0, profile.waistCm > 0 else { return }
+        await fileProfileWaistIfNew(store: store)
+        let waists = await waistMeasurements(store: store)
+        guard !waists.isEmpty else { return }
+        let inputsKey = vo2maxInputsKey(waists)
+        let lastDays = inputsKey == vo2maxFullPassKey ? requested : max(requested, Self.vo2maxSeriesDays)
         let key = Self.vo2maxEstimateKey
         let computedId = deviceId + "-noop"
         let now = Date()
@@ -1335,7 +1380,7 @@ final class IntelligenceEngine: ObservableObject {
         inputs.append((day: today, restingHR: nil, strain: nil))
         inputs.append((day: yesterday, restingHR: nil, strain: nil))
         let series = FitnessAgeEngine.dailyVO2maxSeries(days: inputs, age: Double(profile.age),
-                                                        sex: profile.sex, waistCm: profile.waistCm)
+                                                        sex: profile.sex, waists: waists)
         var fresh: [String: Double] = [:]
         for p in series where p.day >= windowFrom && p.day <= today { fresh[p.day] = p.vo2max }
 
@@ -1364,7 +1409,7 @@ final class IntelligenceEngine: ObservableObject {
                 changed = true
             }
         }
-        if lastDays >= Self.vo2maxSeriesDays { vo2maxFullPassKey = vo2maxProfileKey }
+        if lastDays >= Self.vo2maxSeriesDays { vo2maxFullPassKey = inputsKey }
         vo2maxEstimateUpdatedAt = Date()
         if changed { vo2maxEstimateRevision += 1 }
     }
