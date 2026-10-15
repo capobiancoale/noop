@@ -337,6 +337,8 @@ enum DemoScreens {
         case "hydration": return AnyView(HydrationView())
         case "scoringguide": return AnyView(ScoringGuideView(initialSection: .charge, onClose: {}))
         case "howitworks": return AnyView(HowNoopWorksView(onClose: {}))
+        case "hraccuracy": return AnyView(HeartRateAccuracyView())
+        case "wodimport": return AnyView(WodImportView(onSaved: {}))
         default:         return nil
         }
     }
