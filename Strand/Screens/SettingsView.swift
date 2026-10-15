@@ -150,6 +150,10 @@ struct SettingsView: View {
     /// and offers a manual coefficient override. See [StepsCalibrationSheet].
     @State private var showStepsCalibration = false
 
+    /// Heart-rate accuracy sheet (strap vs its own beats, a 30-second pulse count, your own baseline).
+    /// Reached from the Profile card, beside the max heart rate it uses.
+    @State private var showHeartRateAccuracy = false
+
     /// iOS environment-diagnostics sheet (device, iOS+build, Data Protection, background refresh,
     /// low-power, sideload + cert expiry). iOS-only; the macOS strap log already carries OS + version.
     @State private var showDiagnostics = false
@@ -228,6 +232,12 @@ struct SettingsView: View {
         .sheet(isPresented: $showStepsCalibration) {
             StepsCalibrationSheet(repo: model.repo, onClose: { showStepsCalibration = false })
                 .environmentObject(profile)
+        }
+        .sheet(isPresented: $showHeartRateAccuracy) {
+            HeartRateAccuracyView(onClose: { showHeartRateAccuracy = false })
+                .environmentObject(model.repo)
+                .environmentObject(profile)
+                .environmentObject(live)
         }
         #if os(iOS)
         .sheet(isPresented: $showDiagnostics) {
@@ -369,6 +379,25 @@ struct SettingsView: View {
                                              : StrandPalette.textTertiary)
                     }
                 }
+                rowDivider
+                // Heart-rate accuracy: right under the max heart rate it depends on. Opens the check that
+                // sets the strap against its own beat timing and against a pulse the person counts.
+                Button {
+                    showHeartRateAccuracy = true
+                } label: {
+                    FormRow(label: "Heart-rate accuracy") {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(StrandPalette.textTertiary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(LiquidPressStyle())
+                .accessibilityLabel("Heart-rate accuracy. Opens the accuracy check.")
+                Text("Checks your strap's heart rate against its own beat-to-beat timing and against a pulse you count yourself, and shows your own sleeping and waking numbers.")
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
                 rowDivider
                 // Step calibration (#139/#132): daily steps = @57 counter ticks ÷ this divisor.
                 // 1.0 = raw pass-through until the true 5/MG tick rate is known. The divisor goes

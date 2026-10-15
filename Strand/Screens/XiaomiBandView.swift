@@ -56,10 +56,10 @@ struct XiaomiBandView: View {
         return f
     }()
     private static let spanFormatter: DateFormatter = {
-        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "d MMM yyyy"; return f
+        let f = DateFormatter(); f.locale = Locale.autoupdatingCurrent; f.setLocalizedDateFormatFromTemplate("dMMMyyyy"); return f
     }()
     private static let asOfFormatter: DateFormatter = {
-        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "d MMM"; return f
+        let f = DateFormatter(); f.locale = Locale.autoupdatingCurrent; f.setLocalizedDateFormatFromTemplate("dMMM"); return f
     }()
     private static let groupedIntFmt: NumberFormatter = {
         let f = NumberFormatter(); f.numberStyle = .decimal; f.maximumFractionDigits = 0; return f
@@ -321,7 +321,7 @@ struct XiaomiBandView: View {
     }
 
     private static let nightFormatter: DateFormatter = {
-        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "d MMM"; return f
+        let f = DateFormatter(); f.locale = Locale.autoupdatingCurrent; f.setLocalizedDateFormatFromTemplate("dMMM"); return f
     }()
 
     // MARK: - Tiles

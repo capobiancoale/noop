@@ -340,8 +340,8 @@ struct WorkoutsView: View {
     }
 
     /// Common sports offered when re-labelling a detected bout (keeps the menu short and honest —
-    /// the user can fine-tune via Edit afterwards).
-    private static let relabelSports = ["Running", "Walking", "Cycling", "Strength Training",
+    /// the user can fine-tune via Edit afterwards). Today's workout block offers the same list.
+    static let relabelSports = ["Running", "Walking", "Cycling", "Strength Training",
                                         "Swimming", "Rowing", "Yoga", "HIIT",
                                         "CrossFit", "Hiking", "Tennis"]
 
@@ -384,14 +384,14 @@ struct WorkoutsView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 filterMenu(
-                    title: sportFilter ?? String(localized: "All sports"),
+                    title: sportFilter.map(WorkoutSource.localizedSport) ?? String(localized: "All sports"),
                     active: sportFilter != nil,
                     a11y: String(localized: "Filter by sport")
                 ) {
                     Button(String(localized: "All sports")) { sportFilter = nil }
                     Divider()
                     ForEach(availableSports, id: \.self) { s in
-                        Button(s) { sportFilter = s }
+                        Button(WorkoutSource.localizedSport(s)) { sportFilter = s }
                     }
                 }
                 filterMenu(
@@ -675,7 +675,7 @@ struct WorkoutsView: View {
                                  groups: [SportGroup], totalTimeH: Double) -> some View {
         let modal = modalSport(from: groups)
         VStack(alignment: .leading, spacing: 12) {
-            Text("Effort this \(effectiveRange.heroWord)")
+            Text(effectiveRange.heroTitle)
                 .font(StrandFont.headline)
                 .foregroundStyle(StrandPalette.textPrimary)
             HStack(spacing: NoopMetrics.gap) {
@@ -686,7 +686,7 @@ struct WorkoutsView: View {
                          tint: StrandPalette.effortBright)
             }
             Text(modal.count > 0
-                 ? "Mostly \(WorkoutSource.displaySport(modal.sport)) (\(effectiveRange.caption))."
+                 ? "Mostly \(WorkoutSource.localizedSport(modal.sport)) (\(effectiveRange.caption))."
                  : "Logged sessions across \(effectiveRange.caption).")
                 .font(StrandFont.footnote)
                 .foregroundStyle(StrandPalette.textTertiary)
@@ -783,7 +783,7 @@ struct WorkoutsView: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(StrandPalette.effortColor)
                         .frame(width: 22, alignment: .center)
-                    Text(WorkoutSource.displaySport(g.sport))
+                    Text(WorkoutSource.localizedSport(g.sport))
                         .font(StrandFont.headline)
                         .foregroundStyle(StrandPalette.textPrimary)
                         .lineLimit(1)
@@ -1143,7 +1143,7 @@ struct WorkoutsView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(StrandPalette.textSecondary)
                     .frame(width: 16)
-                Text(WorkoutSource.displaySport(row.sport))
+                Text(WorkoutSource.localizedSport(row.sport))
                     .font(StrandFont.subhead)
                     .foregroundStyle(StrandPalette.textPrimary)
                     .lineLimit(1)
@@ -1225,7 +1225,7 @@ struct WorkoutsView: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 8) {
-                        Text(WorkoutSource.displaySport(row.sport))
+                        Text(WorkoutSource.localizedSport(row.sport))
                             .font(StrandFont.subhead)
                             .foregroundStyle(StrandPalette.textPrimary)
                             .lineLimit(1)
@@ -1308,7 +1308,7 @@ struct WorkoutsView: View {
         let effort = row.strain != nil
             ? String(localized: "Effort \(Self.effortCellLabel(strain: row.strain, scale: effortScale))")
             : String(localized: "no Effort recorded")
-        let base = String(localized: "\(WorkoutSource.displaySport(row.sport)), \(compactRowSubtitle(row)), \(effort)")
+        let base = String(localized: "\(WorkoutSource.localizedSport(row.sport)), \(compactRowSubtitle(row)), \(effort)")
         guard selectionMode else { return base }
         if !selectable { return String(localized: "\(base). Imported, can't be merged.") }
         return isSelected ? String(localized: "\(base). Selected.") : String(localized: "\(base). Not selected.")
@@ -1465,14 +1465,15 @@ struct WorkoutsView: View {
             case .all:     return String(localized: "all time")
             }
         }
-        /// A short noun for the effort hero's "Effort this …" headline.
-        var heroWord: String {
+        /// The effort hero's headline, one whole phrase per range: a noun dropped into "Effort this %@"
+        /// can't agree in gender with "this" in Italian ("questa settimana", "questo mese", "quest'anno").
+        var heroTitle: String {
             switch self {
-            case .week:    return String(localized: "week")
-            case .month:   return String(localized: "month")
-            case .quarter: return String(localized: "quarter")
-            case .year:    return String(localized: "year")
-            case .all:     return String(localized: "log")
+            case .week:    return String(localized: "Effort this week")
+            case .month:   return String(localized: "Effort this month")
+            case .quarter: return String(localized: "Effort this quarter")
+            case .year:    return String(localized: "Effort this year")
+            case .all:     return String(localized: "Effort this log")
             }
         }
         /// Trailing-window length in days, or nil for "all".
@@ -1496,10 +1497,11 @@ struct WorkoutsView: View {
 
     // MARK: - Formatting
 
+    // Shown to the user: in their language and its order ("27 Sep 2026", "27 set 2026").
     private static let dateFmt: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "d MMM yyyy"
+        f.locale = Locale.autoupdatingCurrent
+        f.setLocalizedDateFormatFromTemplate("dMMMyyyy")
         return f
     }()
 

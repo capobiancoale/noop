@@ -12,7 +12,17 @@ final class ProfileStore: ObservableObject {
     @Published var heightCm: Double { didSet { d.set(heightCm, forKey: K.height) } }
     /// Optional waist circumference (cm); 0 = not set. Only used to ALSO show an estimated VO₂max
     /// alongside Fitness Age — the Fitness Age itself does not need it (the body term cancels).
-    @Published var waistCm: Double { didSet { d.set(waistCm, forKey: K.waist) } }
+    @Published var waistCm: Double {
+        didSet {
+            d.set(waistCm, forKey: K.waist)
+            d.set(Date().timeIntervalSince1970, forKey: K.waistSetAt)
+        }
+    }
+    /// When `waistCm` was last set (nil if before this was recorded). The daily VO₂max estimate files each new
+    /// waist as a dated measurement on this day, so it counts from then on and leaves the days before alone.
+    var waistSetAt: Date? {
+        (d.object(forKey: K.waistSetAt) as? Double).map { Date(timeIntervalSince1970: $0) }
+    }
     /// 0 = auto-estimate from age.
     @Published var hrMaxOverride: Int { didSet { d.set(hrMaxOverride, forKey: K.hrMax) } }
     /// Step-calibration divisor (#139/#132): counter ticks per real step for the @57 motion
@@ -56,6 +66,7 @@ final class ProfileStore: ObservableObject {
         static let height = "profile.heightCm", hrMax = "profile.hrMaxOverride"
         static let stepScale = "profile.stepTicksPerStep"
         static let waist = "profile.waistCm"
+        static let waistSetAt = "profile.waistSetAt"
         static let stepsCoeff = "profile.stepsCalibrationCoefficient"
         static let stepsSampleDays = "profile.stepsCalibrationSampleDays"
         static let stepsConfidence = "profile.stepsCalibrationConfidence"

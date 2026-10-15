@@ -407,9 +407,10 @@ struct BodyClockCard: View {
 
 // MARK: - 3. Heads-Up card (illness early-warning, confounder-suppressed)
 
-/// The confounder-suppressed illness "heads-up". Renders the engine's already-decided level +
-/// copy; the host only mounts it when the engine returns a non-quiet level. On-device estimate
-/// — not a diagnosis. Mirrors the existing amber HealthAlertBanner treatment.
+/// The confounder-suppressed illness "heads-up". Renders the engine's already-decided level as a
+/// sentence built in the app (`IllnessCopy`), so it follows the UI language; the engine's own English
+/// `copy` is never shown. The host only mounts it when the engine returns a non-quiet level. On-device
+/// estimate — not a diagnosis. Mirrors the existing amber HealthAlertBanner treatment.
 struct HeadsUpCard: View {
     /// The decision from `IllnessSignalEngine.evaluate(...)`, computed in the analytics pass.
     let result: IllnessSignalEngine.Result
@@ -417,6 +418,9 @@ struct HeadsUpCard: View {
     /// NOT gate this card (the engine's level already did); when the level is raised and a distance is
     /// present we append a subtle "Confidence" line so the user can gauge how strong the signal is.
     var distance: IllnessDistance.Result? = nil
+    /// The personal false-alarm calibration (nil = not computed yet). Shown as a status line: what the
+    /// alert's false-alarm rate is on the user's own healthy days, or how long until it is known.
+    var calibration: IllnessCalibration.Result? = nil
 
     var body: some View {
         NoopCard(padding: 14, tint: hue) {
@@ -432,7 +436,7 @@ struct HeadsUpCard: View {
                         Text(title)
                             .font(StrandFont.headline)
                             .foregroundStyle(StrandPalette.textPrimary)
-                        Text(result.copy)
+                        Text(sentence)
                             .font(StrandFont.subhead)
                             .foregroundStyle(StrandPalette.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -446,7 +450,8 @@ struct HeadsUpCard: View {
                 }
                 // ...and what was ruled out (the differentiating part vs a black-box warning).
                 if !result.suppressedBy.isEmpty {
-                    whyRow(label: "Explained by", values: result.suppressedBy, tint: StrandPalette.textTertiary)
+                    whyRow(label: "Explained by", values: result.suppressedBy.map(IllnessCopy.reason),
+                           tint: StrandPalette.textTertiary)
                 }
                 // Optional confidence read from the parallel Mahalanobis distance, only when the level is
                 // raised. Subtle by design: it augments, never gates (the engine already decided to raise).
@@ -455,11 +460,19 @@ struct HeadsUpCard: View {
                         .font(StrandFont.caption)
                         .foregroundStyle(StrandPalette.textTertiary)
                 }
+                // Not a diagnosis, plus the honest limit of the personal calibration.
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(IllnessCopy.disclaimer)
+                    IllnessCalibrationNote(calibration: calibration)
+                }
+                .font(StrandFont.caption)
+                .foregroundStyle(StrandPalette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title). \(result.copy)")
+        .accessibilityLabel("\(title). \(sentence)")
     }
 
     private func whyRow(label: LocalizedStringKey, values: [String], tint: Color) -> some View {
@@ -473,6 +486,9 @@ struct HeadsUpCard: View {
     }
 
     // MARK: derived presentation
+
+    /// The localized sentence for the engine's decision (level + fired signals + suppression reasons).
+    private var sentence: String { IllnessCopy.sentence(for: result) }
 
     /// The card hue follows the level: raised/already-unwell = amber warning (matches the
     /// shipped banner); suppressed/mild = a calmer neutral so it never scares.
@@ -513,6 +529,27 @@ struct HeadsUpCard: View {
         guard result.level == .raised,
               let d = distance else { return nil }
         return String(localized: "Confidence: \(IllnessConfidence.band(d.distance)) (distance \(IllnessConfidence.formatted(d.distance)))")
+    }
+}
+
+// MARK: - Personal false-alarm calibration note (Heads-Up card + Automations)
+
+/// The calibration status lines of the illness watch: the false-alarm rate on the user's own healthy
+/// days (or how many healthy days are still needed), and the honest limit — a person's own data can fix
+/// how often the alert cries wolf, not how well it catches a real illness; that comes from published
+/// studies. Plain caption lines; the host sets the colour.
+struct IllnessCalibrationNote: View {
+    let calibration: IllnessCalibration.Result?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(IllnessCopy.calibrationLine(calibration))
+            if let strictest = IllnessCopy.strictestLine(calibration) {
+                Text(strictest)
+            }
+            Text("Whether it catches a real illness can't be calibrated on your data: that comes from published studies.")
+        }
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -598,17 +635,23 @@ private func prettyDay(_ key: String) -> String {
                     note: "Shifting your clock 3.0 h earlier, about an hour a day. Light and sleep timing only."),
                 onOpenPlanner: {})
 
-            HeadsUpCard(result: IllnessSignalEngine.Result(
-                score: 64, level: .raised,
-                firedSignals: ["RHR +6", "HRV −22%", "skin temp +0.7 °C"],
-                suppressedBy: [], signalCount: 3,
-                copy: "Heads-up — your body looks strained. RHR +6, HRV −22%, skin temp +0.7 °C. With no alcohol or travel logged, consider taking it easy. On-device estimate — not a diagnosis."))
+            HeadsUpCard(
+                result: IllnessSignalEngine.Result(
+                    score: 64, level: .raised,
+                    firedSignals: ["RHR +6", "HRV −22%", "skin temp +0.7 °C"],
+                    suppressedBy: [], signalCount: 3, copy: ""),
+                calibration: IllnessCalibration.Result(
+                    active: true, raiseThreshold: 58, healthyDays: 212, missingDays: 0, episodes: 3,
+                    alarmRate: 3.0 / 212.0, alarmRateUpper95: 0.0333, targetMet: true))
 
-            HeadsUpCard(result: IllnessSignalEngine.Result(
-                score: 28, level: .suppressed,
-                firedSignals: ["RHR +5", "skin temp +0.6 °C"],
-                suppressedBy: ["alcohol"], signalCount: 2,
-                copy: "Some signals are up (RHR +5, skin temp +0.6 °C), but you logged alcohol — likely that, not illness. On-device estimate — not a diagnosis."))
+            HeadsUpCard(
+                result: IllnessSignalEngine.Result(
+                    score: 28, level: .suppressed,
+                    firedSignals: ["RHR +5", "skin temp +0.6 °C"],
+                    suppressedBy: ["alcohol", "a low glucose at night"], signalCount: 2, copy: ""),
+                calibration: IllnessCalibration.Result(
+                    active: false, raiseThreshold: 50, healthyDays: 64, missingDays: 56, episodes: 1,
+                    alarmRate: 1.0 / 64.0, alarmRateUpper95: 0.073, targetMet: true))
         }
         .padding(NoopMetrics.screenPadding)
     }

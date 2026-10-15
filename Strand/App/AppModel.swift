@@ -129,6 +129,13 @@ final class AppModel: ObservableObject {
     /// sole fire gate; this only surfaces a "how strong" confidence readout in the Heads-Up card when
     /// the engine has already raised. nil = not computed this pass. (Augment-only, Option A.)
     @Published var illnessDistance: IllnessDistance.Result?
+    /// The personal false-alarm calibration of the illness heads-up (healthy days replayed, the raise
+    /// threshold chosen from them, the false-alarm rate). nil until it has been computed. See
+    /// `IllnessCalibration`: it calibrates the false-alarm rate only, never the sensitivity to an illness.
+    @Published var illnessCalibration: IllnessCalibration.Result?
+    /// The calibration replay in flight, so overlapping `repo.$days` emissions share one run instead of
+    /// starting two (and none of them evaluates the alert on the default threshold meanwhile).
+    private var illnessCalibrationTask: Task<IllnessCalibration.Result, Never>?
     /// Cycle-phase awareness (only computed when the user has opted in; else nil). Awareness only.
     @Published var cyclePhase: CyclePhaseEngine.Result?
     /// The nightly fused-index curve (oldest→newest) feeding the cycle card's sparkline.
@@ -197,6 +204,8 @@ final class AppModel: ObservableObject {
     private var readSpineCancellable: AnyCancellable?
     /// Daily re-arm timer for the single-instant firmware smart alarm (see scheduleDailySmartAlarmRearm).
     private var smartAlarmRearmTimer: Timer?
+    /// The 10-minute VO₂max re-evaluation loop (see startVO2maxRefreshLoop).
+    private var vo2maxRefreshTask: Task<Void, Never>?
 
     init() {
         let live = LiveState()
@@ -220,6 +229,12 @@ final class AppModel: ObservableObject {
         // inert (one UserDefaults bool read) when the mode is off. `live` is captured strongly, as above.
         self.repo.workoutsLog = { [live] line in live.append(log: line, domain: .workouts) }
         self.gpsRecorder.workoutsLog = { [live] line in live.append(log: line, domain: .workouts) }
+        // A saved, edited or deleted WOD changes its day's Effort (its session-RPE load folds in where the
+        // heart rate under-reads it), so rescore the recent window like any other user edit.
+        let engine = self.intelligence
+        self.repo.onWodsChanged = { [weak engine] in
+            Task { @MainActor in await engine?.analyzeRecent() }
+        }
         // #961: give the read model the user's HRmax + sex so it can backfill a strap-native workout's
         // Effort on display when the stored value is nil (a live/manual session that ended with sparse HR).
         // Seed it now and keep it in step with any profile edit (objectWillChange fires just before a
@@ -392,6 +407,28 @@ final class AppModel: ObservableObject {
                 // freshly-scored history so the Health hub cards read a ready result.
                 await self.refreshV5Signals()
                 try? await Task.sleep(nanoseconds: 900_000_000_000)  // 15 min, matches the offload cadence
+            }
+        }
+        startVO2maxRefreshLoop()
+    }
+
+    /// How often the daily VO₂max estimate is re-evaluated (seconds). VO₂max itself changes over weeks, so
+    /// this re-reads the newest nights and training, it does not measure anything new every 10 minutes.
+    static let vo2maxRefreshIntervalS: UInt64 = 600
+
+    /// Re-evaluate today's VO₂max estimate every 10 minutes, whether or not the user trains. Cheap (no raw
+    /// heart-rate reads: `IntelligenceEngine.refreshVO2maxEstimate` works on the cached daily rows), so it runs
+    /// beside the 15-minute scoring tick rather than inside it. Skipped during an import and while the
+    /// dashboard cache or the store is not ready (the engine checks both); the scoring pass ends with the full
+    /// version of the same step, so a sync or an edit updates it at once.
+    private func startVO2maxRefreshLoop() {
+        vo2maxRefreshTask?.cancel()
+        vo2maxRefreshTask = Task(priority: .utility) { [weak self] in
+            try? await Task.sleep(nanoseconds: 30_000_000_000)   // let the launch refresh and first scoring land
+            while !Task.isCancelled {
+                guard let self else { return }
+                if !self.hasActiveImport { await self.intelligence.refreshVO2maxEstimate() }
+                try? await Task.sleep(nanoseconds: Self.vo2maxRefreshIntervalS * 1_000_000_000)
             }
         }
     }
@@ -1303,10 +1340,12 @@ final class AppModel: ObservableObject {
     /// Illness/strain early-warning (v5): the confounder-suppressed `IllnessSignalEngine`. For the last
     /// ~2 days vs a ~28-day personal baseline it z-scores resting HR, skin-temp deviation, HRV (negated)
     /// and respiration ORIENTED illness-ward, then the engine applies its minimum-corroboration gate,
-    /// composite score, and , the differentiating part , same-day journal confounder suppression
-    /// (alcohol / a hard-or-late workout / etc.) so a night out doesn't cry wolf. The journal context is
-    /// read asynchronously, so this kicks a Task; the published `illnessSignal` + the `healthAlert`
-    /// banner both come from the engine's single decision. On-device only, APPROXIMATE , not a diagnosis.
+    /// composite score, and , the differentiating part , same-day confounder suppression
+    /// (alcohol / a hard-or-late workout / a low glucose at night) so a night out or a night low doesn't
+    /// cry wolf. The journal and glucose context are read asynchronously, so this kicks a Task; the
+    /// published `illnessSignal` + the `healthAlert` banner both come from the engine's single decision.
+    /// The raise threshold is the user's own when the false-alarm calibration is active (never below the
+    /// shipped default). On-device only, APPROXIMATE , not a diagnosis.
     private func evaluateIllness(_ days: [DailyMetric]) {
         guard behavior.illnessWatch, days.count >= 14 else {
             healthAlert = nil; illnessSignal = nil; illnessDistance = nil; return
@@ -1315,101 +1354,112 @@ final class AppModel: ObservableObject {
             guard let self else { return }
             // Confounder tags from the recent journal (within the last ~2 days). Read once, off the
             // engine's hot path , the engine only needs presence flags, not the rows.
-            let recentDays = Set(days.suffix(2).map(\.day))
+            let recentDays = Set(days.suffix(IllnessSignalEngine.recentDayCount).map(\.day))
             let journal = await self.repo.journalEntries(days: 7)
             var ctxAlcohol = false, ctxHardWorkout = false, ctxAlreadyUnwell = false
             for e in journal where e.answeredYes && recentDays.contains(e.day) {
-                let q = e.question.lowercased()
-                if q.contains("alcohol") || q.contains("drink") { ctxAlcohol = true }
-                if q.contains("workout") || q.contains("train") || q.contains("exercise") { ctxHardWorkout = true }
-                if q.contains("sick") || q.contains("ill") || q.contains("unwell") { ctxAlreadyUnwell = true }
+                let tags = IllnessCalibration.tags(forQuestion: e.question)
+                if tags.alcohol { ctxAlcohol = true }
+                if tags.workout { ctxHardWorkout = true }
+                if tags.unwell { ctxAlreadyUnwell = true }
             }
+            // A low glucose at night: the lowest CGM reading 00:00-06:00 (Apple Health) under 70 mg/dL on
+            // either recent night. No glucose data , an empty set , leaves the behaviour unchanged.
+            let overnight = await self.repo.series(key: IllnessWatch.nightLowMetricKey,
+                                                   source: Repository.appleHealthSource, days: 7)
+            let ctxNightLow = !recentDays.isDisjoint(with: IllnessWatch.nightLowDays(overnight))
+            let calibration = await self.illnessCalibrationIfDue(days)
             self.applyIllnessSignal(days, alcohol: ctxAlcohol, hardOrLateWorkout: ctxHardWorkout,
-                                    alreadyUnwell: ctxAlreadyUnwell)
+                                    alreadyUnwell: ctxAlreadyUnwell, nocturnalLow: ctxNightLow,
+                                    personalRaiseThreshold: calibration.personalRaiseThreshold)
         }
     }
 
-    /// Run the `IllnessSignalEngine` from the day history + the journal-derived confounder context, then
-    /// publish the result + the legacy `healthAlert` banner string (kept for the existing banner surface).
+    /// The personal false-alarm calibration: the stored one while it is fresh, else a new replay of the
+    /// whole history. It is recomputed only when the history grew by 30+ days or a month passed
+    /// (`Snapshot.isStale`); the replay itself runs off the main actor and the result is persisted with
+    /// its date. Never called from `body`.
+    private func illnessCalibrationIfDue(_ days: [DailyMetric]) async -> IllnessCalibration.Result {
+        let today = Repository.dayString(Date())
+        if let stored = IllnessWatch.loadCalibration(),
+           !stored.isStale(historyDays: days.count, today: today) {
+            if illnessCalibration != stored.result { illnessCalibration = stored.result }
+            return stored.result
+        }
+        if let running = illnessCalibrationTask { return await running.value }
+        let task = Task { await self.computeIllnessCalibration(days, today: today) }
+        illnessCalibrationTask = task
+        let result = await task.value
+        illnessCalibrationTask = nil
+        return result
+    }
+
+    /// Replay the whole history for the calibration. Reads the full journal and the full overnight-glucose
+    /// history (for the confounder days), runs the pure replay on a background task, then publishes and
+    /// persists the result.
+    private func computeIllnessCalibration(_ days: [DailyMetric], today: String) async -> IllnessCalibration.Result {
+        let journal = await repo.journalEntries()
+        let overnight = await repo.series(key: IllnessWatch.nightLowMetricKey,
+                                          source: Repository.appleHealthSource, fullHistory: true)
+        let entries = journal.map { (day: $0.day, question: $0.question, answeredYes: $0.answeredYes) }
+        let confounders = IllnessCalibration.dayFlags(entries: entries,
+                                                      nightLowDays: IllnessWatch.nightLowDays(overnight))
+        let vitals = IllnessWatch.vitals(days)
+        let flags = confounders.flags
+        let unwell = confounders.unwellDays
+        let result = await Task.detached(priority: .utility) {
+            IllnessCalibration.calibrate(history: vitals, flags: flags, unwellDays: unwell)
+        }.value
+        IllnessWatch.saveCalibration(IllnessCalibration.Snapshot(
+            result: result, computedDay: today, historyDays: days.count))
+        illnessCalibration = result
+        return result
+    }
+
+    /// Run the `IllnessSignalEngine` from the day history + the journal/glucose-derived confounder
+    /// context, then publish the result + the `healthAlert` banner string (kept for the existing banner
+    /// surface). The z-building is `IllnessSignalEngine.inputs(history:endingAt:)`, the SAME code the
+    /// calibration replays, so the live alert and the calibration can never disagree.
     private func applyIllnessSignal(_ days: [DailyMetric], alcohol: Bool,
-                                    hardOrLateWorkout: Bool, alreadyUnwell: Bool) {
+                                    hardOrLateWorkout: Bool, alreadyUnwell: Bool,
+                                    nocturnalLow: Bool, personalRaiseThreshold: Double?) {
         let previous = healthAlert
-        let recent = Array(days.suffix(2))
-        let base = Array(days.suffix(31).dropLast(3))    // ~28 days ending 3 days ago
-        func mean(_ vals: [Double]) -> Double? { vals.isEmpty ? nil : vals.reduce(0, +) / Double(vals.count) }
-        func rm(_ kp: (DailyMetric) -> Double?) -> Double? { mean(recent.compactMap(kp)) }
-
-        // Build each signal's illness-ward z against the personal baseline (Baselines.deviation). The
-        // baseline is folded over the full pre-recent history; a trusted baseline (≥14 nights) is the
-        // engine's gate for actually raising. Skin-temp is already a stored DEVIATION (°C), so it's
-        // z-scored against a zero-centred personal spread; the others z-score the raw column.
-        func signal(_ kp: (DailyMetric) -> Double?, cfgKey: String, illnessUp: Bool) -> (IllnessSignalEngine.SignalReading, Bool)? {
-            guard let cfg = Baselines.metricCfg[cfgKey], let recentMean = rm(kp) else { return nil }
-            let state = Baselines.foldHistory(base.map(kp), cfg: cfg)
-            guard state.usable else { return (IllnessSignalEngine.SignalReading(zIllnessward: 0, present: false), false) }
-            let dev = Baselines.deviation(recentMean, state: state)
-            let z = illnessUp ? dev.z : -dev.z   // HRV drop is illness-ward → negate
-            return (IllnessSignalEngine.SignalReading(zIllnessward: z), state.trusted)
-        }
-
-        let rhr = signal({ $0.restingHr.map(Double.init) }, cfgKey: "resting_hr", illnessUp: true)
-        let hrv = signal({ $0.avgHrv }, cfgKey: "hrv", illnessUp: false)
-        let resp = signal({ $0.respRateBpm }, cfgKey: "resp", illnessUp: true)
-        // Skin-temp deviation: a stored °C delta. Build a small zero-centred state from its own recent
-        // spread so a +0.6 °C reads as a meaningful z without needing a separate baseline column.
-        var skin: (IllnessSignalEngine.SignalReading, Bool)? = nil
-        if let recentSkin = rm({ $0.skinTempDevC }) {
-            let z = recentSkin / 0.3     // ~0.3 °C ≈ one personal spread (matches skin_temp floorSpread)
-            skin = (IllnessSignalEngine.SignalReading(zIllnessward: z), true)
-        }
-
-        let inputs = IllnessSignalEngine.Inputs(
-            restingHR: rhr?.0, skinTemp: skin?.0, hrv: hrv?.0, respiration: resp?.0)
+        let vitals = IllnessWatch.vitals(days)
+        guard let window = IllnessSignalEngine.inputs(history: vitals, endingAt: vitals.count - 1) else { return }
+        let inputs = window.inputs
 
         // PARALLEL Mahalanobis distance on the SAME illness-ward z-vector (RHR up, HRV negated, skin-temp
         // up, respiration up). This NEVER gates the alert: the IllnessSignalEngine above remains the sole
         // fire gate. We compute it here only so the Heads-Up card can show a "how strong" confidence band
         // when the engine has already raised. nil where a reading is absent / not present (dropped from the
         // distance). correlation: nil = identity, validated to agree ~100% with the z-sum detector.
-        func zIfPresent(_ r: (IllnessSignalEngine.SignalReading, Bool)?) -> Double? {
-            guard let reading = r?.0, reading.present else { return nil }
+        func zIfPresent(_ reading: IllnessSignalEngine.SignalReading?) -> Double? {
+            guard let reading, reading.present else { return nil }
             return reading.zIllnessward
         }
         let distanceFeatures = IllnessDistance.FeatureVector(
-            restingHR: zIfPresent(rhr),
-            rmssd: zIfPresent(hrv),       // hrv.zIllnessward is already the NEGATED HRV z
-            skinTemp: zIfPresent(skin),
-            respiration: zIfPresent(resp))
+            restingHR: zIfPresent(inputs.restingHR),
+            rmssd: zIfPresent(inputs.hrv),       // hrv.zIllnessward is already the NEGATED HRV z
+            skinTemp: zIfPresent(inputs.skinTemp),
+            respiration: zIfPresent(inputs.respiration))
         illnessDistance = IllnessDistance.evaluate(features: distanceFeatures, correlation: nil)
 
-        // baselineTrusted: require the HRV/RHR baselines to be trusted before the engine may raise.
-        let trusted = (rhr?.1 ?? false) || (hrv?.1 ?? false)
         let context = IllnessSignalEngine.Context(
             alcohol: alcohol, hardOrLateWorkout: hardOrLateWorkout,
-            alreadyUnwell: alreadyUnwell, baselineTrusted: trusted)
+            alreadyUnwell: alreadyUnwell, baselineTrusted: window.baselineTrusted,
+            nocturnalLow: nocturnalLow, personalRaiseThreshold: personalRaiseThreshold)
 
-        // Caller-rendered phrases for the signals that fire (the engine surfaces only the firing ones).
-        var labels: [String: String] = [:]
-        if let r = rm({ $0.restingHr.map(Double.init) }), let b = mean(base.compactMap { $0.restingHr.map(Double.init) }), r > b {
-            labels["restingHR"] = "RHR +\(Int((r - b).rounded()))"
-        }
-        if let r = rm({ $0.avgHrv }), let b = mean(base.compactMap { $0.avgHrv }), b > 0, r < b {
-            labels["hrv"] = "HRV −\(Int(((1 - r / b) * 100).rounded()))%"
-        }
-        if let r = rm({ $0.skinTempDevC }), r > 0 {
-            labels["skinTemp"] = "skin temp +\(String(format: "%.1f", r)) °C"
-        }
-        if let r = rm({ $0.respRateBpm }), let b = mean(base.compactMap { $0.respRateBpm }), r > b {
-            labels["respiration"] = "respiration up"
-        }
+        // Caller-rendered, localized phrases for the signals that fire (the engine surfaces only those).
+        let labels = IllnessCopy.firedLabels(from: window)
 
         let result = IllnessSignalEngine.evaluate(inputs, context: context, firedLabels: labels)
         illnessSignal = result
         // The amber banner string reflects the raised / already-unwell levels only (the calmer levels
         // surface in the Health hub's Heads-Up card, never as a scary banner).
-        healthAlert = (result.level == .raised || result.level == .alreadyUnwell) ? result.copy : nil
-        if let alert = healthAlert, previous == nil {
-            IllnessNotifier.post(alert)
+        let raisedOrUnwell = result.level == .raised || result.level == .alreadyUnwell
+        healthAlert = raisedOrUnwell ? IllnessCopy.alert(for: result) : nil
+        if raisedOrUnwell, previous == nil {
+            IllnessNotifier.post(IllnessCopy.sentence(for: result))
         }
     }
 

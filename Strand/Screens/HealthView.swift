@@ -65,6 +65,9 @@ private struct HealthSectionsStack: View {
             // so the ~1Hz HR stream re-renders only this subtree — the static
             // vitals grid below does not re-render on each HR tick.
             HeartRateSection()
+            // Night heart rhythm: last night's beats screened for an irregular rhythm, and the last 14 nights.
+            // A card with its own loading, depending only on `repo`, so the live HR stream never re-renders it.
+            HeartRhythmCard()
             // Fitness Age (weekly, computed by IntelligenceEngine and read back from the
             // "fitness_age" metricSeries). Its own view depending only on `repo`/`profile`,
             // so the live HR stream never re-renders it.
@@ -651,7 +654,7 @@ private struct FitnessAgeSection: View {
 
     /// Latest weekly Fitness Age (years) read from the "fitness_age" metricSeries, nil until loaded/computed.
     @State private var fitnessAge: Double?
-    /// Latest estimated VO₂max (ml/kg/min) from "vo2max_est" — only present once a waist is set.
+    /// Latest daily estimated VO₂max (ml/kg/min) from "vo2max_est" — only present once a waist is set.
     @State private var vo2max: Double?
     @State private var loaded = false
 
@@ -665,7 +668,7 @@ private struct FitnessAgeSection: View {
     ///   screens aren't hosted in a per-screen NavigationStack, so a sheet is the in-app drill-down.
     /// - `.settings`: Settings (the profile card) so a required-missing input can be filled in place.
     private enum FitnessSheet: String, Identifiable {
-        case trend, settings
+        case trend, settings, vo2max
         var id: String { rawValue }
     }
     @State private var fitnessSheet: FitnessSheet?
@@ -693,6 +696,7 @@ private struct FitnessAgeSection: View {
             SectionHeader("Fitness Age", overline: "Weekly",
                           trailing: fitnessAge != nil ? String(localized: "vs age \(profile.age)") : nil)
             content
+            vo2maxLink
         }
         .sheet(item: $fitnessSheet) { which in
             NavigationStack {
@@ -701,6 +705,8 @@ private struct FitnessAgeSection: View {
                     if let m = fitnessAgeMetric { MetricDetailView(metric: m) }
                 case .settings:
                     SettingsView()
+                case .vo2max:
+                    VO2maxView()
                 }
             }
             #if os(macOS)
@@ -731,6 +737,36 @@ private struct FitnessAgeSection: View {
             // Brief read of the weekly value; honest placeholder rather than an empty gap.
             ComingSoon(what: "Reading your Fitness Age…", symbol: "figure.run")
         }
+    }
+
+    /// Opens the VO₂max screen: the estimate from runs and walks, the one at rest and the user's own values.
+    private var vo2maxLink: some View {
+        Button { fitnessSheet = .vo2max } label: {
+            HStack(spacing: NoopMetrics.space3) {
+                Image(systemName: "lungs.fill")
+                    .foregroundStyle(StrandPalette.metricCyan)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("VO₂max").font(StrandFont.subhead).foregroundStyle(StrandPalette.textPrimary)
+                    Text("From your runs and walks, at rest, and your own values")
+                        .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .accessibilityHidden(true)
+            }
+            .padding(NoopMetrics.space4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                FrostedCardSurface(tint: StrandPalette.metricCyan, cornerRadius: NoopMetrics.cardRadius)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(LiquidPressStyle())
+        .accessibilityLabel("VO₂max: from your runs and walks, at rest, and your own values")
     }
 
     /// The hero vessel's fill (0…1): younger reads FULLER. Maps a fitness age across a 20…70-year span
@@ -785,7 +821,7 @@ private struct FitnessAgeSection: View {
                     Spacer(minLength: 0)
                     if let vo2 = vo2max {
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text("VO₂max").strandOverline()
+                            Text("VO₂max at rest").strandOverline()
                             Text(String(format: "%.0f", vo2))
                                 .font(StrandFont.number(30))
                                 .foregroundStyle(StrandPalette.metricCyan)
@@ -846,7 +882,7 @@ private struct FitnessAgeSection: View {
         .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
     }
 
-    /// Load the latest weekly Fitness Age (+ optional VO₂max) from the strap's metricSeries. Uses the
+    /// Load the latest weekly Fitness Age (+ the daily VO₂max estimate) from the strap's metricSeries. Uses the
     /// same `exploreSeries(key:source:)` path every other metric on this screen reads, with source
     /// "my-whoop" (the Repository merges the computed "-noop" rows under any real import). Takes the
     /// freshest point — the weekly value is keyed to the week's Saturday and refines through the week.
@@ -1259,7 +1295,8 @@ private struct SkinTempSection: View {
 
             // 1. Illness heads-up — only when the engine returned something worth surfacing.
             if let illness = model.illnessSignal, illness.level != .quiet {
-                HeadsUpCard(result: illness, distance: model.illnessDistance)
+                HeadsUpCard(result: illness, distance: model.illnessDistance,
+                            calibration: model.illnessCalibration)
             }
 
             // 2. Body clock — shows nil-state copy via the engine's own confidence handling.

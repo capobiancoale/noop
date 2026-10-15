@@ -670,7 +670,7 @@ struct TodayView: View {
         RecoveryScorer.skinTempRelative(deviationC: chargeBreakdownRow?.skinTempDevC)
     }
 
-    /// #205 (one-word readiness read kept on the hero: Push / Maintain / Rest). PURE mapping of the
+    /// #205 (one-word readiness read kept on the hero: Push / Maintain / Recover). PURE mapping of the
     /// existing `ReadinessEngine.Level` so the hero keeps a glanceable verdict even though the full
     /// Readiness card folds into the Charge breakdown sheet (S4). `insufficient` returns nil (the hero then
     /// shows no readiness word, matching the old card hiding itself). Mirror EXACTLY in Kotlin.
@@ -678,8 +678,10 @@ struct TodayView: View {
         switch level {
         case .primed:       return String(localized: "Push")
         case .balanced:     return String(localized: "Maintain")
-        case .strained:     return String(localized: "Rest")
-        case .rundown:      return String(localized: "Rest")
+        // "Recover", not "Rest": Rest is the sleep score's name and stays "Rest" in every language, so the
+        // verdict word has to be a different catalog key (the Liquid Today hero says "Recover" too).
+        case .strained:     return String(localized: "Recover")
+        case .rundown:      return String(localized: "Recover")
         case .insufficient: return nil
         }
     }
@@ -951,7 +953,7 @@ struct TodayView: View {
     }
 
     private static let navDayFmt: DateFormatter = {
-        let f = DateFormatter(); f.dateFormat = "EEE d MMM"; f.locale = Locale(identifier: "en_US_POSIX"); return f
+        let f = DateFormatter(); f.locale = Locale.autoupdatingCurrent; f.setLocalizedDateFormatFromTemplate("EEEdMMM"); return f
     }()
 
     /// The selected day as a small locale-aware numeric date ("28/06/2026" or "6/28/2026" per region). The
@@ -3951,10 +3953,25 @@ struct TodayView: View {
         // gauge falls back to the stored row (never a fabricated value); a navigated past day clears it.
         let liveStrainLocal: Double?
         if selectedDayOffset == 0 {
-            let todayHr = await repo.hrSamples(from: windowStart, to: windowEnd)
+            // The whole day, like the engine's day read: the default 8 000-row cap is ~2 h of a 1 Hz strap.
+            let todayHr = await repo.hrSamples(from: windowStart, to: windowEnd, limit: 200_000)
             let maxHR = profile.age > 0 ? StrainScorer.tanakaHRmax(age: Double(profile.age)) : nil
             let restHR = displayDay?.restingHr.map(Double.init) ?? StrainScorer.defaultRestingHR
-            liveStrainLocal = StrainScorer.strain(todayHr, maxHR: maxHR, restingHR: restHR, sex: profile.sex)
+            // Today's logged WODs fold in exactly as the engine folds them (session-RPE load the heart rate
+            // under-reads), matched against today's workouts, so the live gauge agrees with the stored day.
+            let tzOffset = TimeZone.current.secondsFromGMT()
+            let todayKey = Repository.dayString(dayStart)
+            let sessions = await repo.allWods().filter { $0.day == todayKey }
+                .compactMap { StrainScorer.LoggedSession(wod: $0, tzOffsetSeconds: tzOffset) }
+            var bouts: [(start: Int, end: Int)] = []
+            if !sessions.isEmpty {
+                bouts = await repo.workoutRows(days: 2, reconcileHr: false)
+                    .filter { $0.endTs > windowStart && $0.startTs < windowEnd }
+                    .map { (start: $0.startTs, end: $0.endTs) }
+            }
+            liveStrainLocal = StrainScorer.strain(todayHr, maxHR: maxHR, restingHR: restHR, sex: profile.sex,
+                                                  sessions: sessions, bouts: bouts,
+                                                  dayStart: windowStart, dayEnd: windowStart + 86_400)
         } else {
             liveStrainLocal = nil
         }
@@ -4093,8 +4110,8 @@ struct TodayView: View {
 
     private var dateLine: String {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "EEEE, d MMMM"
+        f.locale = Locale.autoupdatingCurrent
+        f.setLocalizedDateFormatFromTemplate("EEEEdMMMM")
         // The selected day's date when navigated; today's banked-row date (or today) at offset 0.
         if selectedDayOffset == 0, let day = repo.today?.day, let date = Self.dayParser.date(from: day) {
             return f.string(from: date)
@@ -4118,8 +4135,8 @@ struct TodayView: View {
         case 1:  return String(localized: "Yesterday")
         default:
             let f = DateFormatter()
-            f.locale = Locale(identifier: "en_US_POSIX")
-            f.dateFormat = "EEE d MMM"
+            f.locale = Locale.autoupdatingCurrent
+            f.setLocalizedDateFormatFromTemplate("EEEdMMM")
             return f.string(from: selectedLogicalDay)
         }
     }
@@ -4239,8 +4256,8 @@ struct TodayView: View {
     /// segment was dropped: the StatTile caption is lineLimit(1) and date + range + bpm clips,     /// avg HR remains on the Workouts screen.
     private func workoutCaption(_ w: WorkoutRow) -> String {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "d MMM"
+        f.locale = Locale.autoupdatingCurrent
+        f.setLocalizedDateFormatFromTemplate("dMMM")
         let start = Date(timeIntervalSince1970: TimeInterval(w.startTs))
         let date = f.string(from: start)
         guard w.endTs > w.startTs else { return "\(date) · \(Self.hrTimeFmt.string(from: start))" }
