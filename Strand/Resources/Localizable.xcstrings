@@ -21555,6 +21555,46 @@
         }
       }
     },
+    "Balance": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilanz"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Balance"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Equilibrio"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Balance"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平衡"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平衡"
+          }
+        }
+      }
+    },
     "Balanced": {
       "localizations": {
         "de": {
@@ -79203,6 +79243,52 @@
         }
       }
     },
+    "Per-night sleep balance: %lld nights, net %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlafbilanz pro Nacht: %1$lld Nächte, netto %2$@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Per-night sleep balance: %1$lld nights, net %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Balance de sueño por noche: %lld noches, neto %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilancio del sonno per notte: %1$lld notti, netto %2$@"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Balance de sono por noite: %lld noites, neto %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每晚睡眠平衡：%1$lld 晚，净 %2$@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每晚睡眠平衡：%1$lld 晚，淨 %2$@"
+          }
+        }
+      }
+    },
     "Personal Experiment": {
       "localizations": {
         "de": {
@@ -117825,6 +117911,52 @@
         }
       }
     },
+    "You're carrying about %@ of surplus over %@. You've slept past your need on balance. Nicely ahead.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du trägst etwa %1$@ Überschuss über %2$@. Unterm Strich hast du über deinen Bedarf geschlafen. Schön im Plus."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "You're carrying about %1$@ of surplus over %2$@. You've slept past your need on balance. Nicely ahead."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Llevas alrededor de %@ de superávit en %@. En balance, has dormido más de lo que necesitas. Vas bien adelantado."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai circa %1$@ di surplus durante %2$@. Nel complesso hai dormito più del tuo fabbisogno. Sei ben in vantaggio."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Llevas cerca de %@ de superávit en %@. En balance, has dormido mais de lo que precisas. Vas bem adelantado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你累积了约 %@ 的盈余，时间跨度为%@。总体上你的睡眠超过了所需。领先得不错。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你累積了約 %@ 的睡眠盈餘（期間：%@）。整體而言你睡得超過所需，狀態領先。"
+          }
+        }
+      }
+    },
     "You're connected.": {
       "localizations": {
         "de": {
@@ -118003,6 +118135,46 @@
         }
       }
     },
+    "You're roughly on top of your sleep across %@. Slept minutes balance out against your need.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Über %@ bist du bei deinem Schlaf ungefähr im Soll. Geschlafene Minuten gleichen sich mit deinem Bedarf aus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vas más o menos al día con tu sueño en %@. Los minutos dormidos se equilibran con tu necesidad."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sei più o meno in pari con il sonno durante %@. I minuti dormiti si bilanciano con il tuo fabbisogno."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Vas mais o menos al dia com o teu sono en %@. Os minutos dormidos se equilibran com o teu necesidad."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在%@内你的睡眠大致跟上了节奏。实际睡眠时长与所需基本持平。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在%@內你的睡眠大致跟上了需求，睡眠分鐘數與所需相抵。"
+          }
+        }
+      }
+    },
     "You're sitting around your typical autonomic baseline: moderate stress, a normal, balanced day.": {
       "localizations": {
         "de": {
@@ -118039,6 +118211,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "你目前處於典型的自律神經基線附近：中等壓力，一個正常、平衡的日子。"
+          }
+        }
+      }
+    },
+    "You've banked about %@ of sleep debt over %@. Surplus nights count back against it. An earlier night or two would clear it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast über %2$@ etwa %1$@ Schlafdefizit angesammelt. Überschuss-Nächte zählen dagegen. Ein oder zwei frühere Nächte würden es ausgleichen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "You've banked about %1$@ of sleep debt over %2$@. Surplus nights count back against it. An earlier night or two would clear it."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Has acumulado alrededor de %@ de deuda de sueño en %@. Las noches con superávit la reducen. Una o dos noches acostándote más temprano la eliminarían."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai accumulato circa %1$@ di debito di sonno durante %2$@. Le notti in surplus lo riducono. Una o due serate anticipate lo azzererebbero."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Has acumulado cerca de %@ de deuda de sono en %@. As noites com superávit a reducen. Uma o dos noites acostándote mais temprano a eliminarían."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你累积了约 %@ 的睡眠负债，时间跨度为%@。盈余的夜晚会抵消它。早睡一两晚就能还清。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你累積了約 %@ 的睡眠負債（期間：%@）。有盈餘的夜晚會抵銷它。早睡一兩晚就能還清。"
           }
         }
       }
@@ -121192,6 +121410,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "平均 · %lld 天"
+          }
+        }
+      }
+    },
+    "balanced": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ausgeglichen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "equilibrado"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "equilibrato"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "equilibrado"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平衡"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平衡"
           }
         }
       }
@@ -125810,6 +126068,46 @@
         }
       }
     },
+    "running balance": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "laufende Bilanz"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "balance acumulado"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bilancio progressivo"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "balance acumulado"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "累计结余"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "累計結餘"
+          }
+        }
+      }
+    },
     "sec": {
       "localizations": {
         "de": {
@@ -126326,6 +126624,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "強"
+          }
+        }
+      }
+    },
+    "surplus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überschuss"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "superávit"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "surplus"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "superávit"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "盈余"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "盈餘"
           }
         }
       }
@@ -139038,96 +139376,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chiaro"
-          }
-        }
-      }
-    },
-    "Debt": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Debito"
-          }
-        }
-      }
-    },
-    "No debt": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nessun debito"
-          }
-        }
-      }
-    },
-    "on target": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "in linea"
-          }
-        }
-      }
-    },
-    "1 night left out: it repeats the night before exactly (same duration and stages), so it looks like a copied record rather than measured sleep.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 notte esclusa: è identica alla notte precedente (stessa durata e stesse fasi), quindi sembra un dato copiato e non sonno misurato."
-          }
-        }
-      }
-    },
-    "%lld nights left out: they repeat the night before exactly (same duration and stages), so they look like a copied record rather than measured sleep.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld notti escluse: sono identiche alla notte precedente (stessa durata e stesse fasi), quindi sembrano un dato copiato e non sonno misurato."
-          }
-        }
-      }
-    },
-    "Sleep vs need per night: %lld nights, debt %@": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sonno rispetto al fabbisogno per notte: %1$lld notti, debito %2$@"
-          }
-        }
-      }
-    },
-    "No sleep debt over %@. Longer nights pay a debt back, but extra sleep isn't saved up for the nights after.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nessun debito di sonno durante %@. Le notti più lunghe ripagano un debito, ma il sonno in più non si mette da parte per le notti successive."
-          }
-        }
-      }
-    },
-    "Only a small debt (%@) over %@, within the usual night-to-night swing.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Solo un piccolo debito (%1$@) durante %2$@, entro la normale variazione da una notte all'altra."
-          }
-        }
-      }
-    },
-    "You owe about %@ of sleep from %@. Every night short of your need adds to it and longer nights pay it back. An earlier night or two would clear it.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hai un debito di sonno di circa %1$@, accumulato durante %2$@. Ogni notte sotto il fabbisogno lo aumenta e le notti più lunghe lo ripagano. Una o due serate anticipate lo azzererebbero."
           }
         }
       }
