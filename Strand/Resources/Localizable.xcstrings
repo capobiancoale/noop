@@ -11934,7 +11934,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un %1$@ stanotte tende a corrispondere per te a circa %2$@ in più sul %3$@ di domani, sulla base di %4$lld dei tuoi %5$@ giorni."
+            "value": "Con %1$@ stanotte, il valore di %3$@ di domani tende a salire di circa %2$@ per te, in base a %4$lld dei tuoi giorni di %5$@."
           }
         },
         "pt-PT": {
@@ -11980,7 +11980,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un %1$@ stanotte tende a corrispondere per te a circa %2$@ in più sul %3$@ di domani, in base a schemi tipici."
+            "value": "Con %1$@ stanotte, il valore di %3$@ di domani tende a salire di circa %2$@ per te, in base agli schemi tipici."
           }
         },
         "pt-PT": {
@@ -12026,7 +12026,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un %1$@ stanotte tende a corrispondere per te a circa %2$@ in meno sul %3$@ di domani, sulla base di %4$lld dei tuoi %5$@ giorni."
+            "value": "Con %1$@ stanotte, il valore di %3$@ di domani tende a scendere di circa %2$@ per te, in base a %4$lld dei tuoi giorni di %5$@."
           }
         },
         "pt-PT": {
@@ -12072,7 +12072,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un %1$@ stanotte tende a corrispondere per te a circa %2$@ in meno sul %3$@ di domani, in base a schemi tipici."
+            "value": "Con %1$@ stanotte, il valore di %3$@ di domani tende a scendere di circa %2$@ per te, in base agli schemi tipici."
           }
         },
         "pt-PT": {
@@ -19113,7 +19113,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Media addormentato"
+            "value": "Sonno medio"
           }
         },
         "pt-PT": {
@@ -31086,7 +31086,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Coerenza 5.5"
+            "value": "Coerenza 5,5"
           }
         },
         "pt-PT": {
@@ -33585,7 +33585,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Collaboratori"
+            "value": "Fattori"
           }
         },
         "pt-PT": {
@@ -34755,7 +34755,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Conteggi del contatore per passo, lascia a 1.0 a meno che i tuoi passi non siano molto elevati. Su un WHOOP 5/MG possono essere molto alti (10× o più), quindi questo arriva fino a 30. Cammina per 1.000 passi noti e dividi il conteggio di NOOP per quello reale per ottenere il tuo valore."
+            "value": "Conteggi del contatore per passo, lascia a 1,0 a meno che i tuoi passi non siano molto elevati. Su un WHOOP 5/MG possono essere molto alti (10× o più), quindi questo arriva fino a 30. Cammina per 1.000 passi noti e dividi il conteggio di NOOP per quello reale per ottenere il tuo valore."
           }
         },
         "pt-PT": {
@@ -38403,7 +38403,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Disconnesso"
+            "value": "Disconnessa"
           }
         },
         "pt-PT": {
@@ -51012,7 +51012,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aiuta di più: %@"
+            "value": "Conta di più: %@"
           }
         },
         "pt-PT": {
@@ -64167,7 +64167,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Override frequenza cardiaca massima"
+            "value": "Frequenza cardiaca massima manuale"
           }
         },
         "pt-PT": {
@@ -70252,7 +70252,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nessun dato per queste metriche in %@. Amplia l'intervallo o scegli metriche che hai registrato."
+            "value": "Nessun dato per queste metriche (%@). Amplia l'intervallo o scegli metriche che hai registrato."
           }
         },
         "pt-PT": {
@@ -73131,7 +73131,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Giorni sovrapposti insufficienti tra queste metriche in %@. Amplia l'intervallo."
+            "value": "Giorni sovrapposti insufficienti tra queste metriche (%@). Amplia l'intervallo."
           }
         },
         "pt-PT": {
@@ -83081,7 +83081,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scansiona di nuovo"
+            "value": "Riscansiona"
           }
         },
         "pt-PT": {
@@ -117934,7 +117934,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hai circa %@ di surplus su %@. Nel complesso hai dormito più del tuo fabbisogno. Sei ben in vantaggio."
+            "value": "Hai circa %1$@ di surplus durante %2$@. Nel complesso hai dormito più del tuo fabbisogno. Sei ben in vantaggio."
           }
         },
         "pt-PT": {
@@ -118152,7 +118152,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sei più o meno in pari con il sonno su %@. I minuti dormiti si bilanciano con il tuo fabbisogno."
+            "value": "Sei più o meno in pari con il sonno durante %@. I minuti dormiti si bilanciano con il tuo fabbisogno."
           }
         },
         "pt-PT": {
@@ -118238,7 +118238,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hai accumulato circa %@ di debito di sonno su %@. Le notti in surplus lo riducono. Una o due serate anticipate lo azzererebbero."
+            "value": "Hai accumulato circa %1$@ di debito di sonno durante %2$@. Le notti in surplus lo riducono. Una o due serate anticipate lo azzererebbero."
           }
         },
         "pt-PT": {
@@ -122009,7 +122009,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "bevi"
+            "value": "drink"
           }
         },
         "pt-PT": {
@@ -123307,7 +123307,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "passaggio successivo"
+            "value": "fascia oraria successiva"
           }
         },
         "pt-PT": {
@@ -125265,7 +125265,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "di %@"
+            "value": "su %@"
           }
         },
         "pt-PT": {
@@ -125385,7 +125385,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "di 3"
+            "value": "su 3"
           }
         },
         "pt-PT": {
@@ -125437,7 +125437,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "di 3 · %@"
+            "value": "su 3 · %@"
           }
         },
         "pt-PT": {
@@ -135815,7 +135815,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "es. 2.0-5.0 (l'intervallo indicato nel tuo referto)"
+            "value": "es. 2,0-5,0 (l'intervallo indicato nel tuo referto)"
           }
         }
       }
@@ -137785,7 +137785,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Trova il polso al polso o sul lato del collo e preparati a contare ogni battito per 30 secondi. NOOP confronta il tuo conteggio con quello che la fascia rileva negli stessi 30 secondi."
+            "value": "Trova il battito al polso o sul lato del collo e preparati a contare ogni battito per 30 secondi. NOOP confronta il tuo conteggio con quello che la fascia rileva negli stessi 30 secondi."
           }
         }
       }
@@ -138976,6 +138976,406 @@
           "stringUnit": {
             "state": "translated",
             "value": "Indossa la fascia ben aderente durante la notte con NOOP collegato e sincronizzala al mattino. È uno screening, non una diagnosi."
+          }
+        }
+      }
+    },
+    "vs your baseline": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vs linea di base"
+          }
+        }
+      }
+    },
+    "Cardio fitness": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fitness cardiovascolare"
+          }
+        }
+      }
+    },
+    "Sleep duration": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durata del sonno"
+          }
+        }
+      }
+    },
+    "Sleep regularity": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regolarità del sonno"
+          }
+        }
+      }
+    },
+    "Daily steps": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passi giornalieri"
+          }
+        }
+      }
+    },
+    "yrs": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "anni"
+          }
+        }
+      }
+    },
+    "Bonded · idle": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Associata · inattiva"
+          }
+        }
+      }
+    },
+    "No scored nights yet. Wear the strap with NOOP connected overnight and the engine will score your Charge, Effort and Rest itself, no WHOOP cloud required.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora nessuna notte valutata. Indossa la fascia con NOOP connesso durante la notte e il motore calcolerà da solo Charge, Effort e Rest, senza bisogno del cloud WHOOP."
+          }
+        }
+      }
+    },
+    "Did you drink any alcohol?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai bevuto alcolici?"
+          }
+        }
+      }
+    },
+    "Did you have caffeine late in the day?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai assunto caffeina a fine giornata?"
+          }
+        }
+      }
+    },
+    "Did you view a screen in bed?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai guardato uno schermo a letto?"
+          }
+        }
+      }
+    },
+    "Did you eat close to bedtime?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai mangiato poco prima di andare a letto?"
+          }
+        }
+      }
+    },
+    "Did you feel stressed?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai avvertito stress?"
+          }
+        }
+      }
+    },
+    "Did you use a sauna?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai fatto la sauna?"
+          }
+        }
+      }
+    },
+    "Did you share your bed?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai condiviso il letto?"
+          }
+        }
+      }
+    },
+    "Did you feel sick or ill?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai avvertito malessere?"
+          }
+        }
+      }
+    },
+    "Did you take magnesium?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai preso il magnesio?"
+          }
+        }
+      }
+    },
+    "Did you read before bed?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai letto prima di dormire?"
+          }
+        }
+      }
+    },
+    "On days you logged ‘%@’, %@ was no different (avg %lld vs %lld, n=%lld vs %lld).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nei giorni in cui hai registrato ‘%1$@’, %2$@ non ha mostrato differenze (media %3$lld vs %4$lld, n=%5$lld vs %6$lld)."
+          }
+        }
+      }
+    },
+    "On days you logged ‘%@’, %@ was %lld%% higher (avg %lld vs %lld, n=%lld vs %lld).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nei giorni in cui hai registrato ‘%1$@’, %2$@ ha segnato il %3$lld%% in più (media %4$lld vs %5$lld, n=%6$lld vs %7$lld)."
+          }
+        }
+      }
+    },
+    "On days you logged ‘%@’, %@ was %lld%% lower (avg %lld vs %lld, n=%lld vs %lld).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nei giorni in cui hai registrato ‘%1$@’, %2$@ ha segnato il %3$lld%% in meno (media %4$lld vs %5$lld, n=%6$lld vs %7$lld)."
+          }
+        }
+      }
+    },
+    "On days you logged ‘%@’, %@ was %@ higher (avg %lld vs %lld, n=%lld vs %lld).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nei giorni in cui hai registrato ‘%1$@’, %2$@ ha segnato %3$@ in più (media %4$lld vs %5$lld, n=%6$lld vs %7$lld)."
+          }
+        }
+      }
+    },
+    "On days you logged ‘%@’, %@ was %@ lower (avg %lld vs %lld, n=%lld vs %lld).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nei giorni in cui hai registrato ‘%1$@’, %2$@ ha segnato %3$@ in meno (media %4$lld vs %5$lld, n=%6$lld vs %7$lld)."
+          }
+        }
+      }
+    },
+    "same day": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "stesso giorno"
+          }
+        }
+      }
+    },
+    "next morning": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mattina dopo"
+          }
+        }
+      }
+    },
+    "%lld mornings later": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld mattine dopo"
+          }
+        }
+      }
+    },
+    "Each extra unit typically lines up with about %@ %@ lower: typical patterns, not yet yours (n=%lld).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni unità aggiuntiva corrisponde in genere a circa %1$@ di %2$@ in meno: schemi tipici, non ancora tuoi (n=%3$lld)."
+          }
+        }
+      }
+    },
+    "Each extra unit typically lines up with about %@ %@ higher: typical patterns, not yet yours (n=%lld).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni unità aggiuntiva corrisponde in genere a circa %1$@ di %2$@ in più: schemi tipici, non ancora tuoi (n=%3$lld)."
+          }
+        }
+      }
+    },
+    "In your data so far, this doesn’t move your %@ the way it typically does (n=%lld).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finora, nei tuoi dati, questo non influenza %1$@ come fa di solito (n=%2$lld)."
+          }
+        }
+      }
+    },
+    "Each extra unit tends to line up with about %@ %@ lower for you (n=%lld).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni unità aggiuntiva tende a corrispondere, per te, a circa %1$@ di %2$@ in meno (n=%3$lld)."
+          }
+        }
+      }
+    },
+    "Each extra unit tends to line up with about %@ %@ higher for you (n=%lld).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni unità aggiuntiva tende a corrispondere, per te, a circa %1$@ di %2$@ in più (n=%3$lld)."
+          }
+        }
+      }
+    },
+    "Sessions like this barely move your next-day Charge (n=%lld).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessioni come questa spostano appena la tua Charge del giorno dopo (n=%lld)."
+          }
+        }
+      }
+    },
+    "Sessions like this usually cost you about %lld Charge point the next morning": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessioni come questa di solito ti costano circa %lld punto Charge la mattina dopo"
+          }
+        }
+      }
+    },
+    "Sessions like this usually cost you about %lld Charge points the next morning": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessioni come questa di solito ti costano circa %lld punti Charge la mattina dopo"
+          }
+        }
+      }
+    },
+    "Sessions like this usually lift you by about %lld Charge point the next morning": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessioni come questa di solito ti fanno guadagnare circa %lld punto Charge la mattina dopo"
+          }
+        }
+      }
+    },
+    "Sessions like this usually lift you by about %lld Charge points the next morning": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessioni come questa di solito ti fanno guadagnare circa %lld punti Charge la mattina dopo"
+          }
+        }
+      }
+    },
+    "(n=%lld).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(n=%lld)."
+          }
+        }
+      }
+    },
+    "and take about %lld day to bounce back (n=%lld).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e servono circa %1$lld giorno per riprendersi (n=%2$lld)."
+          }
+        }
+      }
+    },
+    "and take about %lld days to bounce back (n=%lld).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e servono circa %1$lld giorni per riprendersi (n=%2$lld)."
+          }
+        }
+      }
+    },
+    "theme.light": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiaro"
           }
         }
       }
