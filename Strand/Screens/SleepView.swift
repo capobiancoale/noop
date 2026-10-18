@@ -133,15 +133,17 @@ struct SleepView: View {
             Group {
                 if let resolved {
                     // Each top-level section fades + rises in sequence on first appear (Reduce-Motion safe).
+                    // Sections are type-erased so the optimised build never spells this column as one deeply
+                    // nested type (see LiquidTodayView: resolving such a type overflowed the main thread's stack).
                     VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
-                        if let sleepUndo { sleepUndoBanner(sleepUndo) }
-                        restHero(resolved).staggeredAppear(index: 0)
+                        if let sleepUndo { AnyView(sleepUndoBanner(sleepUndo)) }
+                        AnyView(restHero(resolved).staggeredAppear(index: 0))
                         SleepMarkCard().staggeredAppear(index: 1)
-                        hero(resolved).staggeredAppear(index: 2)
-                        metricGrid(resolved).staggeredAppear(index: 3)
-                        sleepDebtLedger(resolved).staggeredAppear(index: 4)
-                        stagesVsTypical(resolved).staggeredAppear(index: 5)
-                        durationTrend(resolved).staggeredAppear(index: 6)
+                        AnyView(hero(resolved).staggeredAppear(index: 2))
+                        AnyView(metricGrid(resolved).staggeredAppear(index: 3))
+                        AnyView(sleepDebtLedger(resolved).staggeredAppear(index: 4))
+                        AnyView(stagesVsTypical(resolved).staggeredAppear(index: 5))
+                        AnyView(durationTrend(resolved).staggeredAppear(index: 6))
                     }
                 } else {
                     emptyState
