@@ -218,7 +218,7 @@ enum WodFormat {
 
     /// Drop a trailing ".0" so 60.0 → "60" but 62.5 stays "62.5".
     static func trimmed(_ v: Double) -> String {
-        v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v)
+        v == v.rounded() ? String(Int(v)) : DisplayNumber.decimal(v)
     }
 
     private static let dayFormatter: DateFormatter = {

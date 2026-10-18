@@ -468,7 +468,7 @@ private struct SleepReadoutPanel: View {
         let lastGate = SleepReadout.lastGateFired(taggedTail: live.taggedTail(domain: .sleep))
         VStack(alignment: .leading, spacing: 4) {
             ReadoutRow(label: String(localized: "HR density (per min)"),
-                       value: live.recentHrSamples.isEmpty ? String(localized: "no live HR yet") : String(format: "%.1f", hrDensity))
+                       value: live.recentHrSamples.isEmpty ? String(localized: "no live HR yet") : DisplayNumber.decimal(hrDensity))
             ReadoutRow(label: String(localized: "Gravity coverage"),
                        value: live.recentGravitySamples.isEmpty ? String(localized: "no live gravity yet") : String(format: "%.0f%%", gravCoverage * 100))
             ReadoutRow(label: String(localized: "Last gate fired"), value: lastGate ?? String(localized: "no night yet"))

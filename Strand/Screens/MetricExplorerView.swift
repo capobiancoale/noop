@@ -730,7 +730,7 @@ struct MetricDetailView: View {
                                         .foregroundStyle(.white)
                                         .shadow(color: .black.opacity(0.5), radius: 6, y: 1)
                                     if !metric.unit.isEmpty {
-                                        Text(metric.unit)
+                                        Text(metric.localizedUnit)
                                             .font(StrandFont.footnote)
                                             .foregroundStyle(.white.opacity(0.85))
                                             .shadow(color: .black.opacity(0.5), radius: 4, y: 1)
@@ -923,7 +923,7 @@ struct MetricDetailView: View {
                      caption: latestCaption, accent: accent)
             StatTile(label: "Δ vs prev", value: deltaText ?? "—",
                      caption: deltaCaption, accent: StrandPalette.textPrimary,
-                     delta: cmp.pctChange.map { "\($0 >= 0 ? "+" : "")\(String(format: "%.1f", $0))%" },
+                     delta: cmp.pctChange.map { "\($0 >= 0 ? "+" : "")\(DisplayNumber.decimal($0))%" },
                      deltaColor: deltaColor)
         }
     }
@@ -1025,7 +1025,7 @@ struct MetricDetailView: View {
                 LiquidTube(frac: min(abs(row.r), 1.0), tint: color, height: 8, animated: false)
                     .frame(width: 64)
                     .accessibilityHidden(true)
-                Text("\(row.r >= 0 ? "+" : "−")\(String(format: "%.2f", abs(row.r)))")
+                Text("\(row.r >= 0 ? "+" : "−")\(DisplayNumber.decimal(abs(row.r), digits: 2))")
                     .font(StrandFont.number(15))
                     .foregroundStyle(color)
                     .frame(width: 52, alignment: .trailing)
@@ -1033,7 +1033,7 @@ struct MetricDetailView: View {
         }
         .padding(.vertical, 10)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(row.metric.title), correlation \(String(format: "%.2f", row.r)), \(row.n) days")
+        .accessibilityLabel("\(row.metric.title), correlation \(DisplayNumber.decimal(row.r, digits: 2)), \(row.n) days")
     }
 
     // MARK: Helpers

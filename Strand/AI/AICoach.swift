@@ -581,7 +581,7 @@ final class AICoachEngine: ObservableObject {
                 for (key, kRows) in byKey {
                     guard let latest = kRows.sorted(by: { $0.takenAt < $1.takenAt }).last else { continue }
                     let name = MarkerCatalog.definition(for: key)?.displayName ?? key
-                    let value = latest.value.map { "\(LabBookFormat.value($0, key: key)) \(latest.unit)" } ?? latest.valueText ?? "—"
+                    let value = latest.value.map { "\(LabBookFormat.value($0, key: key, locale: Locale(identifier: "en_US_POSIX"))) \(latest.unit)" } ?? latest.valueText ?? "—"
                     markerSummaries.append("\(name) \(value)")
                 }
             }

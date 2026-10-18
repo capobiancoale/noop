@@ -329,7 +329,7 @@ struct SettingsView: View {
                         poundsField(weightKg: $profile.weightKg)
                     } else {
                         measureField(value: $profile.weightKg, unit: "kg",
-                                     range: 30...250, step: 0.5, format: "%.1f",
+                                     range: 30...250, step: 0.5, digits: 1,
                                      accessibility: String(localized: "Weight in kilograms"))
                     }
                 }
@@ -340,7 +340,7 @@ struct SettingsView: View {
                         feetInchesField(heightCm: $profile.heightCm)
                     } else {
                         measureField(value: $profile.heightCm, unit: "cm",
-                                     range: 120...230, step: 1, format: "%.0f",
+                                     range: 120...230, step: 1, digits: 0,
                                      accessibility: String(localized: "Height in centimetres"))
                     }
                 }
@@ -405,7 +405,7 @@ struct SettingsView: View {
                 // variable increment (fine near 1.0, coarse up top) so high values stay reachable.
                 FormRow(label: "Step calibration") {
                     HStack(spacing: 10) {
-                        Text(String(format: "%.1f", profile.stepTicksPerStep))
+                        Text(DisplayNumber.decimal(profile.stepTicksPerStep))
                             .font(StrandFont.bodyNumber)
                             .foregroundStyle(StrandPalette.textPrimary)
                             .frame(minWidth: 44, alignment: .trailing)
@@ -415,7 +415,7 @@ struct SettingsView: View {
                             profile.stepTicksPerStep = ProfileStore.steppedStepScale(profile.stepTicksPerStep, up: false)
                         }
                             .labelsHidden()
-                            .accessibilityLabel("Step calibration, \(String(format: "%.1f", profile.stepTicksPerStep)) counter ticks per step")
+                            .accessibilityLabel("Step calibration, \(DisplayNumber.decimal(profile.stepTicksPerStep)) counter ticks per step")
                     }
                 }
                 Text("Counter ticks per step. Leave at 1.0 unless your steps run high. On a WHOOP 5/MG they can run very high (10× or more), so this goes up to 30. Walk a known 1,000 steps and divide NOOP's count by the real count to get your value.")
@@ -466,10 +466,10 @@ struct SettingsView: View {
     /// Numeric weight/height field: tabular value + small +/- stepper.
     private func measureField(value: Binding<Double>, unit: String,
                               range: ClosedRange<Double>, step: Double,
-                              format: String, accessibility: String) -> some View {
+                              digits: Int, accessibility: String) -> some View {
         HStack(spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(String(format: format, value.wrappedValue))
+                Text(DisplayNumber.decimal(value.wrappedValue, digits: digits))
                     .font(StrandFont.bodyNumber)
                     .foregroundStyle(StrandPalette.textPrimary)
                     .frame(minWidth: 48, alignment: .trailing)
@@ -624,10 +624,12 @@ struct SettingsView: View {
                 }
                 rowDivider
                 FormRow(label: "Temperature") {
-                    // Three-way: "Match" follows the system above; °C / °F pin it explicitly. Stored as
-                    // an empty string ("match") or the TemperatureUnit raw value.
+                    // Three-way: "Auto" follows the system above; °C / °F pin it explicitly. Stored as
+                    // an empty string ("match") or the TemperatureUnit raw value. The segment says "Auto"
+                    // (its own key, not the old "Match": its Italian, "Corrispondenza", was wrong here and
+                    // wide enough to push the whole page past the screen edge).
                     Picker("Temperature", selection: $temperatureRaw) {
-                        Text("Match").tag("")
+                        Text("Auto").tag("")
                         Text("°C").tag(TemperatureUnit.celsius.rawValue)
                         Text("°F").tag(TemperatureUnit.fahrenheit.rawValue)
                     }
@@ -655,6 +657,17 @@ struct SettingsView: View {
 
     // MARK: - Appearance (Theme everywhere; alternate app icon iOS-only)
 
+    /// The theme segment labels. "Light" is also the sleep-stage word ("Leggero" in Italian) and a catalog
+    /// key carries one translation, so the light option has its own key ("Light theme", Italian "Chiaro").
+    /// System and Dark keep the design system's labels.
+    private func themeLabel(_ mode: AppearanceMode) -> String {
+        switch mode {
+        case .system: return mode.label
+        case .light:  return String(localized: "Light theme")
+        case .dark:   return mode.label
+        }
+    }
+
     /// Theme (System / Light / Dark) on every platform, plus the iOS app-icon choice. The Theme picker
     /// writes `AppearanceMode.storageKey`, which both app roots read via `.preferredColorScheme`; because
     /// every palette token is a dynamic `Color(light:dark:)`, the whole UI re-resolves on change.
@@ -668,7 +681,7 @@ struct SettingsView: View {
                 FormRow(label: "Theme") {
                     Picker("Theme", selection: $appearanceRaw) {
                         ForEach(AppearanceMode.allCases) { mode in
-                            Text(mode.label).tag(mode.rawValue)
+                            Text(themeLabel(mode)).tag(mode.rawValue)
                         }
                     }
                     .labelsHidden()
@@ -766,15 +779,17 @@ struct SettingsView: View {
                 Text(strapStatusDetail)
                     .font(StrandFont.subhead)
                     .foregroundStyle(StrandPalette.textSecondary)
-                HStack(spacing: NoopMetrics.space3) {
-                    NoopButton("Re-scan", systemImage: "arrow.clockwise", kind: .primary) {
-                        model.scan()
+                // Side by side when both fit; stacked when a longer translation would clip a label.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: NoopMetrics.space3) {
+                        strapRescanButton
+                        strapDisconnectButton
+                        Spacer(minLength: 0)
                     }
-
-                    NoopButton("Disconnect", systemImage: "xmark.circle", kind: .secondary) {
-                        model.disconnect()
+                    VStack(alignment: .leading, spacing: NoopMetrics.space3) {
+                        strapRescanButton
+                        strapDisconnectButton
                     }
-                    .disabled(!live.connected && !live.bonded)
                 }
 
                 Divider().overlay(StrandPalette.hairline)
@@ -898,6 +913,19 @@ struct SettingsView: View {
 
     // Shares LiveState.connectionStatus* with the sidebar footer (RootView) so the two never drift (#266).
     private var strapStatusTitle: String { live.connectionStatusLabel }
+
+    private var strapRescanButton: some View {
+        NoopButton("Re-scan", systemImage: "arrow.clockwise", kind: .primary) {
+            model.scan()
+        }
+    }
+
+    private var strapDisconnectButton: some View {
+        NoopButton("Disconnect", systemImage: "xmark.circle", kind: .secondary) {
+            model.disconnect()
+        }
+        .disabled(!live.connected && !live.bonded)
+    }
 
     private var strapTone: StrandTone {
         if live.connectionStatusIsActive { return .positive }
@@ -2501,7 +2529,7 @@ struct StepsCalibrationSheet: View {
                     let coeff = profile.stepsManualCoefficient > 0
                         ? profile.stepsManualCoefficient : profile.stepsCalibrationCoefficient
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(String(format: "%.1f", coeff))
+                        Text(DisplayNumber.decimal(coeff))
                             .font(StrandFont.number(30))
                             .foregroundStyle(StrandPalette.accent)
                         Text("steps per motion unit")
@@ -2608,7 +2636,7 @@ struct StepsCalibrationSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(draftManual > 0 ? String(format: "%.1f", draftManual) : String(localized: "Auto"))
+                    Text(draftManual > 0 ? DisplayNumber.decimal(draftManual) : String(localized: "Auto"))
                         .font(StrandFont.number(24))
                         .foregroundStyle(draftManual > 0 ? StrandPalette.accent : StrandPalette.textSecondary)
                     Text(draftManual > 0 ? "steps / motion unit" : "fit from your phone")
@@ -2629,7 +2657,7 @@ struct StepsCalibrationSheet: View {
                 }
                 .tint(StrandPalette.accent)
                 .accessibilityValue(draftManual > 0
-                                    ? "\(String(format: "%.1f", draftManual)) steps per motion unit"
+                                    ? "\(DisplayNumber.decimal(draftManual)) steps per motion unit"
                                     : "Automatic")
 
                 // Live preview: a typical recent day re-estimated at the draft coefficient.
@@ -2741,17 +2769,39 @@ struct StepsCalibrationSheet: View {
 // MARK: - Two-column form row
 
 /// Label on the left, control on the right — the two-column form feel.
+///
+/// A control with a fixed width (a segmented picker, a stepper with its value) can be wider than the row
+/// leaves it once the label is translated: the Italian "Corrispondenza" segment made the Temperature
+/// picker wider than the card, and the whole Settings page grew past the screen and slid off its left
+/// edge. So when the control and a label of at least `minLabelWidth` do not fit side by side, the label
+/// goes on its own line above the control instead of the control overflowing.
 private struct FormRow<Control: View>: View {
     let label: LocalizedStringKey
     @ViewBuilder var control: () -> Control
 
+    /// The narrowest the label may be squeezed to (two short lines) before the row stacks.
+    private let minLabelWidth: CGFloat = 110
+
+    private var labelText: some View {
+        Text(label)
+            .font(StrandFont.body)
+            .foregroundStyle(StrandPalette.textPrimary)
+    }
+
     var body: some View {
-        HStack(alignment: .center, spacing: NoopMetrics.space4) {
-            Text(label)
-                .font(StrandFont.body)
-                .foregroundStyle(StrandPalette.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            control()
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: NoopMetrics.space4) {
+                // idealWidth is what ViewThatFits measures: the label counts as `minLabelWidth`, not as
+                // its full one-line width, so a label that can wrap does not force the stacked layout.
+                labelText
+                    .frame(minWidth: 0, idealWidth: minLabelWidth, maxWidth: .infinity, alignment: .leading)
+                control()
+            }
+            VStack(alignment: .leading, spacing: NoopMetrics.space2) {
+                labelText
+                control()
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
         }
         .frame(minHeight: 32)
     }

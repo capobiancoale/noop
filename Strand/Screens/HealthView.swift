@@ -553,7 +553,7 @@ private struct RecoveryContributorsSection: View {
                 label: "Respiratory",
                 strength: lowerIsBetter(latest?.respRateBpm, base: respBase),
                 word: word(lowerIsBetter(latest?.respRateBpm, base: respBase)),
-                detail: latest?.respRateBpm.map { String(format: "%.1f rpm", $0) } ?? "—",
+                detail: latest?.respRateBpm.map { "\(DisplayNumber.decimal($0)) rpm" } ?? "—",
                 tint: StrandPalette.sleepLight),       // respiratory shares the blue world
         ]
     }
@@ -1112,11 +1112,11 @@ private struct VitalitySection: View {
             if (best?.lnHazard ?? 0) < 0 || (worst?.lnHazard ?? 0) > 0 {
                 Divider().overlay(StrandPalette.hairline)
                 if let best, best.lnHazard < 0 {
-                    Text("Helping most: \(best.label)")
+                    Text("Helping most: \(factorName(best))")
                         .font(StrandFont.footnote).foregroundStyle(StrandPalette.statusPositive)
                 }
                 if let worst, worst.lnHazard > 0 {
-                    Text("Holding you back: \(worst.label)")
+                    Text("Holding you back: \(factorName(worst))")
                         .font(StrandFont.footnote).foregroundStyle(StrandPalette.statusWarning)
                 }
             }
@@ -1131,6 +1131,23 @@ private struct VitalitySection: View {
             FrostedCardSurface(tint: StrandPalette.chargeColor, cornerRadius: NoopMetrics.cardRadius)
         }
         .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
+    }
+
+    /// The engine's factor labels are plain English strings; the sentence names the factor in the reader's
+    /// language, lower-cased because it follows a colon ("Conta di più: variabilità della frequenza
+    /// cardiaca"). Keyed by the factor's stable `key` so a reworded engine label cannot break the lookup.
+    private func factorName(_ c: VitalityEngine.Contribution) -> String {
+        let name: String
+        switch c.key {
+        case "rhr":         name = String(localized: "Resting heart rate")
+        case "vo2max":      name = String(localized: "Cardio fitness")
+        case "sleep":       name = String(localized: "Sleep duration")
+        case "consistency": name = String(localized: "Sleep regularity")
+        case "hrv":         name = String(localized: "Heart-rate variability")
+        case "steps":       name = String(localized: "Daily steps")
+        default:            name = c.label
+        }
+        return name.lowercased()
     }
 
     /// The Body Age delta as whole-phrase variants per count and direction, so translators see

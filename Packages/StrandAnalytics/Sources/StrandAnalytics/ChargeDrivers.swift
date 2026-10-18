@@ -202,8 +202,8 @@ extension RecoveryScorer {
                                              hrvBaseline: hrvBaseline, rhrBaseline: rhrBaseline,
                                              respBaseline: respBaseline, sleepPerf: sleepPerf,
                                              skinTempDev: skinTempDev)),
-                valueText: String(format: "%.1f br/min", r),
-                baselineText: String(format: "%.1f br/min baseline", b.baseline),
+                valueText: "\(NumberText.decimal(r)) br/min",
+                baselineText: "\(NumberText.decimal(b.baseline)) br/min baseline",
                 verdict: respVerdict(value: r, baseline: b.baseline)))
         }
 
@@ -266,6 +266,6 @@ extension RecoveryScorer {
 
     static func skinTempDevText(_ dev: Double) -> String {
         let sign = dev >= 0 ? "+" : ""
-        return "\(sign)\(String(format: "%.1f", dev)) C vs baseline"
+        return "\(sign)\(NumberText.decimal(dev)) C vs baseline"
     }
 }

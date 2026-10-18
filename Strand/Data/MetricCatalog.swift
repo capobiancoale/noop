@@ -28,14 +28,18 @@ struct MetricDescriptor: Identifiable, Hashable {
         }
     }
 
+    /// The stored unit as shown. "yrs" is the one stored unit that is a word rather than a symbol, so it is
+    /// localized ("anni"); bpm, ms, %, kg and the rest read the same in every language.
+    var localizedUnit: String { unit == "yrs" ? String(localized: "yrs") : unit }
+
     /// True for the Effort metric (#268). Its stored value is 0–100; the effort-scale toggle converts
     /// the DISPLAYED number + unit onto WHOOP's 0–21 axis. Mirrors the Android `MetricSpec.whoopEffort`
     /// gate (`key == "strain"`) — the only value-converting metric in the catalog.
     private var isEffort: Bool { key == "strain" }
 
     func format(_ v: Double) -> String {
-        let n = decimals == 0 ? String(Int(v.rounded())) : String(format: "%.\(decimals)f", v)
-        return unit.isEmpty ? n : "\(n) \(unit)"
+        let n = decimals == 0 ? String(Int(v.rounded())) : DisplayNumber.decimal(v, digits: decimals)
+        return unit.isEmpty ? n : "\(n) \(localizedUnit)"
     }
 
     /// Effort-aware plain format (#268): the Effort metric's stored 0–100 value is shown on the selected
@@ -85,14 +89,14 @@ struct MetricDescriptor: Identifiable, Hashable {
         switch unit {
         case "kg":  return UnitFormatter.massUnit(system)
         case "°C":  return UnitFormatter.temperatureUnit(temperature)
-        default:    return isEffort ? displayUnit(effortScale: effortScale) : unit
+        default:    return isEffort ? displayUnit(effortScale: effortScale) : localizedUnit
         }
     }
 
     /// The Effort metric's unit LABEL on the selected scale — "/100" or "/21" (#268). Non-Effort metrics
     /// return their stored label unchanged. Mirrors the Android `MetricSpec.displayUnit` swap.
     func displayUnit(effortScale: EffortScale) -> String {
-        guard isEffort else { return unit }
+        guard isEffort else { return localizedUnit }
         return "/" + UnitFormatter.effortScaleMax(effortScale)
     }
 }

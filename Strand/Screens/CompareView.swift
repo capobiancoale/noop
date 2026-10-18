@@ -860,7 +860,7 @@ struct CompareView: View {
     /// the autocorrelation-corrected effective sample size the p-value is based on.
     private func footerLine(_ p: PairResult) -> String {
         guard let t = p.test else { return "" }
-        let pText = t.p < 0.01 ? "< 0.01" : String(format: "%.2f", t.p)
+        let pText = t.p < 0.01 ? "< 0.01" : DisplayNumber.decimal(t.p, digits: 2)
         let independent = Int(t.effectiveN.rounded())
         if p.verdict == .clear || p.verdict == .possible {
             let stats = String(localized: "r = \(signedR(t.r)) · p = \(pText) · \(t.n) days (≈ \(independent) independent)")
@@ -875,7 +875,7 @@ struct CompareView: View {
     }
 
     private func signedR(_ r: Double) -> String {
-        (r >= 0 ? "+" : "−") + String(format: "%.2f", abs(r))
+        (r >= 0 ? "+" : "−") + DisplayNumber.decimal(abs(r), digits: 2)
     }
 
     private func strengthWord(_ r: Double) -> String {

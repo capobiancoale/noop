@@ -276,7 +276,7 @@ struct CoupledView: View {
                         Group {
                             if let s = dayStrain21 {
                                 CountUpText(value: s,
-                                            format: { String(format: "%.1f", $0) },
+                                            format: { DisplayNumber.decimal($0) },
                                             font: StrandFont.number(34),
                                             color: .white)
                             } else {
@@ -292,10 +292,10 @@ struct CoupledView: View {
                     // Right: the coupled stat stack, OPTIMAL range (with a liquid tube band), calories, workouts.
                     VStack(alignment: .leading, spacing: 14) {
                         optimalStat
-                        heroStat("Calories",
+                        heroStat(String(localized: "Calories"),
                                  caloriesText,
                                  tint: StrandPalette.metricAmber)
-                        heroStat("Workouts",
+                        heroStat(String(localized: "Workouts"),
                                  (day?.exerciseCount).map { "\($0)" } ?? "0",
                                  tint: StrandPalette.textPrimary)
                     }

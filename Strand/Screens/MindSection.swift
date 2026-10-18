@@ -249,7 +249,7 @@ struct MindSection: View {
         let text = corr.r > 0
             ? String(localized: "Days with higher \(metric) tend to be your better-mood days.")
             : String(localized: "Days with higher \(metric) tend to be your lower-mood days.")
-        let caption = String(localized: "\(strength) link · r = \(String(format: "%+.2f", corr.r)) · n = \(corr.n) days")
+        let caption = String(localized: "\(strength) link · r = \(DisplayNumber.signed(corr.r, digits: 2)) · n = \(corr.n) days")
         // |r| capped at 1 for the leading strength vessel's fill.
         return MoodLine(id: id, text: text, caption: caption, strength: min(1, abs(corr.r)))
     }

@@ -300,10 +300,20 @@ struct AppleHealthView: View {
 
     private var rangeControl: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                SegmentedPillControl(RangeWindow.allCases, selection: $range) { $0.label }
-                Spacer()
-                Text(range.caption).strandOverline()
+            // The pills never truncate (a "TUT…" pill is worse than no caption): when the trailing window
+            // caption does not fit beside them it is dropped, the summary line below already names the window.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    SegmentedPillControl(RangeWindow.allCases, selection: $range) { $0.label }
+                    Spacer(minLength: 8)
+                    Text(range.caption).strandOverline()
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                HStack(spacing: 0) {
+                    SegmentedPillControl(RangeWindow.allCases, selection: $range) { $0.label }
+                    Spacer(minLength: 0)
+                }
             }
             Text(rangeSummaryCaption)
                 .font(StrandFont.footnote)
@@ -579,13 +589,13 @@ struct AppleHealthView: View {
                      fmt: { "\(Int($0.rounded()))" })
             statTile(key: "vo2max", label: "VO₂ Max",
                      accent: StrandPalette.accent, unit: "ml/kg",
-                     fmt: { String(format: "%.1f", $0) })
+                     fmt: { DisplayNumber.decimal($0) })
             statTile(key: "weight", label: "Weight",
                      accent: StrandPalette.accent,
                      fmt: { massLabel($0) })
             statTile(key: "body_fat", label: "Body Fat",
                      accent: StrandPalette.metricAmber, unit: "%",
-                     fmt: { String(format: "%.1f", $0) })
+                     fmt: { DisplayNumber.decimal($0) })
             statTile(key: "lean_mass", label: "Lean Mass",
                      accent: StrandPalette.accent,
                      fmt: { massLabel($0) })
@@ -659,10 +669,10 @@ struct AppleHealthView: View {
                       fmt: { "\(Int($0.rounded())) ms" })
             chartCard(title: "Blood oxygen", key: "spo2",
                       gradient: cyanGradient, fallback: 90...100,
-                      fmt: { String(format: "%.1f%%", $0) })
+                      fmt: { "\(DisplayNumber.decimal($0))%" })
             chartCard(title: "Respiratory rate", key: "resp_rate",
                       gradient: accentGradient, fallback: 10...22,
-                      fmt: { String(format: "%.1f rpm", $0) })
+                      fmt: { "\(DisplayNumber.decimal($0)) rpm" })
         }
     }
 
@@ -688,13 +698,13 @@ struct AppleHealthView: View {
                       fmt: { massLabel($0) })
             chartCard(title: "Body fat", key: "body_fat",
                       gradient: amberGradient, fallback: 8...35,
-                      fmt: { String(format: "%.1f%%", $0) })
+                      fmt: { "\(DisplayNumber.decimal($0))%" })
             chartCard(title: "Lean body mass", key: "lean_mass",
                       gradient: accentGradient, fallback: 40...80,
                       fmt: { massLabel($0) })
             chartCard(title: "BMI", key: "bmi",
                       gradient: purpleGradient, fallback: 16...35,
-                      fmt: { String(format: "%.1f", $0) })
+                      fmt: { DisplayNumber.decimal($0) })
             // Vitals extras (blood pressure, hydration, waist) — shown only when Apple Health actually
             // carries them, so a user without these never sees an empty card. Read-only.
             if !raw("bp_systolic").isEmpty {
@@ -710,12 +720,12 @@ struct AppleHealthView: View {
             if !raw("water").isEmpty {
                 chartCard(title: "Hydration", key: "water",
                           gradient: cyanGradient, fallback: 0...4,
-                          fmt: { String(format: "%.1f L", $0) })
+                          fmt: { "\(DisplayNumber.decimal($0)) L" })
             }
             if !raw("waist").isEmpty {
                 chartCard(title: "Waist", key: "waist",
                           gradient: amberGradient, fallback: 60...120,
-                          fmt: { String(format: "%.1f cm", $0) })
+                          fmt: { "\(DisplayNumber.decimal($0)) cm" })
             }
         }
     }
@@ -756,7 +766,7 @@ struct AppleHealthView: View {
                       fmt: { "\(Int($0.rounded()))%" })
             chartCard(title: "Insulin (total per day)", key: "insulin_total",
                       gradient: accentGradient, fallback: 0...60,
-                      fmt: { String(format: "%.1f U", $0) })
+                      fmt: { "\(DisplayNumber.decimal($0)) U" })
             chartCard(title: "Carbs (per day)", key: "carbs_g",
                       gradient: amberGradient, fallback: 0...300,
                       fmt: { "\(intString($0)) g" })
@@ -784,10 +794,10 @@ struct AppleHealthView: View {
                      aggregate: .mean, fmt: { "\(Int($0.rounded()))" })
             statTile(key: "glucose_tbr", label: "Time Below",
                      accent: StrandPalette.metricAmber, unit: "%",
-                     aggregate: .mean, fmt: { String(format: "%.1f", $0) })
+                     aggregate: .mean, fmt: { DisplayNumber.decimal($0) })
             statTile(key: "insulin_total", label: "Insulin / day",
                      accent: StrandPalette.accent, unit: "U",
-                     aggregate: .mean, fmt: { String(format: "%.1f", $0) })
+                     aggregate: .mean, fmt: { DisplayNumber.decimal($0) })
             basalBolusTile
             statTile(key: "glucose_overnight_min", label: "Overnight Low",
                      accent: StrandPalette.metricPurple, unit: "mg/dL",
@@ -805,7 +815,7 @@ struct AppleHealthView: View {
         let gmi = mean(vals).flatMap { DiabetesMetrics.gmiPercent(meanMgdl: $0) }
         return StatTile(
             label: "GMI / est. A1c",
-            value: gmi.map { String(format: "%.1f%%", $0) } ?? "—",
+            value: gmi.map { "\(DisplayNumber.decimal($0))%" } ?? "—",
             caption: gmi != nil ? String(localized: "est. from avg glucose") : nil,
             accent: gmi != nil ? StrandPalette.metricPurple : StrandPalette.textTertiary
         )

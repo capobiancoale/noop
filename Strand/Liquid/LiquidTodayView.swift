@@ -674,7 +674,7 @@ struct LiquidTodayView: View {
     private func signalFigures(_ s: ReadinessEngine.Signal) -> String? {
         switch s.key {
         case "hrv", "rhr", "respRate": return s.evidence
-        case "acwr": return readiness.acwr.map { String(format: "%.2f", $0) }
+        case "acwr": return readiness.acwr.map { DisplayNumber.decimal($0, digits: 2) }
         default: return nil
         }
     }
@@ -1938,7 +1938,7 @@ struct LiquidTodayView: View {
 
     private func unitText(_ v: Double?, _ unit: String, decimals: Int = 0) -> String {
         guard let v else { return "–" }
-        let n = decimals > 0 ? String(format: "%.\(decimals)f", v) : String(Int(v.rounded()))
+        let n = decimals > 0 ? DisplayNumber.decimal(v, digits: decimals) : String(Int(v.rounded()))
         return unit.isEmpty ? n : "\(n) \(unit)"
     }
 
@@ -1972,7 +1972,7 @@ struct LiquidTodayView: View {
         var parts: [String] = []
         let secs = w.durationS ?? Double(max(w.endTs - w.startTs, 0))
         parts.append("\(Int(secs / 60)) min")
-        if let dm = w.distanceM, dm > 0 { parts.append(String(format: "%.1f km", dm / 1000)) }
+        if let dm = w.distanceM, dm > 0 { parts.append("\(DisplayNumber.decimal(dm / 1000)) km") }
         if let k = w.energyKcal { parts.append("\(Int(k.rounded())) kcal") }
         return parts.joined(separator: " · ")
     }

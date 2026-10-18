@@ -1679,7 +1679,7 @@ struct SleepView: View {
             ChartCard(
                 title: "Hours asleep",
                 subtitle: String(localized: "Per night, trailing 30 days"),
-                trailing: avg.map { String(localized: "\(String(format: "%.1f", $0)) h avg") },
+                trailing: avg.map { String(localized: "\(DisplayNumber.decimal($0)) h avg") },
                 height: NoopMetrics.chartHeight,
                 tint: StrandPalette.restColor,
                 chart: {
@@ -1689,7 +1689,7 @@ struct SleepView: View {
                                    valueRange: trendRange(pts),
                                    showsArea: true,
                                    height: NoopMetrics.chartHeight,
-                                   valueFormat: { String(format: "%.1f h", $0) },
+                                   valueFormat: { "\(DisplayNumber.decimal($0)) h" },
                                    accessibilityLabel: String(localized: "Hours asleep trend"))
                     } else {
                         sparsePlaceholder
@@ -1697,9 +1697,9 @@ struct SleepView: View {
                 },
                 footer: {
                     ChartFooter([
-                        ("Avg",    avg.map { String(format: "%.1f h", $0) } ?? "—"),
-                        ("Min",    pts.map(\.value).min().map { String(format: "%.1f h", $0) } ?? "—"),
-                        ("Max",    pts.map(\.value).max().map { String(format: "%.1f h", $0) } ?? "—"),
+                        ("Avg",    avg.map { "\(DisplayNumber.decimal($0)) h" } ?? "—"),
+                        ("Min",    pts.map(\.value).min().map { "\(DisplayNumber.decimal($0)) h" } ?? "—"),
+                        ("Max",    pts.map(\.value).max().map { "\(DisplayNumber.decimal($0)) h" } ?? "—"),
                         ("Nights", "\(pts.count)"),
                     ])
                 }
@@ -2260,7 +2260,7 @@ struct SleepView: View {
     }
 
     private func rrValue(_ v: Double?) -> String {
-        v.map { String(format: "%.1f", $0) } ?? "—"
+        v.map { DisplayNumber.decimal($0) } ?? "—"
     }
 
     /// "+12% vs typical" / "−0.4 rpm vs typical" — the latest-vs-mean caption every tile carries.
@@ -2268,10 +2268,10 @@ struct SleepView: View {
         guard let latest, let typical, typical != 0 else { return String(localized: "vs typical - ") }
         let diff = latest - typical
         let mag = abs(diff)
-        let num = decimals == 0 ? "\(Int(mag.rounded()))" : String(format: "%.\(decimals)f", mag)
+        let num = decimals == 0 ? "\(Int(mag.rounded()))" : DisplayNumber.decimal(mag, digits: decimals)
         // A difference that rounds to nothing carries no sign: "−0% vs typical" read as a drop when the
         // night was within rounding of the usual. "±" says "no difference" without claiming a direction.
-        let zero = decimals == 0 ? "0" : String(format: "%.\(decimals)f", 0.0)
+        let zero = decimals == 0 ? "0" : DisplayNumber.decimal(0.0, digits: decimals)
         let sign = num == zero ? "±" : (diff >= 0 ? "+" : "−")
         return String(localized: "\(sign)\(num)\(suffix) vs typical")
     }
