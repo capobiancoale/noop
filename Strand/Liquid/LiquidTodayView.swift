@@ -257,22 +257,27 @@ struct LiquidTodayView: View {
 
                 liquidRefreshIndicator   // grows in the revealed space; a vessel filling with the pull
 
+                // Every section is type-erased. In the optimised (TestFlight / Release) build Swift sees through the
+                // sections' `some View` and spells this whole stack as ONE nested generic type; resolving its
+                // metadata at runtime recursed past the main thread's stack on an iPhone and NOOP crashed at launch
+                // ("Thread stack size exceeded due to excessive recursion" in swift_getTypeByMangledName). AnyView
+                // at each section keeps every type shallow; the cost is a handful of erased nodes, negligible here.
                 VStack(alignment: .leading, spacing: 12) {
-                    scene                                   // block 1: the scores and what they mean
-                    if !nightLows.isEmpty { nightLowSection }  // qualifies Charge, so it sits right under it
-                    if hasGlucoseBlock { glucoseNowSection }    // block 2
-                    todayWorkoutSection                         // block 3
-                    detailsToggle
+                    AnyView(scene)                                   // block 1: the scores and what they mean
+                    if !nightLows.isEmpty { AnyView(nightLowSection) }  // qualifies Charge, so it sits right under it
+                    if hasGlucoseBlock { AnyView(glucoseNowSection) }    // block 2
+                    AnyView(todayWorkoutSection)                         // block 3
+                    AnyView(detailsToggle)
                     if detailsExpanded {
-                        heartRateSection
-                        if hasTodayCross { todayCrossSection }
-                        recoveryVitalsSection
-                        keyMetricsSection
-                        if hasRecStrain { recoveryStrainSection }
-                        if hasWeekData { weekSummarySection }
-                        if hasGlucoseToday { glucoseTodaySection }
-                        yourCardsSection
-                        dataSourcesSection
+                        AnyView(heartRateSection)
+                        if hasTodayCross { AnyView(todayCrossSection) }
+                        AnyView(recoveryVitalsSection)
+                        AnyView(keyMetricsSection)
+                        if hasRecStrain { AnyView(recoveryStrainSection) }
+                        if hasWeekData { AnyView(weekSummarySection) }
+                        if hasGlucoseToday { AnyView(glucoseTodaySection) }
+                        AnyView(yourCardsSection)
+                        AnyView(dataSourcesSection)
                     }
                     Color.clear.frame(height: 90) // floating tab-bar clearance
                 }
