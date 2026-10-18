@@ -296,7 +296,14 @@ just the most recent (step through earlier nights to compare):
   each as "Xh Ym · NN%", with time-in-bed, efficiency, and onset–wake times.
 - **Night detail** — a uniform tile grid, each with a sparkline and a "vs typical" caption: Sleep
   Performance, Efficiency, Consistency, Hours vs Needed, Restorative (deep + REM share),
-  Respiratory, and Sleep Debt (vs your personal sleep need, floored at 7.5 h).
+  Respiratory, and Sleep Debt (the debt still owed over the last 14 nights; see below).
+- **Sleep-debt ledger** — the last 14 nights against a fixed need: the WHOOP export's per-night
+  need when you imported one (minus the debt WHOOP already adds to it, so it isn't counted twice),
+  else 8 h (adults need at least 7 h, athletes sit at the top of the 7–9 h range). Debt adds up night by night and longer nights pay it back, but it never goes below
+  zero: extra sleep is not saved up for later nights (Van Dongen 2003, Banks 2010, Kitamura 2016).
+  Your own average is not used as the need, because that would always read "on target". A night
+  that repeats the night before exactly (same total, deep and REM) is treated as a copied record:
+  it is left out of the ledger and the sleep tiles, and the card says how many were left out.
 - **Stages vs typical** — Deep / REM / Light as horizontal bars, last-night minutes with a marker
   at your personal mean, so highs and lows pop.
 - **Asleep duration** — a trailing-30-night hours trend with avg / min / max.
