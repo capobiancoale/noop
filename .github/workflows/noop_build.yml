@@ -162,6 +162,17 @@ jobs:
             echo "(the Apple Watch app installs from the Watch app → Available Apps, or automatically if enabled)."
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # The debug symbols of this exact build, so a crash report from TestFlight (an .ips file) can be
+      # symbolicated: without them the app's own frames show only as offsets.
+      - name: Upload debug symbols
+        if: success()
+        uses: actions/upload-artifact@v6
+        with:
+          name: dsym
+          path: "*.dSYM.zip"
+          if-no-files-found: warn
+          retention-days: 90
+
       # The xcodebuild log, for diagnosing a failed build. Kept briefly: the repository is public.
       - name: Upload build log
         if: always()
