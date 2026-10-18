@@ -263,8 +263,9 @@ struct CompareView: View {
                        // Liquid finish: the day-of-sky backdrop carries the liquid atmosphere across the
                        // analysis tabs, exactly like Today and the batch-1 screens.
                        topBackground: liquidScaffoldSky()) {
+            // Sections type-erased so the optimised build keeps the column's type shallow (see LiquidTodayView).
             VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
-                metricSection
+                AnyView(metricSection)
 
                 if selected.count < minSelection {
                     ComingSoon(what: "Compare needs at least two metrics with history. Import your WHOOP export in Data Sources first.")
@@ -275,8 +276,8 @@ struct CompareView: View {
                             ? "No data for these metrics in \(range.phrase). Widen the range or pick metrics you've logged."
                             : "Reading your history…")
                     } else {
-                        overlaySection(series)
-                        correlationSection(series)
+                        AnyView(overlaySection(series))
+                        AnyView(correlationSection(series))
                     }
                 }
             }

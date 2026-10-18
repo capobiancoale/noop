@@ -48,11 +48,12 @@ struct HeartRateAccuracyView: View {
     }
 
     private var sections: some View {
+        // Cards type-erased so the optimised build keeps the column's type shallow (see LiquidTodayView).
         VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
-            agreementCard
+            AnyView(agreementCard)
             HeartRhythmCard()
             PulseCountCard()
-            contextCard
+            AnyView(contextCard)
             VStack(alignment: .leading, spacing: 6) {
                 Text("Informational only, not medical advice.")
                 Text("Optical wrist heart rate can read high during intense, rhythmic movement, when the sensor can lock onto the movement cadence instead of the pulse. That comes from the sensor, not the app.")

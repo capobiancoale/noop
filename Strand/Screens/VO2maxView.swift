@@ -48,19 +48,21 @@ struct VO2maxView: View {
         ScreenScaffold(title: "VO₂max",
                        subtitle: "Your aerobic fitness estimated from your own data, next to the values you measure",
                        onRefresh: { await load() }) {
+            // Sections type-erased: in the optimised build a column of `some View` sections becomes one deeply nested type whose
+            // metadata lookup overflowed the main thread's stack at launch (see LiquidTodayView). AnyView keeps types shallow.
             VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
                 if !loaded {
                     ProgressView().frame(maxWidth: .infinity)
                 } else {
-                    summaryTiles
-                    dailyEstimateCard
-                    if hasAnyChartData { chartCard }
-                    exerciseCard
-                    wodCard
-                    restingCard
-                    entriesCard
+                    AnyView(summaryTiles)
+                    AnyView(dailyEstimateCard)
+                    if hasAnyChartData { AnyView(chartCard) }
+                    AnyView(exerciseCard)
+                    AnyView(wodCard)
+                    AnyView(restingCard)
+                    AnyView(entriesCard)
                 }
-                methodNote
+                AnyView(methodNote)
             }
         }
         // Reload when the daily records change (refreshSeq) and when the 10-minute re-evaluation stored a new point.

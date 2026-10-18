@@ -154,16 +154,18 @@ struct WorkoutsView: View {
                 let groups = sportGroups(from: windowRows)
                 let zonesSummary = WorkoutZones.summary(from: windowRows)
 
-                HStack { startLiveWorkoutButton; Spacer() }
-                rangeBar(rows: windowRows, effectiveRange: resolved)
-                if let postLogNote { postLogBanner(postLogNote) }
-                effortHero(rows: windowRows, effectiveRange: resolved, groups: groups)
-                summarySection(rows: windowRows, effectiveRange: resolved, groups: groups)
-                breakdownSection(groups: groups, rows: windowRows)
+                // Sections type-erased: in the optimised build a column of `some View` sections becomes one deeply nested type whose
+                // metadata lookup overflowed the main thread's stack at launch (see LiquidTodayView). AnyView keeps types shallow.
+                AnyView(HStack { startLiveWorkoutButton; Spacer() })
+                AnyView(rangeBar(rows: windowRows, effectiveRange: resolved))
+                if let postLogNote { AnyView(postLogBanner(postLogNote)) }
+                AnyView(effortHero(rows: windowRows, effectiveRange: resolved, groups: groups))
+                AnyView(summarySection(rows: windowRows, effectiveRange: resolved, groups: groups))
+                AnyView(breakdownSection(groups: groups, rows: windowRows))
                 if let z = zonesSummary {
-                    zonesSection(z, totalSessions: windowRows.count)
+                    AnyView(zonesSection(z, totalSessions: windowRows.count))
                 }
-                sessionsSection(rows: windowRows)
+                AnyView(sessionsSection(rows: windowRows))
             }
         }
         .task(id: repo.refreshSeq) {
