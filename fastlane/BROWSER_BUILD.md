@@ -83,7 +83,7 @@ con questi nomi **esatti**:
 
 | Variabile | Effetto |
 |---|---|
-| `ENABLE_NUKE_CERTS` = `true` | Quando il certificato di distribuzione scade (una volta l'anno) lo rinnova da solo. Consigliato. |
+| `ENABLE_NUKE_CERTS` = `true` | Quando il certificato di distribuzione scade (una volta l'anno) lo rinnova da solo. **Non impostarla se compili anche Loop con un repository certificati diverso** (`Match-Secrets` di Loop e `NOOP-Match-Secrets` di NOOP): il rinnovo revoca *tutti* i certificati di distribuzione del tuo account, anche quello di Loop, e il build successivo di Loop fallirebbe. Le app già installate non ne risentono. In quel caso il rinnovo annuale si fa a mano. |
 | `AUTO_BUILD_ON_PUSH` = `false` | Disattiva le build automatiche a ogni push (restano quelle a mano). |
 | `MATCH_REPO` = `Match-Secrets` | Usa il repository dei certificati di **Loop** invece di uno separato — in quel caso `MATCH_PASSWORD` deve essere quella di Loop. |
 
