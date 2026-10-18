@@ -469,8 +469,10 @@ struct MarkerEditorView: View {
         )
     }
 
+    /// A typed number. An Italian (or any comma-decimal) keyboard types "5,2", which `Double(_:)` rejects,
+    /// so the comma is read as the decimal point; that alone made such a value impossible to save.
     private func parsed(_ s: String) -> Double? {
-        Double(s.trimmingCharacters(in: .whitespaces))
+        Double(s.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: "."))
     }
 
     private func save() {
@@ -539,7 +541,9 @@ enum MarkerUnits {
     }
 
     /// A short label for the conversion factor (4 sig figs), e.g. "0.02586".
-    static func factorLabel(_ f: Double) -> String { String(format: "%.5g", f) }
+    static func factorLabel(_ f: Double) -> String {
+        f.formatted(.number.precision(.significantDigits(1...5)).grouping(.never))
+    }
 
     /// A lower-cased, underscored slug for a custom marker name → its stable key.
     static func slug(_ name: String) -> String {

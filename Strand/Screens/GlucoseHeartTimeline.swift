@@ -1133,7 +1133,7 @@ private enum TimelineMarks {
     }
 
     static func units(_ u: Double) -> String {
-        (u == u.rounded() ? String(Int(u)) : String(format: "%.1f", u)) + " U"
+        (u == u.rounded() ? String(Int(u)) : DisplayNumber.decimal(u)) + " U"
     }
 
     /// Reports where a lane's plot sits, in the timeline's coordinate space.

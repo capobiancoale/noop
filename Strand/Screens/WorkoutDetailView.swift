@@ -370,7 +370,7 @@ struct WorkoutDetailView: View {
                         VStack(spacing: 0) {
                             // The session's Effort contribution ticks up to its value — the NOOP signature.
                             CountUpText(value: displayValue,
-                                        format: { String(format: "%.1f", $0) },
+                                        format: { DisplayNumber.decimal($0) },
                                         font: StrandFont.rounded(28),
                                         color: StrandPalette.textPrimary)
                                 .shadow(color: .black.opacity(0.5), radius: 5, y: 1)

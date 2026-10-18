@@ -389,8 +389,8 @@ struct FullDayChartView: View {
     private func format(_ v: Double) -> String {
         switch metric {
         case .hr, .respiration, .hrv: return String(Int(v.rounded()))
-        case .skinTemp: return String(format: "%.1f", v)
-        case .spo2, .motion: return String(format: "%.2f", v)
+        case .skinTemp: return DisplayNumber.decimal(v)
+        case .spo2, .motion: return DisplayNumber.decimal(v, digits: 2)
         // #175: name the band's own state at the nearest code so the readout reads "asleep", not "2.0".
         case .bandSleepState: return Self.bandStateLabel(v)
         }

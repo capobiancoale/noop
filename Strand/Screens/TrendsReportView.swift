@@ -395,7 +395,7 @@ struct TrendsReportPage: View {
     }
 
     private func round1Text(_ x: Double) -> String {
-        String(format: "%.1f", (x * 10).rounded() / 10)
+        DisplayNumber.decimal((x * 10).rounded() / 10)
     }
 
     /// "Jun 15" / "15 giu" from "2026-06-15": the month names and their order come from the user's locale

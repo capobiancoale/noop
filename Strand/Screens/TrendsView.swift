@@ -431,7 +431,7 @@ struct TrendsView: View {
                         // Charge/Rest vessels regardless of the displayed Effort unit.
                         pipScoreRow(label: "Effort", value: display, range: 0...maxV,
                                     tint: StrandPalette.effortColor, frac: v / 100,
-                                    format: { oneDecimal ? String(format: "%.1f", $0) : "\(Int($0.rounded()))" })
+                                    format: { oneDecimal ? DisplayNumber.decimal($0) : "\(Int($0.rounded()))" })
                     }
                     if let v = restAvg {
                         pipScoreRow(label: "Rest", value: v, range: 0...100,
@@ -511,15 +511,21 @@ struct TrendsView: View {
         let cap = recovery.caption
         let isWide = recovery.widened
         return VStack(alignment: .leading, spacing: NoopMetrics.space2) {
-            HStack {
-                // The pills claim their width first; the trailing subtitle is the one that gives way
-                // (shrinks, then truncates), so no segment label is squeezed onto a second line.
-                SegmentedPillControl(Range.allCases, selection: $range) { $0.label }
-                    .layoutPriority(1)
-                Spacer(minLength: NoopMetrics.space2)
-                Text(rangeSubtitle).strandOverline()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+            // The pills claim their width first; the trailing subtitle is the one that gives way. It is
+            // dropped when it does not fit whole (never shrunk into a clipped "ULTIMI 9…"): the hero card
+            // below carries the same window name, so nothing is lost.
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    SegmentedPillControl(Range.allCases, selection: $range) { $0.label }
+                    Spacer(minLength: NoopMetrics.space2)
+                    Text(rangeSubtitle).strandOverline()
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                HStack {
+                    SegmentedPillControl(Range.allCases, selection: $range) { $0.label }
+                    Spacer(minLength: 0)
+                }
             }
             Text(cap)
                 .font(StrandFont.footnote)

@@ -42,7 +42,11 @@ struct HeartRhythmCard: View {
         if let night = report?.lastNight {
             verdictBlock(night)
             figures(night.result)
-            if let nights = report?.nights, nights.count >= 2 {
+            // The 14-night strip only when at least one of those nights had enough clean beats. With none,
+            // it would be an empty 0–10 % chart under 14 open circles; the "not enough data" read above
+            // already says it (and what to change), so nothing is drawn.
+            if let nights = report?.nights, nights.count >= 2,
+               nights.contains(where: { $0.result.verdict != .notEnoughData }) {
                 strip(nights)
             }
         } else if loaded {

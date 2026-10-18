@@ -429,15 +429,27 @@ struct AutomationsView: View {
             .frame(maxWidth: 320)
     }
 
+    /// Label + help on the left and the Shortcut-name field on the right when both have room; on a phone
+    /// the field would be squeezed to a sliver (its placeholder cut to "Nome del coman…") while the label
+    /// wrapped to three lines, so there the field goes under the label at full width instead.
     private func shortcutFieldRow(_ label: String, help: String, text: Binding<String>) -> some View {
-        HStack(alignment: .center, spacing: 16) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label).font(StrandFont.body).foregroundStyle(StrandPalette.textPrimary)
-                Text(help).font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+        let labels = VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(StrandFont.body).foregroundStyle(StrandPalette.textPrimary)
+            Text(help).font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        return ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: 16) {
+                labels
+                    .frame(minWidth: 0, idealWidth: 160, maxWidth: .infinity, alignment: .leading)
+                shortcutField(String(localized: "Shortcut name"), text: text)
+                    .frame(minWidth: 150, idealWidth: 200, maxWidth: 320)
             }
-            Spacer()
-            shortcutField(String(localized: "Shortcut name"), text: text)
+            VStack(alignment: .leading, spacing: 8) {
+                labels
+                shortcutField(String(localized: "Shortcut name"), text: text)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .frame(minHeight: 42).padding(.vertical, 4)
     }

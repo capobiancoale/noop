@@ -107,7 +107,7 @@ enum WeeklyDigestText {
                 ? String(localized: "Last week only had 1 day of data, so week-over-week changes are rough, not a trend.")
                 : String(localized: "Last week only had \(days) days of data, so week-over-week changes are rough, not a trend.")
         case .steadyRestHeld(let sd):
-            let spread = String(format: "%.1f", sd)
+            let spread = DisplayNumber.decimal(sd)
             return String(localized: "A steady week: Rest held even (±\(spread) pts) and nothing moved much.")
         case .steady:
             return String(localized: "A steady week: no metric moved meaningfully from last week.")
@@ -134,7 +134,7 @@ enum WeeklyDigestText {
         case .percent(let p):
             return "\(p)%"
         case .absolute(let value, let unit):
-            let number = String(format: "%.1f", value)
+            let number = DisplayNumber.decimal(value)
             return unit.isEmpty ? String(localized: "\(number) pts") : "\(number) \(unit)"
         }
     }
@@ -427,6 +427,14 @@ struct WeeklyDigestContent: View {
 
     // MARK: Footer (full screen only)
 
+    /// True when the balance read is already shown as one of the card's focal lines.
+    private var balanceIsFocalLine: Bool {
+        digest.focalItems.contains { item in
+            if case .balance = item { return true }
+            return false
+        }
+    }
+
     private var footer: some View {
         VStack(alignment: .leading, spacing: 6) {
             Divider().overlay(StrandPalette.hairline)
@@ -435,10 +443,15 @@ struct WeeklyDigestContent: View {
                     .font(StrandFont.footnote)
                     .foregroundStyle(StrandPalette.textTertiary)
             }
-            Text(WeeklyDigestText.balance(digest.balance))
-                .font(StrandFont.footnote)
-                .foregroundStyle(StrandPalette.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
+            // An over- or under-loaded week already carries its balance read as a focal line at the top of
+            // this same card; repeating it here said the same sentence twice. Only the balanced and
+            // not-enough-data reads, which have no focal line, are written out in the footer.
+            if !balanceIsFocalLine {
+                Text(WeeklyDigestText.balance(digest.balance))
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Text("Informational only, not medical advice.")
                 .font(StrandFont.footnote)
                 .foregroundStyle(StrandPalette.textTertiary)
@@ -515,7 +528,7 @@ struct WeeklyDigestContent: View {
         }
     }
 
-    private func fmt1(_ x: Double) -> String { String(format: "%.1f", x) }
+    private func fmt1(_ x: Double) -> String { DisplayNumber.decimal(x) }
 }
 
 // MARK: - Rough-comparison chip contract (#463, testable mirror of Android)

@@ -565,7 +565,7 @@ enum IllnessConfidence {
         return String(localized: "slight")
     }
     static func formatted(_ distance: Double) -> String {
-        String(format: "%.1f", distance)
+        DisplayNumber.decimal(distance)
     }
 }
 

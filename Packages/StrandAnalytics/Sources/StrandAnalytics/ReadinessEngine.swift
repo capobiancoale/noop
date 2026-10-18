@@ -200,7 +200,7 @@ public enum ReadinessEngine {
                 monotony = mono
                 if mono >= 2.0 {
                     signals.append(Signal(key: "monotony", label: "Training variety",
-                        evidence: "monotony \(String(format: "%.1f", mono))",
+                        evidence: "monotony \(NumberText.decimal(mono))",
                         detail: "low - similar strain every day raises strain/illness risk", flag: .watch))
                 }
             }
@@ -238,8 +238,8 @@ public enum ReadinessEngine {
     }
 
     private static func acwrSignal(_ ratio: Double, acute: Double, chronic: Double) -> Signal {
-        let pct = String(format: "%.2f", ratio)
-        let evidence = "7d \(String(format: "%.1f", acute)) / 28d \(String(format: "%.1f", chronic))"
+        let pct = NumberText.decimal(ratio, digits: 2)
+        let evidence = "7d \(NumberText.decimal(acute)) / 28d \(NumberText.decimal(chronic))"
         switch ratio {
         case ..<0.8:
             return Signal(key: "acwr", label: "Training load",
@@ -267,7 +267,7 @@ public enum ReadinessEngine {
     private static func format(_ value: Double, decimals: Int) -> String {
         decimals == 0
             ? String(Int(value.rounded()))
-            : String(format: "%.\(decimals)f", value)
+            : NumberText.decimal(value, digits: decimals)
     }
 
     // MARK: Synthesis

@@ -347,7 +347,7 @@ struct WodDetailView: View {
     }
 
     private func trimU(_ u: Double) -> String {
-        (u == u.rounded() ? String(Int(u)) : String(format: "%.1f", u)) + " U"
+        (u == u.rounded() ? String(Int(u)) : DisplayNumber.decimal(u)) + " U"
     }
 
     private func deltaText(_ r: WodGlucoseResponse) -> String {

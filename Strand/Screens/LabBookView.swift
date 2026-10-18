@@ -498,9 +498,11 @@ extension LabMarkerCategory {
 
 enum LabBookFormat {
     /// Format a numeric value with the marker's catalog decimals (default 1 for custom markers).
-    static func value(_ v: Double, key: String) -> String {
+    /// `locale` defaults to the reader's; the coach prompt pins POSIX so what is sent to a provider never
+    /// depends on the phone's language.
+    static func value(_ v: Double, key: String, locale: Locale = .autoupdatingCurrent) -> String {
         let decimals = MarkerCatalog.definition(for: key)?.decimals ?? 1
-        return decimals == 0 ? String(Int(v.rounded())) : String(format: "%.\(decimals)f", v)
+        return decimals == 0 ? String(Int(v.rounded())) : DisplayNumber.decimal(v, digits: decimals, locale: locale)
     }
 
     private static let dayFormatter: DateFormatter = {
@@ -939,7 +941,7 @@ enum LabBookSignals {
     }
 
     static func signedR(_ r: Double) -> String {
-        (r >= 0 ? "+" : "−") + String(format: "%.2f", abs(r))
+        (r >= 0 ? "+" : "−") + DisplayNumber.decimal(abs(r), digits: 2)
     }
 
     static func strengthWord(_ r: Double) -> String {

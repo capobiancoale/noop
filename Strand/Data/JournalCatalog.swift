@@ -259,9 +259,49 @@ final class JournalCatalogStore: ObservableObject {
 
     // MARK: - Custom add / remove / restore (v1 API preserved)
 
-    /// The display label for a canonical key: the user's rename, or the verbatim canonical.
+    /// The display label for a canonical key: the user's rename, else the built-in question in the UI
+    /// language, else the verbatim canonical.
     func displayName(for canonical: String) -> String {
-        item(for: canonical)?.displayName ?? canonical.trimmingCharacters(in: .whitespacesAndNewlines)
+        item(for: canonical)?.displayName ?? Self.displayLabel(forQuestion: canonical)
+    }
+
+    /// The text to SHOW for a journal question. A built-in (starter) question appears in the UI language;
+    /// an imported or custom one appears exactly as written. DISPLAY ONLY: the stored text, the
+    /// `journal` rows and every matcher that reads them (the effects engine, the illness watch's
+    /// `IllnessCalibration.tags(forQuestion:)`) keep the English `canonical`, so a translated label
+    /// never starts a new, disconnected behaviour.
+    nonisolated static func displayLabel(forQuestion question: String) -> String {
+        localizedStarter(question) ?? question.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// The translated text of a starter question, matched on the same normalised key the catalog dedupes
+    /// on (case and spacing do not matter), or nil for any other question. One literal per question so
+    /// each is extracted into the string catalog.
+    nonisolated static func localizedStarter(_ canonical: String) -> String? {
+        switch norm(canonical) {
+        case "did you drink any alcohol?":
+            return String(localized: "Did you drink any alcohol?")
+        case "did you have caffeine late in the day?":
+            return String(localized: "Did you have caffeine late in the day?")
+        case "did you view a screen in bed?":
+            return String(localized: "Did you view a screen in bed?")
+        case "did you eat close to bedtime?":
+            return String(localized: "Did you eat close to bedtime?")
+        case "did you feel stressed?":
+            return String(localized: "Did you feel stressed?")
+        case "did you use a sauna?":
+            return String(localized: "Did you use a sauna?")
+        case "did you share your bed?":
+            return String(localized: "Did you share your bed?")
+        case "did you feel sick or ill?":
+            return String(localized: "Did you feel sick or ill?")
+        case "did you take magnesium?":
+            return String(localized: "Did you take magnesium?")
+        case "did you read before bed?":
+            return String(localized: "Did you read before bed?")
+        default:
+            return nil
+        }
     }
 
     /// True when `q` is a user-added custom question (not a starter/imported one).
@@ -354,9 +394,10 @@ struct JournalCatalogItem: Equatable, Codable, Identifiable {
 
     var id: String { canonical }
 
-    /// What the UI renders: the rename if present, else the verbatim canonical.
+    /// What the UI renders: the rename if present, else the built-in question in the UI language, else
+    /// the verbatim canonical. Display only; `canonical` is what is stored and matched.
     var display: String {
-        displayName ?? canonical
+        displayName ?? JournalCatalogStore.displayLabel(forQuestion: canonical)
     }
 
     init(canonical: String, displayName: String?, kind: JournalKind, group: JournalGroup,

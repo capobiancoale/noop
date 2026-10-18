@@ -284,7 +284,7 @@ struct WorkoutsView: View {
             await MainActor.run { postLogNote = nil }
             return
         }
-        let sentence = match.sentence()
+        let sentence = InsightsCopy.activityCostSentence(match)
         await MainActor.run { withAnimation(.easeOut(duration: 0.2)) { postLogNote = sentence } }
         // Auto-dismiss after a few seconds (transient caption, not a permanent card).
         try? await Task.sleep(nanoseconds: 7_000_000_000)
@@ -637,7 +637,7 @@ struct WorkoutsView: View {
                         // interpolates it straight to one decimal — no re-scaling in the format closure.
                         CountUpText(
                             value: displayValue,
-                            format: { String(format: "%.1f", $0) },
+                            format: { DisplayNumber.decimal($0) },
                             font: StrandFont.rounded(46),
                             color: StrandPalette.textPrimary
                         )
@@ -746,7 +746,7 @@ struct WorkoutsView: View {
                      caption: String(localized: "covered"),
                      accent: StrandPalette.metricCyan)
             StatTile(label: "Most Active",
-                     value: modal.sport,
+                     value: modal.count > 0 ? WorkoutSource.localizedSport(modal.sport) : modal.sport,
                      caption: modal.count > 0
                          ? (modal.count == 1 ? String(localized: "1 session") : String(localized: "\(modal.count) sessions"))
                          : nil,
@@ -1547,7 +1547,7 @@ struct WorkoutsView: View {
         return UnitFormatter.distanceFromMeters(m, system: unitSystem)
     }
 
-    private func oneDecimal(_ v: Double) -> String { String(format: "%.1f", v) }
+    private func oneDecimal(_ v: Double) -> String { DisplayNumber.decimal(v) }
 
     private func grouped(_ v: Double) -> String {
         Self.intFmt.string(from: NSNumber(value: Int(v.rounded()))) ?? "\(Int(v.rounded()))"

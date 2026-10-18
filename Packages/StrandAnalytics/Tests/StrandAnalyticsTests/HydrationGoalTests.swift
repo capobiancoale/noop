@@ -89,8 +89,15 @@ final class HydrationGoalTests: XCTestCase {
     // MARK: - Display helpers
 
     func testCardValueString() {
-        XCTAssertEqual(HydrationGoal.cardValueString(totalML: 1200, goalML: 3200), "1.2 / 3.2 L")
-        XCTAssertEqual(HydrationGoal.cardValueString(totalML: 0, goalML: 3700), "0.0 / 3.7 L")
+        let en = Locale(identifier: "en_US")
+        XCTAssertEqual(HydrationGoal.cardValueString(totalML: 1200, goalML: 3200, locale: en), "1.2 / 3.2 L")
+        XCTAssertEqual(HydrationGoal.cardValueString(totalML: 0, goalML: 3700, locale: en), "0.0 / 3.7 L")
+    }
+
+    /// The card value is read off the screen, so an Italian reader gets the comma, not the dot.
+    func testCardValueStringUsesTheReadersDecimalSeparator() {
+        let it = Locale(identifier: "it_IT")
+        XCTAssertEqual(HydrationGoal.cardValueString(totalML: 1200, goalML: 3200, locale: it), "1,2 / 3,2 L")
     }
 
     func testFractionClamps() {
