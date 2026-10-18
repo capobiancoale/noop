@@ -222,11 +222,14 @@ struct CompareView: View {
 
     // Distinct, high-legibility series colors (avoid the recovery/strain ramps so
     // overlay lines read as categorical, not as a value gradient).
+    // Four distinct hues in a fixed order. `accent` and `metricCyan` are the same cyan in dark mode, so the
+    // first two series used to draw in one colour; cyan, amber, purple, rose keep every adjacent pair apart
+    // (normal-vision and colour-blind separation checked for both appearances).
     private static let seriesPalette: [Color] = [
-        StrandPalette.accent,        // mint-green
-        StrandPalette.metricCyan,    // cyan
-        StrandPalette.metricPurple,  // purple
+        StrandPalette.accent,        // cyan (dark) / brand blue (light)
         StrandPalette.metricAmber,   // amber
+        StrandPalette.metricPurple,  // purple
+        StrandPalette.metricRose,    // rose
     ]
 
     /// Default starter selection (falls back gracefully if a key is missing).
