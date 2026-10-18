@@ -4,9 +4,10 @@ import Foundation
 /// reader's decimal separator: "55,1" in Italian, "55.1" in English. `String(format: "%.1f", …)` always
 /// prints a dot, whatever the locale. Display only: grouping is off so `en_US` output matches `%.Nf`
 /// digit for digit. (The app target has its own `DisplayNumber` in Units.swift; this one is internal to
-/// the package so the two modules do not export the same name.)
-enum GaugeNumber {
-    static func decimal(_ v: Double, digits: Int = 1) -> String {
+/// the package so the two modules do not export the same name; `@usableFromInline` because a public default
+/// argument, StrainGauge's `valueFormat`, refers to it.)
+@usableFromInline enum GaugeNumber {
+    @usableFromInline static func decimal(_ v: Double, digits: Int = 1) -> String {
         v.formatted(.number.precision(.fractionLength(digits)).grouping(.never))
     }
 }
