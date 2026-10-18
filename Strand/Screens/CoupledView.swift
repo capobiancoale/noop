@@ -433,11 +433,18 @@ struct CoupledView: View {
     }
 
     /// The night's need (minutes) for the slept-vs-needed read: the imported per-day figure when the
-    /// export carried one, else the fixed 8 h default (`SleepDebt.defaultNeedMin`), the same rule as
-    /// SleepView's hours-vs-needed tile and debt ledger so the two screens agree.
+    /// export carried one, else the shared ≥ 7.5h personal-mean floor (matches SleepView.sleepNeedMin).
     private var sleepNeedForDay: Double {
         if let need = day.flatMap({ repo.importedSleep[$0.day]?.needMin }), need > 0 { return need }
-        return SleepDebt.defaultNeedMin
+        return sleepNeedMin
+    }
+
+    /// The personal sleep need (minutes): the recent-mean total sleep, never below a 7.5h floor. Byte-for-byte
+    /// the same rule as SleepView.sleepNeedMin so the two screens agree.
+    private var sleepNeedMin: Double {
+        let banked = repo.days.compactMap { $0.totalSleepMin }.filter { $0 > 0 }
+        let mean = banked.isEmpty ? nil : banked.reduce(0, +) / Double(banked.count)
+        return Swift.max(450, mean ?? 450)   // 450 min = 7.5h
     }
 
     /// Last night's bed → wake span, e.g. "23:41 – 07:23", from the freshest banked sleep session, only
