@@ -658,12 +658,13 @@ struct SettingsView: View {
     // MARK: - Appearance (Theme everywhere; alternate app icon iOS-only)
 
     /// The theme segment labels. "Light" is also the sleep-stage word ("Leggero" in Italian) and a catalog
-    /// key carries one translation, so the light option has its own key ("Light theme", Italian "Chiaro").
+    /// key carries one translation, so the light option has its own key ("theme.light": English "Light",
+    /// Italian "Chiaro").
     /// System and Dark keep the design system's labels.
     private func themeLabel(_ mode: AppearanceMode) -> String {
         switch mode {
         case .system: return mode.label
-        case .light:  return String(localized: "Light theme")
+        case .light:  return String(localized: "theme.light", defaultValue: "Light")
         case .dark:   return mode.label
         }
     }
