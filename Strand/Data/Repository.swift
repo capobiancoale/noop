@@ -837,8 +837,7 @@ final class Repository: ObservableObject {
     nonisolated static func userEditedDays(_ sessions: [CachedSleepSession]) -> Set<String> {
         var days = Set<String>()
         for s in sessions where s.userEdited {
-            let offsetSec = TimeZone.current.secondsFromGMT(for: Date(timeIntervalSince1970: TimeInterval(s.endTs)))
-            days.insert(AnalyticsEngine.dayString(s.endTs, offsetSec: offsetSec))
+            days.insert(SleepStageTotals.wakeDay(of: s))
         }
         return days
     }
