@@ -253,25 +253,27 @@ struct TrendsView: View {
                 // (#732); see sleepPerfByDay. resolve() still does the windowing/widening.
                 let rest = resolve { sleepPerfByDay[$0.day] }
                 VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
-                    // The main card list ripples in once on appear (Reduce-Motion safe).
+                    // The main card list ripples in once on appear (Reduce-Motion safe). Each card is type-erased:
+                    // in the optimised build the column otherwise becomes one deeply nested type whose metadata
+                    // lookup can overflow the main thread's stack (see LiquidTodayView).
                     Group {
                         // Week-in-review digest (#208) with prev/next week browsing (#710) — self-hides
                         // only when NO week in history has data. Past weeks render in the same format.
-                        weeklyDigestNav
-                            .staggeredAppear(index: 0)
+                        AnyView(weeklyDigestNav
+                            .staggeredAppear(index: 0))
                         // The Charge / Effort / Rest trio, presented in NOOP's pip language.
-                        weekInReview(charge: recovery, effort: strain, rest: rest)
-                            .staggeredAppear(index: 1)
-                        rangeBar(recovery: recovery)
-                            .staggeredAppear(index: 2)
-                        heroRecovery(recovery: recovery)
-                            .staggeredAppear(index: 3)
-                        smallMultiples(hrv: hrv, rhr: rhr, strain: strain)
-                            .staggeredAppear(index: 4)
-                        yearStrip
-                            .staggeredAppear(index: 5)
-                        exportReportRow
-                            .staggeredAppear(index: 6)
+                        AnyView(weekInReview(charge: recovery, effort: strain, rest: rest)
+                            .staggeredAppear(index: 1))
+                        AnyView(rangeBar(recovery: recovery)
+                            .staggeredAppear(index: 2))
+                        AnyView(heroRecovery(recovery: recovery)
+                            .staggeredAppear(index: 3))
+                        AnyView(smallMultiples(hrv: hrv, rhr: rhr, strain: strain)
+                            .staggeredAppear(index: 4))
+                        AnyView(yearStrip
+                            .staggeredAppear(index: 5))
+                        AnyView(exportReportRow
+                            .staggeredAppear(index: 6))
                     }
                 }
             }

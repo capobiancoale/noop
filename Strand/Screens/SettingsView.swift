@@ -177,13 +177,15 @@ struct SettingsView: View {
                        // Settings' own frosted cards sit on the dark canvas below the sky band, unchanged.
                        topBackground: liquidScaffoldSky()) {
             VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
-                // Everyday sections stay expanded (S3): the ones a first-run user actually needs.
-                profilePhotoCard.staggeredAppear(index: 0)
-                profileCard.staggeredAppear(index: 1)
-                unitsCard.staggeredAppear(index: 2)
-                appearanceCard.staggeredAppear(index: 3)
-                strapCard.staggeredAppear(index: 4)
-                featuresCard.staggeredAppear(index: 5)
+                // Everyday sections stay expanded (S3): the ones a first-run user actually needs. Each card is
+                // type-erased: in the optimised build the column otherwise becomes one deeply nested type whose
+                // metadata lookup can overflow the main thread's stack (see LiquidTodayView).
+                AnyView(profilePhotoCard.staggeredAppear(index: 0))
+                AnyView(profileCard.staggeredAppear(index: 1))
+                AnyView(unitsCard.staggeredAppear(index: 2))
+                AnyView(appearanceCard.staggeredAppear(index: 3))
+                AnyView(strapCard.staggeredAppear(index: 4))
+                AnyView(featuresCard.staggeredAppear(index: 5))
 
                 // Lower-frequency sections collapse behind a single default-closed disclosure so the
                 // screen opens at ~6 sections instead of 11. Nothing is removed; every section here
@@ -194,15 +196,15 @@ struct SettingsView: View {
                     subtitle: "Recovery, Test Centre, experimental probes, and backup. Tucked away to keep the everyday screen tidy.",
                     isExpanded: $advancedOpen
                 ) {
-                    recoveryCard
-                    testCentreCard
-                    experimentalCard
-                    backupCard
+                    AnyView(recoveryCard)
+                    AnyView(testCentreCard)
+                    AnyView(experimentalCard)
+                    AnyView(backupCard)
                 }
                 .staggeredAppear(index: 6)
 
                 // About stays expanded at the foot (version, links and the help sheets people return to).
-                aboutCard.staggeredAppear(index: 7)
+                AnyView(aboutCard.staggeredAppear(index: 7))
             }
         }
         .alert(backupAlertTitle, isPresented: $showBackupAlert) {
