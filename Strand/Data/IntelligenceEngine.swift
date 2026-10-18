@@ -235,6 +235,20 @@ final class IntelligenceEngine: ObservableObject {
         if !computing { UserDefaults.standard.set(true, forKey: Self.effortRescoreFlagKey) }
     }
 
+    /// UserDefaults flag guarding the one-shot full-history rescore after the edited-night fix (below).
+    static let sleepEditRescoreFlagKey = "intelligence.sleepEditRescore.v1.done"
+
+    /// One-shot, on-upgrade FULL-history rescore after the edited-night fix in `sleepEditedDaily`. Before
+    /// it, every pass folded each hand-edited sleep block in its window into EVERY day's main-night pick,
+    /// so one edited night was copied onto each day it out-scored (the same total, deep and REM night after
+    /// night). The regular pass only revisits the last 21 days; this rescores every day with raw data once
+    /// so older copies regenerate from their own nights. Same lock handling as `runEffortRescoreIfNeeded`.
+    func runSleepEditRescoreIfNeeded(historyDays: Int = 4000) async {
+        guard !UserDefaults.standard.bool(forKey: Self.sleepEditRescoreFlagKey) else { return }
+        await analyzeRecent(maxDays: historyDays)
+        if !computing { UserDefaults.standard.set(true, forKey: Self.sleepEditRescoreFlagKey) }
+    }
+
     /// UserDefaults flag guarding the one-shot #547 implausible-timestamp DB heal (below). Set once the
     /// heal completes so it never re-runs.
     static let timestampHealFlagKey = "intelligence.timestampHeal.v547.done"
@@ -1647,14 +1661,18 @@ final class IntelligenceEngine: ObservableObject {
     private func sleepEditedDaily(_ daily: DailyMetric, detected: [CachedSleepSession],
                                  editsByStart: [Int: CachedSleepSession],
                                  habitualMidsleepSec: Int?) -> DailyMetric {
-        guard !editsByStart.isEmpty else { return daily }
+        // `editsByStart` holds every edited block in the scoring window. Keep only this day's: edits of its
+        // own detected blocks and hand-logged blocks that end on it. Another day's edited night passed in
+        // as `manual` joined this day's main-night pick and, when it out-scored the real night, replaced it.
+        let detectedStarts = Set(detected.map { $0.startTs })
+        let dayEdits = SleepStageTotals.editsForDay(editsByStart, detectedStarts: detectedStarts, day: daily.day)
+        guard !dayEdits.isEmpty else { return daily }
         let detectedTuples = detected.map { (startTs: $0.startTs, stagesJSON: $0.stagesJSON) }
-        let editedStages = editsByStart.mapValues { $0.stagesJSON }
+        let editedStages = dayEdits.mapValues { $0.stagesJSON }
         // A hand-logged nap is a userEdited row with NO detected twin , it would never be
         // visited by the substitution pass, so its minutes were dropped from the day's Rest
         // total. Pass those twinless rows through the union channel so they fold in. (#518/#508)
-        let detectedStarts = Set(detected.map { $0.startTs })
-        let manualTuples = editsByStart
+        let manualTuples = dayEdits
             .filter { !detectedStarts.contains($0.key) }
             .map { (startTs: $0.key, stagesJSON: $0.value.stagesJSON) }
         // #525/#547: supply each block's EFFECTIVE onset (audit finding C / #8) keyed by its stable
@@ -1668,9 +1686,9 @@ final class IntelligenceEngine: ObservableObject {
         // legacy SUM and an overnight+nap day would re-include the nap in the headline total.
         var onsetByStart: [Int: Int] = [:]
         for d in detected {
-            onsetByStart[d.startTs] = editsByStart[d.startTs]?.effectiveStartTs ?? d.effectiveStartTs
+            onsetByStart[d.startTs] = dayEdits[d.startTs]?.effectiveStartTs ?? d.effectiveStartTs
         }
-        for (start, edit) in editsByStart where !detectedStarts.contains(start) {
+        for (start, edit) in dayEdits where !detectedStarts.contains(start) {
             onsetByStart[start] = edit.effectiveStartTs
         }
         guard let r = SleepStageTotals.dailyAggregateHonoringEdits(detected: detectedTuples,
