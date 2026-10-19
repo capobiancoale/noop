@@ -210,8 +210,10 @@ extension HealthWritePlan {
         public let loggedTs: Double
         /// Result time, else time cap (nil: neither).
         public let durationS: Double?
-        public init(id: String, loggedTs: Double, durationS: Double?) {
-            self.id = id; self.loggedTs = loggedTs; self.durationS = durationS
+        /// The session's end when the user set it (then `loggedTs` is its start).
+        public let sessionEnd: Double?
+        public init(id: String, loggedTs: Double, durationS: Double?, sessionEnd: Double? = nil) {
+            self.id = id; self.loggedTs = loggedTs; self.durationS = durationS; self.sessionEnd = sessionEnd
         }
     }
 
@@ -251,12 +253,20 @@ extension HealthWritePlan {
         }
         var wodsByOwn: [Int: [String]] = [:]
         var standalone: [WorkoutToWrite] = []
+        // NOOP's own bouts inside a session the user timed: part of that session, not workouts of their own.
+        var absorbed = Set<Int>()
         let candidates = own.map { (start: $0.start, end: $0.end) } + others.map { (start: $0.start, end: $0.end) }
         for w in wods.sorted(by: { $0.loggedTs < $1.loggedTs }) {
-            let window = WodTimeWindow.resolve(loggedTs: w.loggedTs, durationS: w.durationS, workouts: candidates)
+            let window = WodTimeWindow.resolve(loggedTs: w.loggedTs, durationS: w.durationS,
+                                               sessionEndTs: w.sessionEnd, workouts: candidates)
             let span = WorkoutSpan(start: window.start, end: window.end)
             guard inWindow(span) else { continue }
-            if window.recorded {
+            if window.userSet {
+                for (i, o) in own.enumerated() where o.start < span.end && o.end > span.start { absorbed.insert(i) }
+                if !covered(span) {
+                    standalone.append(WorkoutToWrite(start: span.start, end: span.end, ownIndex: nil, wodIds: [w.id]))
+                }
+            } else if window.recorded {
                 if let i = own.firstIndex(where: { $0.start == window.start && $0.end == window.end }) {
                     wodsByOwn[i, default: []].append(w.id)
                 }
@@ -266,7 +276,8 @@ extension HealthWritePlan {
             }
         }
         var out = standalone
-        for (i, s) in own.enumerated() where inWindow(s) && s.duration >= minWorkoutSeconds && !covered(s) {
+        for (i, s) in own.enumerated()
+        where inWindow(s) && s.duration >= minWorkoutSeconds && !covered(s) && !absorbed.contains(i) {
             out.append(WorkoutToWrite(start: s.start, end: s.end, ownIndex: i, wodIds: wodsByOwn[i] ?? []))
         }
         return out.sorted { $0.start < $1.start }

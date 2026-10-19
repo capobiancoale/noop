@@ -333,10 +333,11 @@ struct LiquidTodayView: View {
                 await refreshGlucose()
             }
         }
-        // Log the WOD of the day's workout, dated when the workout started.
+        // Log the WOD of the day's workout: its session starts and ends with the workout (adjustable).
         .sheet(isPresented: $showWodEditor) {
             WodEditorView(existing: nil,
-                          initialDate: dayWorkouts.first.map { Date(timeIntervalSince1970: TimeInterval($0.startTs)) }) {
+                          initialDate: dayWorkouts.first.map { Date(timeIntervalSince1970: TimeInterval($0.startTs)) },
+                          initialEnd: dayWorkouts.first.map { Date(timeIntervalSince1970: TimeInterval($0.endTs)) }) {
                 Task { await load() }
             }
         }
@@ -1054,8 +1055,9 @@ struct LiquidTodayView: View {
             glucoseSparkWindow = crossBounds.lowerBound.timeIntervalSince1970...crossBounds.upperBound.timeIntervalSince1970
         }
         glucoseSpark = crossTrace.visible(from: glucoseSparkWindow.lowerBound, to: glucoseSparkWindow.upperBound)
-        workoutGlucose = dayWorkouts.first.flatMap {
-            WorkoutGlucose.around(crossTrace, start: Double($0.startTs), end: Double($0.endTs))
+        workoutGlucose = dayWorkouts.first.flatMap { w in
+            let span = workoutSession ?? (start: w.startTs, end: w.endTs)
+            return WorkoutGlucose.around(crossTrace, start: Double(span.start), end: Double(span.end))
         }
     }
 
@@ -1307,8 +1309,15 @@ struct LiquidTodayView: View {
         return minutes > 0 ? pct.map { minutes * $0 / 100 } : nil
     }
 
+    /// The whole session a WOD logged for the newest workout timed (warm-up and skill included), which the
+    /// workout's zones, heart-rate recovery and glucose then read instead of the strap's bout. nil: none timed.
+    private var workoutSession: (start: Int, end: Int)? {
+        workoutWods.compactMap(\.sessionSpan).first
+    }
+
     /// The WODs logged for a workout: those whose logged time resolves to it, by the same rule the WOD screen
-    /// uses to find its workout (`WodTimeWindow.resolve` over the sessions recorded within half a day).
+    /// uses to find its workout (`WodTimeWindow.resolve` over the sessions recorded within half a day), and
+    /// those whose timed session overlaps it.
     static func wods(for w: WorkoutRow, among wods: [WodLogRow], workouts: [WorkoutRow]) -> [WodLogRow] {
         wods.filter { wod in
             let logged = Double(wod.ts)
@@ -1318,7 +1327,9 @@ struct LiquidTodayView: View {
                 .map { (start: Double($0.startTs), end: Double($0.endTs)) }
             let window = WodTimeWindow.resolve(loggedTs: logged,
                                                durationS: (wod.resultSeconds ?? wod.timeCapS).map(Double.init),
+                                               sessionEndTs: wod.endTs.map(Double.init),
                                                workouts: spans)
+            if window.userSet { return window.start < Double(w.endTs) && window.end > Double(w.startTs) }
             return window.recorded && window.start == Double(w.startTs) && window.end == Double(w.endTs)
         }
     }
@@ -1823,14 +1834,17 @@ struct LiquidTodayView: View {
         dayWorkouts = workouts.filter { $0.startTs >= from && $0.startTs < to }.sorted { $0.startTs > $1.startTs }
         let allWods = await wodsA
         if let w = dayWorkouts.first {
-            // Zones as the workout screen shows them: an imported split first, else the strap's own samples.
-            if let imported = Self.importedZoneMinutes(w) {
+            workoutWods = Self.wods(for: w, among: allWods, workouts: workouts)
+            let session = workoutSession
+            let span = session ?? (start: w.startTs, end: w.endTs)
+            // Zones as the workout screen shows them: an imported split first, else the strap's own samples
+            // (over the whole session when a WOD logged for it timed one).
+            if session == nil, let imported = Self.importedZoneMinutes(w) {
                 workoutZones = imported
             } else {
-                workoutZones = await repo.workoutZoneMinutes(from: w.startTs, to: w.endTs, maxHR: profile.hrMax)
+                workoutZones = await repo.workoutZoneMinutes(from: span.start, to: span.end, maxHR: profile.hrMax)
             }
-            workoutWods = Self.wods(for: w, among: allWods, workouts: workouts)
-            workoutRecovery = await repo.heartRateRecovery(start: w.startTs, end: w.endTs)
+            workoutRecovery = await repo.heartRateRecovery(start: span.start, end: span.end)
         } else {
             workoutZones = nil
             workoutWods = []

@@ -440,13 +440,15 @@ Effort         = 100 · ln(heart-rate TRIMP + added TRIMP + 1) / ln(D)
 ```
 
 - The comparison uses the classic Edwards zones (50–90 % of HRmax), the scale the 0.52 ratio was measured on.
-- "Recorded for that session" is the detected workout that best overlaps it (within an hour either side), else
+- "Recorded for that session" is the session the user timed (start and end, e.g. an hour of warm-up, skill
+  and a 15-minute AMRAP), else the detected workout that best overlaps it (within an hour either side), else
   the span the WOD could occupy whether its logged time marks the start or the end. A WOD imported with a date
   only (anchored to local noon) is matched to the day's detected workout, or counts in full if none exists.
 - Never negative: a metcon the heart rate fully captured adds nothing, so nothing is counted twice. A day with
   no heart rate still has no Effort; a WOD alone never makes one.
-- Duration is the result time, else the time cap; a WOD without RPE or duration adds nothing (the WOD screen
-  says so). Saving, editing or deleting a WOD rescores the recent days; the WOD screen shows what it added.
+- Duration is the timed session's length (Foster's session-RPE rates the whole session and multiplies by its
+  full duration, so the RPE then rates the whole session), else the result time, else the time cap; a WOD
+  without RPE or duration adds nothing (the WOD screen says so). Saving, editing or deleting a WOD rescores the recent days; the WOD screen shows what it added.
 
 ### Glucose and heart rate on one clock (`WodTimeWindow`, `GlucoseTrace`, `TimelineTicks`, `TimelineEvents`)
 
@@ -454,7 +456,9 @@ The WOD screen and Today's "Heart & Glucose" card show glucose (Apple Health), h
 boluses in lanes on one clock, zoomable like the Deep Timeline. Informational only: it never suggests carbs or
 insulin.
 
-- **Where a WOD sat.** The recorded workout (strap or Apple Health) overlapping most with
+- **Where a WOD sat.** When the user set the session's start and end (Log WOD → Session end), exactly that
+  span, whatever the strap recorded (at most 4 h). Otherwise the recorded workout (strap or Apple Health)
+  overlapping most with
   `[logged − duration, logged + duration]` is the WOD, since the logged time may mark its start or its end
   (nearest within an hour if none overlaps; longer than 4 h never counts). Without one, the logged time is the
   start. Duration is the result time, else the time cap, else 20 min. The screen says which source it used.

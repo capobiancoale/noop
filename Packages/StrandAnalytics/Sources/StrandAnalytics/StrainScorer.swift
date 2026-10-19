@@ -297,8 +297,12 @@ public enum StrainScorer {
         public let ts: Int
         /// False when only the date is known (imports anchor such entries to local noon).
         public let timeKnown: Bool
-        public init(rpe: Double, durationMin: Double, ts: Int, timeKnown: Bool) {
+        /// The session's end when the user timed it (unix seconds): then `ts` is its start and [ts, end] is
+        /// exactly where its heart rate is.
+        public let end: Int?
+        public init(rpe: Double, durationMin: Double, ts: Int, timeKnown: Bool, end: Int? = nil) {
             self.rpe = rpe; self.durationMin = durationMin; self.ts = ts; self.timeKnown = timeKnown
+            self.end = end
         }
         /// Foster's session-RPE load (arbitrary units).
         public var load: Double { rpe * durationMin }
@@ -310,15 +314,17 @@ public enum StrainScorer {
     /// How far from its logged time a detected workout can sit and still be the logged session (seconds).
     static let sessionMatchSlackS = 3_600
 
-    /// The heart-rate window that recorded each logged session: the detected workout (`bouts`) that best
-    /// overlaps it — within an hour either side when the time is known, anywhere in the day otherwise —
-    /// else the span the session could occupy whether its time marks the start or the end.
+    /// The heart-rate window that recorded each logged session: the span the user timed when they did;
+    /// else the detected workout (`bouts`) that best overlaps it — within an hour either side when the time
+    /// is known, anywhere in the day otherwise — else the span the session could occupy whether its time
+    /// marks the start or the end.
     public static func sessionWindows(_ sessions: [LoggedSession], bouts: [(start: Int, end: Int)],
                                       dayStart: Int, dayEnd: Int) -> [(expected: Double, start: Int, end: Int)] {
         var used = Set<Int>()
         return sessions.compactMap { s in
             guard s.rpe > 0, s.durationMin > 0 else { return nil }
             let expected = trimpPerSessionRPE * s.load
+            if let end = s.end, end > s.ts { return (expected, max(dayStart, s.ts), min(dayEnd, end)) }
             let dur = Int((s.durationMin * 60).rounded())
             let core = s.timeKnown ? (lo: s.ts - dur, hi: s.ts + dur) : (lo: dayStart, hi: dayEnd)
             let search = s.timeKnown ? (lo: core.lo - sessionMatchSlackS, hi: core.hi + sessionMatchSlackS) : core

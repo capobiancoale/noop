@@ -35,6 +35,24 @@ final class GlucoseTimelineTests: XCTestCase {
         XCTAssertEqual(w, WodTimeWindow(start: t0, end: t0 + 1_200, recorded: false))
     }
 
+    /// A 15-minute AMRAP inside an hour of warm-up and skill: the session the user timed is the span, even
+    /// though the strap recorded only the hard part.
+    func testTheSessionTheUserTimedIsTheSpan() {
+        let w = WodTimeWindow.resolve(loggedTs: t0, durationS: 900, sessionEndTs: t0 + 3_600,
+                                      workouts: [(t0 + 2_400, t0 + 3_300)])
+        XCTAssertEqual(w, WodTimeWindow(start: t0, end: t0 + 3_600, recorded: false, userSet: true))
+        XCTAssertEqual(w.durationMinutes, 60)
+    }
+
+    /// An end at or before the start, or more than four hours after it, is ignored.
+    func testAnImplausibleSessionEndIsIgnored() {
+        let before = WodTimeWindow.resolve(loggedTs: t0, durationS: 900, sessionEndTs: t0 - 60, workouts: [])
+        XCTAssertFalse(before.userSet)
+        XCTAssertEqual(before.end, t0 + 900)
+        let tooLong = WodTimeWindow.resolve(loggedTs: t0, durationS: 900, sessionEndTs: t0 + 5 * 3_600, workouts: [])
+        XCTAssertFalse(tooLong.userSet)
+    }
+
     func testWithoutADurationTheWodIsAssumedTwentyMinutes() {
         let w = WodTimeWindow.resolve(loggedTs: t0, durationS: nil, workouts: [])
         XCTAssertEqual(w.durationMinutes, 20)

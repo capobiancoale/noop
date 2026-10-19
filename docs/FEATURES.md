@@ -134,8 +134,9 @@ The home dashboard (`TodayView.swift`, titled "Control Center"). A tight, gaples
    lows. A past day shows that day's trace and figures. Informational only.
 3. **Today's workout.** The day's latest session: its Effort, time in heart-rate zones, glucose at its start
    and end (with a note if it went below 70 during it or in the hour after) and the WOD logged for it. A
-   detected session asks what it was: rename it, or mark it as not a workout. **Log WOD** (dated when the
-   session started) and **Start session** (beta) sit here too; **All workouts** opens the full list. Once the
+   detected session asks what it was: rename it, or mark it as not a workout. **Log WOD** (its session
+   starts and ends with the workout; adjust both, e.g. an hour of warm-up, skill and a 15-minute AMRAP, and
+   heart rate, zones, Effort and glucose read the whole hour) and **Start session** (beta) sit here too; **All workouts** opens the full list. Once the
    strap has recorded heart rate after the session, a **Recovery** line shows how far the heart rate fell in
    the first minute and where it was 30 minutes after, e.g. "−28 bpm in 1 min · 30 min after: 92 bpm" (only
    the parts that were recorded).

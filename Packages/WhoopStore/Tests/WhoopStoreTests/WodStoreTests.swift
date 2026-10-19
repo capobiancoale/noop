@@ -80,6 +80,40 @@ final class WodStoreTests: XCTestCase {
         XCTAssertTrue(afterDelete.isEmpty)
     }
 
+    // MARK: - v25 session end
+
+    func testV25AddsSessionEndColumn() async throws {
+        let store = try await WhoopStore.inMemory()
+        let cols = try await store.columnNamesForTest(table: "wodLog")
+        XCTAssertTrue(cols.contains("endTs"))
+    }
+
+    /// A WOD logged with its whole session (warm-up, skill, a 15-minute AMRAP: an hour in all) keeps its end,
+    /// and an edit can clear it again.
+    func testSessionEndRoundTrip() async throws {
+        let store = try await WhoopStore.inMemory()
+        var r = WodLogRow(id: "s1", ts: 1_000_000, day: "2026-10-19", type: "CrossFit", title: "Cindy",
+                          format: "AMRAP", timeCapS: 900, resultKind: .roundsReps, resultRounds: 18,
+                          rpe: 8, createdTs: 1_000_000, endTs: 1_003_600)
+        try await store.upsertWod(r)
+        let saved = try await store.allWods()
+        XCTAssertEqual(saved.first, r)
+        XCTAssertEqual(saved.first?.sessionSpan?.start, 1_000_000)
+        XCTAssertEqual(saved.first?.sessionSpan?.end, 1_003_600)
+
+        r.endTs = nil
+        try await store.upsertWod(r)
+        let cleared = try await store.allWods()
+        XCTAssertNil(cleared.first?.endTs)
+        XCTAssertNil(cleared.first?.sessionSpan)
+    }
+
+    /// An end at or before the start is no span.
+    func testSessionSpanNeedsEndAfterStart() {
+        let r = WodLogRow(id: "x", ts: 500, day: "d", type: "CrossFit", title: "X", createdTs: 0, endTs: 500)
+        XCTAssertNil(r.sessionSpan)
+    }
+
     func testAllWodsNewestFirst() async throws {
         let store = try await WhoopStore.inMemory()
         try await store.upsertWod(WodLogRow(id: "a", ts: 100, day: "d", type: "CrossFit", title: "A", createdTs: 0))

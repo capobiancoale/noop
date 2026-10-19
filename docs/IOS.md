@@ -468,8 +468,9 @@ tenths; max heart rate is the profile's, the user's own when set in Settings, el
   the whole second, so one sample per second is kept before summing.
 - **A workout's detail:** the zone bar with each zone's time and share, from WHOOP's imported split when the
   workout has one, else from the strap's own heart rate over the workout (`Repository.workoutZoneMinutes`).
-- **A WOD's screen:** the same bar over the WOD's span (the recorded workout it matches, else the logged time
-  plus result time or time cap; `WodTimeWindow`), with the zones' bpm.
+- **A WOD's screen:** the same bar over the WOD's span (the session start and end the user set; else the
+  recorded workout it matches; else the logged time plus result time or time cap; `WodTimeWindow`), with the
+  zones' bpm. Today's workout card reads the same timed session for its zones, recovery and glucose.
 
 Each sample counts until the next one, capped at the median spacing, so a gap in the strap's data never
 lands in one zone (`HRZones.timeInZone`).
@@ -503,7 +504,8 @@ screen keeps an *Allow* button. The screen shows when NOOP last wrote and what.
   bouts and sessions recorded in NOOP, 5 min or longer, ended 10 min ago or more) and the logged WODs. A WOD
   is placed as the WOD screen places it (`WodTimeWindow.resolve`): on one of NOOP's workouts it becomes that
   workout (Cross Training, the WOD's name as brand name, result, RX/scaled and RPE in metadata); on another
-  app's workout it adds nothing; on none, it is written over its logged time. Sessions Apple Health already
+  app's workout it adds nothing; on none, it is written over its logged time. A WOD whose session the user
+  timed is written over that whole session, and NOOP's own bouts inside it are not written again. Sessions Apple Health already
   has from another app (half or more of the time covered) and imports from other apps (WHOOP, Hevy, files)
   are left out. Each workout is built with `HKWorkoutBuilder`, carrying its heart rate minute by minute, its
   energy when NOOP has it, and minutes per heart-rate zone (50–100 % of max heart rate) and Effort in its
