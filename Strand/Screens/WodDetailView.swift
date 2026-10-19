@@ -378,10 +378,12 @@ struct WodDetailView: View {
         guard !glucoseLoaded, !glucoseLoading else { return }
         glucoseLoading = true
         let e = current
-        // Where the WOD really sat: the workout the strap or Apple Health recorded around the logged time
-        // (which may mark its start or its end), else the logged time plus the result time / time cap.
+        // Where the WOD really sat: the session the user timed; else the workout the strap or Apple Health
+        // recorded around the logged time (which may mark its start or its end); else the logged time plus
+        // the result time / time cap.
         let logged = TimeInterval(e.ts)
         let window = WodTimeWindow.resolve(loggedTs: logged, durationS: (e.resultSeconds ?? e.timeCapS).map(Double.init),
+                                           sessionEndTs: e.endTs.map(Double.init),
                                            workouts: await recordedWorkouts(around: logged))
         zoneMinutes = await repo.workoutZoneMinutes(from: Int(window.start), to: Int(window.end), maxHR: profile.hrMax)
         zonesLoaded = true
@@ -426,10 +428,12 @@ struct WodDetailView: View {
             .map { (start: Double($0.startTs), end: Double($0.endTs)) }
     }
 
-    /// Where the WOD's span on the chart comes from: a recorded workout, or the time the WOD was logged.
+    /// Where the WOD's span on the chart comes from: the session the user timed, a recorded workout, or the
+    /// time the WOD was logged.
     private func windowCaption(_ w: WodTimeWindow) -> String {
         let from = Self.clock.string(from: Date(timeIntervalSince1970: w.start))
         let to = Self.clock.string(from: Date(timeIntervalSince1970: w.end))
+        if w.userSet { return String(localized: "Session \(from)–\(to) · the start and end you set") }
         return w.recorded
             ? String(localized: "WOD \(from)–\(to) · from the recorded workout")
             : String(localized: "WOD \(from)–\(to) · from the time you logged (no recorded workout found)")

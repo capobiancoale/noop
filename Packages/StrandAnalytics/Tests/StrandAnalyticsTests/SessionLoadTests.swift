@@ -119,6 +119,34 @@ final class SessionLoadTests: XCTestCase {
         XCTAssertNil(StrainScorer.LoggedSession(wod: wod(ts: day0, rpe: 8), tzOffsetSeconds: 0))
     }
 
+    /// A 15-minute AMRAP inside an hour of warm-up and skill, timed by the user: the session is the hour,
+    /// for both the session-RPE duration and the heart-rate window.
+    func testSessionFromWodUsesTheTimedSession() {
+        var w = wod(ts: day0 + 64_800, rpe: 8, cap: 900)
+        w.endTs = day0 + 64_800 + 3_600
+        let s = StrainScorer.LoggedSession(wod: w, tzOffsetSeconds: 0)!
+        XCTAssertEqual(s.durationMin, 60)
+        XCTAssertEqual(s.ts, day0 + 64_800)
+        XCTAssertEqual(s.end, day0 + 64_800 + 3_600)
+        XCTAssertTrue(s.timeKnown)
+        // A timed session needs no result or time cap, but still needs an RPE.
+        var noCap = wod(ts: day0 + 64_800, rpe: 7)
+        noCap.endTs = day0 + 64_800 + 2_700
+        XCTAssertEqual(StrainScorer.LoggedSession(wod: noCap, tzOffsetSeconds: 0)?.durationMin, 45)
+        noCap.rpe = nil
+        XCTAssertNil(StrainScorer.LoggedSession(wod: noCap, tzOffsetSeconds: 0))
+    }
+
+    /// The heart rate of a timed session is read over exactly its span, not over the strap's shorter bout.
+    func testATimedSessionReadsItsWholeSpan() {
+        let start = day0 + 1080 * 60, end = start + 3_600
+        let s = StrainScorer.LoggedSession(rpe: 8, durationMin: 60, ts: start, timeKnown: true, end: end)
+        let bout = (start: start + 2_400, end: start + 3_300)
+        let windows = StrainScorer.sessionWindows([s], bouts: [bout], dayStart: day0, dayEnd: day0 + 86_400)
+        XCTAssertEqual(windows.map(\.start), [start])
+        XCTAssertEqual(windows.map(\.end), [end])
+    }
+
     func testDateOnlyImportsAreTimeUnknown() {
         // Imports anchor a date-only WOD to local noon (UTC+2 here).
         let noonLocal = day0 + 12 * 3600 - 7200

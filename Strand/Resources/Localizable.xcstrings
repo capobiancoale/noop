@@ -139379,6 +139379,66 @@
           }
         }
       }
+    },
+    "Session start": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inizio sessione"
+          }
+        }
+      }
+    },
+    "Session end": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fine sessione"
+          }
+        }
+      }
+    },
+    "Ends at": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finisce alle"
+          }
+        }
+      }
+    },
+    "A session can last at most 4 hours.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una sessione può durare al massimo 4 ore."
+          }
+        }
+      }
+    },
+    "Heart rate, zones and Effort read the whole session, warm-up and skill included. Rate the RPE for the whole session.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frequenza cardiaca, zone ed Effort leggono tutta la sessione, riscaldamento e skill compresi. Dai l'RPE all'intera sessione."
+          }
+        }
+      }
+    },
+    "Session %@–%@ · the start and end you set": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessione %1$@–%2$@ · inizio e fine impostati da te"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

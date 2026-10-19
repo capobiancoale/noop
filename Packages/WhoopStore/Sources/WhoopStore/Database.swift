@@ -481,6 +481,15 @@ extension WhoopStore {
                 t.add(column: "rx", .boolean)
             }
         }
+
+        migrator.registerMigration("v25-wod-session-end") { db in
+            // The end of a WOD's whole session (warm-up, skill and the WOD), unix seconds, when the user sets
+            // it: with it the logged `ts` is the session's start and heart rate, zones and Effort read the
+            // whole span. Nullable, so every WOD logged before keeps its old behaviour.
+            try db.alter(table: "wodLog") { t in
+                t.add(column: "endTs", .integer)
+            }
+        }
         return migrator
     }
 }

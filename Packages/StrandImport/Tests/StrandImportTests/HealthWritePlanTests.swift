@@ -185,6 +185,21 @@ final class HealthWritePlanWorkoutTests: XCTestCase {
         XCTAssertTrue(plan.isEmpty)
     }
 
+    /// A session the user timed is written over its whole span, and the strap's bout inside it (the hard part)
+    /// is not written again on its own.
+    func testATimedSessionIsWrittenWholeAndAbsorbsTheStrapBout() {
+        let session = (start: now - 5 * 3_600, end: now - 4 * 3_600)
+        let own = [HealthWritePlan.WorkoutSpan(start: session.start + 2_400, end: session.start + 3_300),
+                   span(30, 60)]
+        let wod = HealthWritePlan.WodEntry(id: "amrap", loggedTs: session.start, durationS: 900,
+                                           sessionEnd: session.end)
+        let plan = HealthWritePlan.workouts(own: own, others: [], wods: [wod], now: now)
+        XCTAssertEqual(plan.first(where: { $0.wodIds == ["amrap"] }),
+                       .init(start: session.start, end: session.end, ownIndex: nil, wodIds: ["amrap"]))
+        XCTAssertNil(plan.first(where: { $0.ownIndex == 0 }), "the strap bout inside the session is absorbed")
+        XCTAssertNotNil(plan.first(where: { $0.ownIndex == 1 }), "a bout outside it is still written")
+    }
+
     func testTwoWodsInOneSessionShareTheWorkout() {
         let own = [span(5, 60)]
         let a = HealthWritePlan.WodEntry(id: "a", loggedTs: own[0].start + 600, durationS: 600)

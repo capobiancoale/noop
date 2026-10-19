@@ -68,17 +68,27 @@ public struct WodLogRow: Equatable, Codable, Sendable, Identifiable {
     public var notes: String?
     public var movements: [WodMovement]
     public var createdTs: Int
+    /// End of the whole session (warm-up, skill and the WOD itself), unix seconds, when the user set it. With
+    /// it, `ts` is the session's start and [ts, endTs] is the span heart rate, zones and Effort read; nil =
+    /// only the logged time is known (it may mark the start or the end). Added in v25.
+    public var endTs: Int?
 
     public init(id: String, ts: Int, day: String, type: String, title: String,
                 format: String? = nil, timeCapS: Int? = nil, resultKind: WodResultKind = .none,
                 resultSeconds: Int? = nil, resultRounds: Int? = nil, resultReps: Int? = nil,
                 resultWeightKg: Double? = nil, rpe: Double? = nil, rx: Bool? = nil, notes: String? = nil,
-                movements: [WodMovement] = [], createdTs: Int) {
+                movements: [WodMovement] = [], createdTs: Int, endTs: Int? = nil) {
         self.id = id; self.ts = ts; self.day = day; self.type = type; self.title = title
         self.format = format; self.timeCapS = timeCapS; self.resultKind = resultKind
         self.resultSeconds = resultSeconds; self.resultRounds = resultRounds; self.resultReps = resultReps
         self.resultWeightKg = resultWeightKg; self.rpe = rpe; self.rx = rx; self.notes = notes
-        self.movements = movements; self.createdTs = createdTs
+        self.movements = movements; self.createdTs = createdTs; self.endTs = endTs
+    }
+
+    /// The session's own span, [start, end] in unix seconds, when the user set its end after its start.
+    public var sessionSpan: (start: Int, end: Int)? {
+        guard let endTs, endTs > ts else { return nil }
+        return (ts, endTs)
     }
 }
 
@@ -110,18 +120,18 @@ extension WhoopStore {
             try db.execute(sql: """
                 INSERT INTO wodLog
                     (id, ts, day, type, title, format, timeCapS, resultKind, resultSeconds, resultRounds,
-                     resultReps, resultWeightKg, rpe, rx, notes, movementsJSON, createdTs)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     resultReps, resultWeightKg, rpe, rx, notes, movementsJSON, createdTs, endTs)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     ts = excluded.ts, day = excluded.day, type = excluded.type, title = excluded.title,
                     format = excluded.format, timeCapS = excluded.timeCapS, resultKind = excluded.resultKind,
                     resultSeconds = excluded.resultSeconds, resultRounds = excluded.resultRounds,
                     resultReps = excluded.resultReps, resultWeightKg = excluded.resultWeightKg,
                     rpe = excluded.rpe, rx = excluded.rx, notes = excluded.notes,
-                    movementsJSON = excluded.movementsJSON
+                    movementsJSON = excluded.movementsJSON, endTs = excluded.endTs
                 """, arguments: [r.id, r.ts, r.day, r.type, r.title, r.format, r.timeCapS,
                                  r.resultKind.rawValue, r.resultSeconds, r.resultRounds, r.resultReps,
-                                 r.resultWeightKg, r.rpe, r.rx, r.notes, movementsJSON, r.createdTs])
+                                 r.resultWeightKg, r.rpe, r.rx, r.notes, movementsJSON, r.createdTs, r.endTs])
             return db.changesCount
         }
     }
@@ -163,6 +173,6 @@ extension WhoopStore {
             resultReps: row["resultReps"], resultWeightKg: row["resultWeightKg"],
             rpe: row["rpe"], rx: row["rx"], notes: row["notes"],
             movements: WodMovementCodec.decode(row["movementsJSON"]),
-            createdTs: row["createdTs"])
+            createdTs: row["createdTs"], endTs: row["endTs"])
     }
 }

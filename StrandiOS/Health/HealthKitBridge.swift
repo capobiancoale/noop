@@ -801,7 +801,8 @@ final class HealthKitBridge: ObservableObject {
         let ownSpans = own.map { HealthWritePlan.WorkoutSpan(start: Double($0.startTs), end: Double($0.endTs)) }
         let wodEntries = wods.map { w in
             HealthWritePlan.WodEntry(id: w.id, loggedTs: Double(w.ts),
-                                     durationS: (w.resultSeconds ?? w.timeCapS).map(Double.init))
+                                     durationS: (w.resultSeconds ?? w.timeCapS).map(Double.init),
+                                     sessionEnd: w.endTs.map(Double.init))
         }
         let plan = HealthWritePlan.workouts(own: ownSpans, others: others, wods: wodEntries, now: now)
 
