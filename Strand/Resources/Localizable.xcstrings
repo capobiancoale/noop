@@ -139390,16 +139390,6 @@
         }
       }
     },
-    "Session end": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fine sessione"
-          }
-        }
-      }
-    },
     "Ends at": {
       "localizations": {
         "it": {
