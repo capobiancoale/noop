@@ -19,15 +19,15 @@ struct WodEditorView: View {
     /// Called after a successful save or delete so the list can refresh.
     let onSaved: () -> Void
 
-    /// `initialDate` sets a new WOD's date (Today logs one at the time its workout started) and `initialEnd`
-    /// its session end (Today: when that workout ended); an edit keeps the WOD's own times.
+    /// Every WOD is logged with its session's start and end. `initialDate` / `initialEnd` set a new WOD's
+    /// (Today: when its workout started and ended); without them a new WOD is the hour up to now. An edit
+    /// keeps the WOD's own times.
     init(existing: WodLogRow?, initialDate: Date? = nil, initialEnd: Date? = nil, onSaved: @escaping () -> Void) {
         self.existing = existing
         self.onSaved = onSaved
-        if existing == nil, let initialDate { _date = State(initialValue: initialDate) }
-        if existing == nil, let initialEnd {
-            _hasEnd = State(initialValue: true)
-            _endTime = State(initialValue: initialEnd)
+        if existing == nil, let initialDate {
+            _date = State(initialValue: initialDate)
+            _endTime = State(initialValue: initialEnd ?? initialDate.addingTimeInterval(Self.defaultSessionSeconds))
         }
     }
 
@@ -44,9 +44,8 @@ struct WodEditorView: View {
 
     @State private var type = "CrossFit"
     @State private var title = ""
-    @State private var date = Date()
-    /// Whether the user times the whole session (start and end); `endTime` supplies its end's time of day.
-    @State private var hasEnd = false
+    /// The session's start; `endTime` supplies its end's time of day (see `sessionEnd`).
+    @State private var date = Date().addingTimeInterval(-WodEditorView.defaultSessionSeconds)
     @State private var endTime = Date()
     @State private var format = "For Time"
     @State private var timeCapMin = ""
@@ -70,21 +69,14 @@ struct WodEditorView: View {
                 Section("Workout") {
                     Picker("Type", selection: $type) { ForEach(types, id: \.self) { Text($0) } }
                     TextField("Name (e.g. Fran, Back Squat 5×5)", text: $title)
-                    if hasEnd {
-                        DatePicker("Session start", selection: $date, displayedComponents: [.date, .hourAndMinute])
+                    DatePicker("Session start", selection: $date, displayedComponents: [.date, .hourAndMinute])
+                    DatePicker("Ends at", selection: $endTime, displayedComponents: .hourAndMinute)
+                    if sessionTooLong {
+                        Text("A session can last at most 4 hours.")
+                            .font(.footnote).foregroundStyle(.red)
                     } else {
-                        DatePicker("Date", selection: $date, displayedComponents: [.date, .hourAndMinute])
-                    }
-                    Toggle("Session end", isOn: Binding(get: { hasEnd }, set: { setHasEnd($0) }))
-                    if hasEnd {
-                        DatePicker("Ends at", selection: $endTime, displayedComponents: .hourAndMinute)
-                        if sessionTooLong {
-                            Text("A session can last at most 4 hours.")
-                                .font(.footnote).foregroundStyle(.red)
-                        } else {
-                            Text("Heart rate, zones and Effort read the whole session, warm-up and skill included. Rate the RPE for the whole session.")
-                                .font(.footnote).foregroundStyle(.secondary)
-                        }
+                        Text("Heart rate, zones and Effort read the whole session, warm-up and skill included. Rate the RPE for the whole session.")
+                            .font(.footnote).foregroundStyle(.secondary)
                     }
                     Picker("Format", selection: $format) { ForEach(formats, id: \.self) { Text($0) } }
                     HStack {
@@ -214,44 +206,33 @@ struct WodEditorView: View {
 
     // MARK: Session end
 
-    /// Turning the session end on proposes an hour after the start, unless an end is already set.
-    private func setHasEnd(_ on: Bool) {
-        if on, !(endTime > date && endTime.timeIntervalSince(date) <= Self.maxSessionSeconds) {
-            endTime = date.addingTimeInterval(3_600)
-        }
-        hasEnd = on
-    }
-
     /// The session's end: the picked time on the start's day, or the next day when that isn't after the start
-    /// (a session past midnight). nil when the session end is off.
-    private var sessionEnd: Date? {
-        guard hasEnd else { return nil }
+    /// (a session past midnight).
+    private var sessionEnd: Date {
         let cal = Calendar.current
         let hm = cal.dateComponents([.hour, .minute], from: endTime)
-        guard var end = cal.date(bySettingHour: hm.hour ?? 0, minute: hm.minute ?? 0, second: 0, of: date) else {
-            return nil
-        }
+        var end = cal.date(bySettingHour: hm.hour ?? 0, minute: hm.minute ?? 0, second: 0, of: date) ?? endTime
         if end <= date { end = cal.date(byAdding: .day, value: 1, to: end) ?? end }
         return end
     }
 
+    /// A session's length when nothing says otherwise: an hour, a typical class.
+    private static let defaultSessionSeconds = 3_600.0
     /// The longest span read as one session (`WodTimeWindow` ignores a longer one).
     private static let maxSessionSeconds = WodTimeWindow.maxRecordedMinutes * 60
 
-    private var sessionTooLong: Bool {
-        sessionEnd.map { $0.timeIntervalSince(date) > Self.maxSessionSeconds } ?? false
-    }
+    private var sessionTooLong: Bool { sessionEnd.timeIntervalSince(date) > Self.maxSessionSeconds }
 
     // MARK: Prefill (edit) + save
 
     private func prefill(_ e: WodLogRow) {
         type = e.type
         title = e.title
-        date = Date(timeIntervalSince1970: TimeInterval(e.ts))
-        if let span = e.sessionSpan {
-            hasEnd = true
-            endTime = Date(timeIntervalSince1970: TimeInterval(span.end))
-        }
+        let start = Date(timeIntervalSince1970: TimeInterval(e.ts))
+        date = start
+        // A WOD logged before sessions had an end (or imported) starts with an hour, to adjust.
+        endTime = e.sessionSpan.map { Date(timeIntervalSince1970: TimeInterval($0.end)) }
+            ?? start.addingTimeInterval(Self.defaultSessionSeconds)
         format = e.format ?? "For Time"
         timeCapMin = e.timeCapS.map { String($0 / 60) } ?? ""
         rxMode = e.rx == nil ? 0 : (e.rx! ? 1 : 2)
@@ -305,7 +286,7 @@ struct WodEditorView: View {
             notes: notes.trimmingCharacters(in: .whitespaces).isEmpty ? nil : notes,
             movements: movs,
             createdTs: existing?.createdTs ?? Int(Date().timeIntervalSince1970),
-            endTs: sessionEnd.map { Int($0.timeIntervalSince1970) }
+            endTs: Int(sessionEnd.timeIntervalSince1970)
         )
         Task { await repo.saveWod(row); onSaved() }
         dismiss()

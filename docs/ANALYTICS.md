@@ -456,9 +456,9 @@ The WOD screen and Today's "Heart & Glucose" card show glucose (Apple Health), h
 boluses in lanes on one clock, zoomable like the Deep Timeline. Informational only: it never suggests carbs or
 insulin.
 
-- **Where a WOD sat.** When the user set the session's start and end (Log WOD → Session end), exactly that
-  span, whatever the strap recorded (at most 4 h). Otherwise the recorded workout (strap or Apple Health)
-  overlapping most with
+- **Where a WOD sat.** The session's start and end the user logged (the WOD editor always asks for both),
+  exactly that span, whatever the strap recorded (at most 4 h). For a WOD without an end (logged before, or
+  imported), the recorded workout (strap or Apple Health) overlapping most with
   `[logged − duration, logged + duration]` is the WOD, since the logged time may mark its start or its end
   (nearest within an hour if none overlaps; longer than 4 h never counts). Without one, the logged time is the
   start. Duration is the result time, else the time cap, else 20 min. The screen says which source it used.
