@@ -139299,6 +139299,126 @@
           }
         }
       }
+    },
+    "Not enough history yet": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Storico ancora insufficiente"
+          }
+        }
+      }
+    },
+    "%@× your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@× il tuo solito"
+          }
+        }
+      }
+    },
+    "Below your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sotto il tuo solito"
+          }
+        }
+      }
+    },
+    "In line with your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In linea con il tuo solito"
+          }
+        }
+      }
+    },
+    "Higher than usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più alto del solito"
+          }
+        }
+      }
+    },
+    "Sharp rise": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forte aumento"
+          }
+        }
+      }
+    },
+    "7-day load %@ · usual week %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carico a 7 giorni %1$@ · settimana abituale %2$@"
+          }
+        }
+      }
+    },
+    "7-day load %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carico a 7 giorni %@"
+          }
+        }
+      }
+    },
+    "Load is your heart-rate training load (TRIMP) including logged WODs. The comparison shows how this week compares with the four weeks before it; it does not predict injury.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il carico è il tuo carico di allenamento basato sulla frequenza cardiaca (TRIMP), compresi i WOD registrati. Il confronto mostra come si pone questa settimana rispetto alle quattro precedenti; non prevede gli infortuni."
+          }
+        }
+      }
+    },
+    "Weekly training load over the last %lld weeks. This week %@, highest %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carico di allenamento settimanale delle ultime %1$lld settimane. Questa settimana %2$@, massimo %3$@."
+          }
+        }
+      }
+    },
+    "Week ending": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settimana che termina il"
+          }
+        }
+      }
+    },
+    "Load": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carico"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

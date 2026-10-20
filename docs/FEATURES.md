@@ -338,6 +338,12 @@ Windows are taken relative to your latest recorded day and auto-widen on sparse 
   icons.
 - **All Sessions** — a uniform table: date/time, sport, duration, avg HR, kcal, distance, and a
   **source badge** (WHOOP or Apple) per row.
+- **Training load** — at the top: this week's load against your usual, as a ratio ("1.24× your usual") with a
+  plain word (below, in line with, higher than your usual, or a sharp rise) and a bar chart of the last 8 weeks.
+  Load is each day's heart-rate training load (TRIMP, WODs included); "usual" is the average of the four weeks
+  before this one (Gabbett 2016; the weeks are kept apart as in Lolli et al. 2019). It needs about five weeks of
+  data and shows "Not enough history yet" until then. It compares your own weeks and does not predict injury
+  (Impellizzeri et al. 2020).
 - **Heart-rate recovery** (in a session's detail, and on a WOD's screen) — how fast the heart rate falls after
   you stop: the drop after 1 and 2 minutes (with a slow / typical / fast word for the first), the heart rate
   5, 10 and 30 minutes after, how long until it was 80 % of the way back to resting, a chart of the first hour
