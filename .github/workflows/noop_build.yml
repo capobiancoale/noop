@@ -166,6 +166,9 @@ jobs:
       # symbolicated: without them the app's own frames show only as offsets.
       - name: Upload debug symbols
         if: success()
+        # Nice to have, not the build: the app is already on TestFlight by now, so a GitHub artifact-service
+        # hiccup here must not mark the run failed.
+        continue-on-error: true
         uses: actions/upload-artifact@v6
         with:
           name: dsym
