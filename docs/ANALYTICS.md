@@ -495,7 +495,9 @@ insulin.
 
 Source: `SleepStager.swift`. Detects in-bed sessions from gravity/HR/RR/respiration and produces a 30-second hypnogram of `{wake, light, deep, rem}`. These stages and the AASM roll-up below are the raw material the **Rest** score composite consumes (see *The Rest score composite* immediately after this section).
 
-> **Honest hedging.** These stages are **approximations**, not PSG-validated, not medical advice. The EEG-free 4-class ceiling is ~65–73% epoch agreement (Walch 2019). **Light/deep separation is the weakest link — deep-minute estimates are the least reliable output.**
+> **Honest hedging.** These stages are **approximations**, not medical advice. The default staging (V2, below)
+> was checked against polysomnography on 31 nights; the V1 recipe described in this section was not, and scored
+> poorly in that check. The EEG-free 4-class ceiling is ~65–73% epoch agreement (Walch 2019). **Light/deep separation is the weakest link — deep-minute estimates are the least reliable output.**
 
 ### Stage 0 — gravity-stillness sleep/wake spine (`detectSleep`)
 
@@ -540,6 +542,33 @@ Consecutive same-stage epochs are merged into `StageSegment`s tiling `[start, en
 
 - `SleepSession` — `start`, `end`, `efficiency` (AASM `asleep / in-bed`, where `asleep = in-bed − wake`), `stages`, per-session `restingHR` (lowest 5-min rolling-mean HR) and `avgHRV` (mean RMSSD over the quality-accepted 5-min tumbling windows, see `windowQuality`).
 - `hypnogramMetrics(_:)` — AASM-style roll-up: TIB / TST / SPT / SOL / REM latency / WASO / efficiency / disturbances, plus deep/REM/light minutes and percentages.
+
+### Staging V2 (`SleepStagerV2`, the default) and the PSG check
+
+Detection (the in-bed span) is always V1's Stage 0. Inside that span the default staging is `SleepStagerV2`
+(Settings → Sleep staging; off = the V1 Stages 1–3 above): per-night z-scored emissions from HR, HR variability
+and movement, a deep gate on the 11-minute HR-flatness percentile, a soft sleep-cycle prior, an R-R respiration
+regularity term when beats are dense enough, and Viterbi smoothing over a sticky transition matrix.
+
+Both recipes were run on the PhysioNet **sleep-accel** nights (Walch et al., *Sleep* 2019: 31 adults, wrist heart
+rate + accelerometer, one lab night each scored by polysomnography in 30 s epochs), with the same wrist streams
+NOOP stages from and no R-R or respiration (`Tools/sleep-staging-validation`, data not committed). Four classes
+(wake / light = N1+N2 / deep = N3 / REM), pooled over all epochs:
+
+| Staging | Cohen's κ | Accuracy | Deep share | REM share |
+|---|---|---|---|---|
+| Polysomnography | | | 15.1 % | 24.2 % |
+| V1 (percentile bands) | 0.10 | 51 % | 11.2 % | 10.5 % |
+| V2 as first shipped | 0.32 | 55 % | 24.6 % | 28.1 % |
+| **V2 calibrated (default)** | **0.34** | **60 %** | **14.9 %** | **24.1 %** |
+
+The calibration changed two constants only — the deep gate (night's flattest 20 % → 15 %) and the deep base
+rate (0.18 → 0.14, light 0.50 → 0.54) — chosen by leave-one-subject-out cross-validation (fit on 30 nights,
+scored on the 31st, for every subject; the same setting won all 31 folds) with an objective of κ minus the
+deep/REM share errors; the row above is that out-of-sample result. Without EEG, 4-class κ around 0.3–0.5 is
+what consumer wearables reach, so the stages remain estimates: wake detection is the weakest class here
+(recall 0.32). A one-shot full-history pass re-stages older nights after the update
+(`IntelligenceEngine.runPendingFullRescores`).
 
 ---
 

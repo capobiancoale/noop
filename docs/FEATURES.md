@@ -294,7 +294,10 @@ just the most recent (step through earlier nights to compare):
 
 - **Stage breakdown hero** — a **hypnogram** (reconstructed from stage durations) or, if intervals
   can't be reconstructed, a proportional stacked stage bar. Footer shows REM / Deep / Light / Awake
-  each as "Xh Ym · NN%", with time-in-bed, efficiency, and onset–wake times.
+  each as "Xh Ym · NN%", with time-in-bed, efficiency, and onset–wake times. Stages computed from the
+  strap come from **Sleep staging V2**, the default since it was checked against laboratory polysomnography
+  (31 nights: deep and REM within a point of the lab's shares, where the earlier staging read far off; see
+  `docs/ANALYTICS.md`). Settings → Sleep staging turns it off to go back to the earlier staging.
 - **Night detail** — a uniform tile grid, each with a sparkline and a "vs typical" caption: Sleep
   Performance, Efficiency, Consistency, Hours vs Needed, Restorative (deep + REM share),
   Respiratory, and Sleep Debt (vs your personal sleep need, floored at 7.5 h).
@@ -338,7 +341,8 @@ Windows are taken relative to your latest recorded day and auto-widen on sparse 
 - **Heart-rate recovery** (in a session's detail, and on a WOD's screen) — how fast the heart rate falls after
   you stop: the drop after 1 and 2 minutes (with a slow / typical / fast word for the first), the heart rate
   5, 10 and 30 minutes after, how long until it was 80 % of the way back to resting, a chart of the first hour
-  and, with at least three sessions, how the 1-minute drop moved over recent ones. It needs heart rate after
+  on the clock (hours and minutes) and, with at least three sessions, how the 1-minute drop moved over recent
+  ones (one point per session). It needs heart rate after
   the session ended, so keep the strap connected for a while after training. Informational only: it depends
   on how you cool down and is not a clinical test.
 

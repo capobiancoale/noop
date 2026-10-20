@@ -13785,46 +13785,6 @@
         }
       }
     },
-    "A transparent cardiorespiratory recipe that recovers deep and REM better than the default staging. Opt-in and experimental: it only changes how already-detected nights are split into stages (detection and scores are unchanged), and the default staging stays in place if you leave this off. Takes effect on the next nights staged.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein transparentes kardiorespiratorisches Rezept, das Tiefschlaf und REM besser rekonstruiert als die Standard-Phaseneinteilung. Opt-in und experimentell: Es ändert nur, wie bereits erkannte Nächte in Phasen aufgeteilt werden (Erkennung und Werte bleiben unverändert), und die Standard-Einteilung bleibt bestehen, wenn du es aus lässt. Wirkt ab den nächsten eingeteilten Nächten."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Una receta cardiorrespiratoria transparente que recupera el sueño profundo y REM mejor que la clasificación por defecto. Opcional y experimental: solo cambia cómo se dividen en fases las noches ya detectadas (la detección y las puntuaciones no cambian), y la clasificación por defecto se mantiene si lo dejas desactivado. Se aplica a las próximas noches clasificadas."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Una ricetta cardiorespiratoria trasparente che recupera meglio il sonno profondo e REM rispetto allo staging predefinito. Facoltativa e sperimentale, cambia solo come le notti già rilevate vengono divise in fasi (rilevamento e punteggi restano invariati), e lo staging predefinito resta attivo se la lasci disattivata. Ha effetto sulle prossime notti elaborate."
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Uma receta cardiorrespiratoria transparente que recupera el sono profundo e REM mejor que a clasificación por defecto. Opcional e experimental: só muda como se dividen en fases as noites já detectadas (a detección e as puntuaciones no cambian), e a clasificación por defecto se mantiene si lo dejas desactivado. Se aplica às próximas noites clasificadas."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一套透明的心肺算法，比默认的分期能更好地还原深睡和 REM。需主动开启且为实验性，它只改变已检测到的夜晚如何被划分为各阶段（检测和评分不变），如果你保持关闭，则沿用默认分期。将在下次分期的夜晚生效。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一套透明的心肺演算法，比預設的分期能更好地還原深睡和 REM。需主動開啟且為實驗性，它只改變已偵測到的夜晚如何被劃分為各階段（偵測和評分不變），如果你保持關閉，則沿用預設分期。將在下次分期的夜晚生效。"
-          }
-        }
-      }
-    },
     "A typical recent day": {
       "localizations": {
         "de": {
@@ -43810,46 +43770,6 @@
         }
       }
     },
-    "Experimental sleep staging (V2)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Experimentelle Schlafphasen-Einteilung (V2)"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clasificación de fases del sueño experimental (V2)"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fasi del sonno sperimentali (V2)"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Clasificación de fases do sono experimental (V2)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "实验性睡眠分期（V2）"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "實驗性睡眠分期（V2）"
-          }
-        }
-      }
-    },
     "Experimental wellness visualization: not a diagnosis, not an ECG, and not a medical device. It cannot detect any heart condition. Beat-to-beat variation has many ordinary, benign causes. If you feel unwell or are worried, contact a qualified professional; in an emergency, your local emergency service. Everything is computed on your device.": {
       "localizations": {
         "de": {
@@ -43886,46 +43806,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "實驗性健康視覺化，並非診斷、並非心電圖，也不是醫療裝置。它無法檢測任何心臟疾病。逐拍變化有許多普通、良性的原因。如果你感覺不適或感到擔憂，請聯繫合格的專業人士；在緊急情況下，請聯繫當地急救服務。一切都在你的裝置上計算。"
-          }
-        }
-      }
-    },
-    "Experimental · Sleep staging": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Experimentell · Schlafphasen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Experimental · Fases del sueño"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sperimentale · Fasi del sonno"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Experimental · Fases do sono"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "实验性 · 睡眠分期"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "實驗性 · 睡眠分期"
           }
         }
       }
@@ -51979,46 +51859,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "消耗如何計算"
-          }
-        }
-      }
-    },
-    "How NOOP splits a night into light / deep / REM. This is a separate, opt-in recipe. Your default staging is unchanged unless you turn it on.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wie NOOP eine Nacht in Leicht / Tief / REM aufteilt. Das ist ein separates Opt-in-Rezept. Deine Standard-Einteilung bleibt unverändert, solange du es nicht einschaltest."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cómo NOOP divide una noche en ligero / profundo / REM. Es una receta aparte y opcional. Tu clasificación por defecto no cambia a menos que la actives."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Come NOOP suddivide una notte in leggero / profondo / REM. Questa è una ricetta separata e opzionale, la tua stadiazione predefinita resta invariata a meno che non la attivi."
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Como NOOP divide uma noite en ligero / profundo / REM. Es uma receta aparte e opcional. O teu clasificación por defecto no muda a menos que a actives."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NOOP 如何将一个夜晚划分为浅睡 / 深睡 / REM。这是一套独立的、需主动开启的算法，除非你开启它，否则你的默认分期保持不变。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NOOP 如何將一個夜晚劃分為淺睡 / 深睡 / REM。這是一套獨立的、需主動開啟的演算法，除非你開啟它，否則你的預設分期保持不變。"
           }
         }
       }
@@ -136070,16 +135910,6 @@
         }
       }
     },
-    "Minutes after the end": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Minuti dopo la fine"
-          }
-        }
-      }
-    },
     "Recovery level": {
       "localizations": {
         "it": {
@@ -139426,6 +139256,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sessione %1$@–%2$@ · inizio e fine impostati da te"
+          }
+        }
+      }
+    },
+    "How NOOP splits a night into light, deep and REM sleep.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Come NOOP divide una notte in sonno leggero, profondo e REM."
+          }
+        }
+      }
+    },
+    "Sleep staging V2 (lab-checked)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fasi del sonno V2 (verificate in laboratorio)"
+          }
+        }
+      }
+    },
+    "On by default. Checked against laboratory sleep recordings (polysomnography, 31 nights), it puts deep and REM sleep much closer to the real amounts than the previous staging, which is used when this is off. It only changes how detected nights are split into stages, from the next nights staged.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attivo di serie. Verificato su registrazioni del sonno in laboratorio (polisonnografia, 31 notti), stima il sonno profondo e il REM molto più vicini ai valori reali rispetto al calcolo precedente, che viene usato se lo disattivi. Cambia solo come le notti rilevate vengono divise in fasi, dalle prossime notti calcolate."
+          }
+        }
+      }
+    },
+    "1-minute recovery, one point per recent workout": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupero a 1 minuto, un punto per ogni allenamento recente"
           }
         }
       }

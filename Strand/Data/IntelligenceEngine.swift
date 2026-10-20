@@ -237,16 +237,24 @@ final class IntelligenceEngine: ObservableObject {
 
     /// UserDefaults flag guarding the one-shot full-history rescore after the edited-night fix (below).
     static let sleepEditRescoreFlagKey = "intelligence.sleepEditRescore.v1.done"
+    /// UserDefaults flag guarding the one-shot full-history re-stage after the PSG calibration of
+    /// `SleepStagerV2`, now the default staging (below).
+    static let stagingCalibrationRescoreFlagKey = "intelligence.sleepStagingV2Calibrated.v1.done"
 
-    /// One-shot, on-upgrade FULL-history rescore after the edited-night fix in `sleepEditedDaily`. Before
-    /// it, every pass folded each hand-edited sleep block in its window into EVERY day's main-night pick,
-    /// so one edited night was copied onto each day it out-scored (the same total, deep and REM night after
-    /// night). The regular pass only revisits the last 21 days; this rescores every day with raw data once
-    /// so older copies regenerate from their own nights. Same lock handling as `runEffortRescoreIfNeeded`.
-    func runSleepEditRescoreIfNeeded(historyDays: Int = 4000) async {
-        guard !UserDefaults.standard.bool(forKey: Self.sleepEditRescoreFlagKey) else { return }
+    /// One-shot, on-upgrade FULL-history rescores, each behind its own flag; one pass covers every pending
+    /// one. The regular pass only revisits the last 21 days, so a fix to how a day is scored reaches older
+    /// days only through a pass like this:
+    /// - the edited-night fix in `sleepEditedDaily`: before it, every pass folded each hand-edited sleep block
+    ///   in its window into EVERY day's main-night pick, so one edited night was copied onto each day it
+    ///   out-scored (the same total, deep and REM night after night);
+    /// - the PSG-calibrated `SleepStagerV2` becoming the default staging: older nights are re-staged with it.
+    /// Same lock handling as `runEffortRescoreIfNeeded`.
+    func runPendingFullRescores(historyDays: Int = 4000) async {
+        let pending = [Self.sleepEditRescoreFlagKey, Self.stagingCalibrationRescoreFlagKey]
+            .filter { !UserDefaults.standard.bool(forKey: $0) }
+        guard !pending.isEmpty else { return }
         await analyzeRecent(maxDays: historyDays)
-        if !computing { UserDefaults.standard.set(true, forKey: Self.sleepEditRescoreFlagKey) }
+        if !computing { for key in pending { UserDefaults.standard.set(true, forKey: key) } }
     }
 
     /// UserDefaults flag guarding the one-shot #547 implausible-timestamp DB heal (below). Set once the
