@@ -450,6 +450,16 @@ Effort         = 100 · ln(heart-rate TRIMP + added TRIMP + 1) / ln(D)
   full duration, so the RPE then rates the whole session), else the result time, else the time cap; a WOD
   without RPE or duration adds nothing (the WOD screen says so). Saving, editing or deleting a WOD rescores the recent days; the WOD screen shows what it added.
 
+### Training load (`TrainingLoad`)
+
+Source: `TrainingLoad.swift`. Shown at the top of the Workouts screen: how much you trained over the last 7 days compared with your usual, so you notice when the load rises fast. A plain comparison of your own weeks, not an injury predictor and not advice.
+
+- **Daily load is TRIMP, not Effort.** Effort is logarithmic (`100 · ln(TRIMP + 1) / ln(D)`), so two Effort-50 days are nowhere near one Effort-100 day and Effort values must not be added. Each day's stored Effort is turned back into its training impulse, `TRIMP = exp(Effort · ln(D) / 100) − 1`, and those are summed. The stored Effort already includes the logged-WOD session-RPE excess (above), so nothing more is added. For days imported from a WHOOP export (WHOOP's strain rescaled to 0–100) the inversion is approximate.
+- **Acute load** = the sum over the last 7 days (today and the 6 before). **Usual week (chronic load)** = the average weekly load of the 4 weeks before those 7 days, i.e. the sum over days 8–35 back divided by 4. The chronic window leaves the acute week out ("uncoupled", Lolli et al. 2019; Windt & Gabbett 2019), so the ratio is not pulled toward 1 by the two windows sharing days.
+- **Ratio** = acute ÷ usual week (Gabbett 2016, Br J Sports Med 50:273), read as a plain word: below 0.8 *below your usual*, up to 1.3 *in line with your usual*, up to 1.5 *higher than usual*, above that *a sharp rise*. 0.8–1.3 is the "sweet spot" Gabbett reported, but Impellizzeri et al. 2020 (Int J Sports Physiol Perform) showed the ratio is not a validated injury predictor, so the screen only says how this week compares with the weeks before it, never "injury risk".
+- **Missing days are unknown, not zero training.** The ratio needs at least 4 days with an Effort in the acute week, at least 14 of the 28 chronic days, and a chronic load above 0; otherwise the card shows the 7-day load and "Not enough history yet" (it needs about five weeks of data). A recorded Effort of 0 is a known easy day and counts as data. A day without an Effort adds nothing to a sum (it is not filled in), which is why both windows must be mostly covered before a ratio is shown.
+- A bar chart shows the load of the last 8 rolling 7-day blocks (each ending on its labelled day, this week highlighted).
+
 ### Glucose and heart rate on one clock (`WodTimeWindow`, `GlucoseTrace`, `TimelineTicks`, `TimelineEvents`)
 
 The WOD screen and Today's "Heart & Glucose" card show glucose (Apple Health), heart rate (the strap) and carbs /

@@ -75,6 +75,10 @@ struct WorkoutsView: View {
     /// solid/building ActivityCost entry — "Sessions like this usually …" (#439). Auto-clears.
     @State private var postLogNote: String?
 
+    /// This week's training load against the usual (see `TrainingLoad`), computed from the daily Effort
+    /// history once per data refresh in `.task`, never in `body`. nil until the first refresh.
+    @State private var trainingLoad: TrainingLoad.Summary?
+
     // MARK: - Filters + selection (#64)
 
     /// Filter beyond the time range: a displayed-sport key (nil = all), an origin class (nil = all), and
@@ -157,6 +161,11 @@ struct WorkoutsView: View {
                 // Sections type-erased: in the optimised build a column of `some View` sections becomes one deeply nested type whose
                 // metadata lookup overflowed the main thread's stack at launch (see LiquidTodayView). AnyView keeps types shallow.
                 AnyView(HStack { startLiveWorkoutButton; Spacer() })
+                // Above the range control on purpose: it always reads the last 7 days against the four
+                // weeks before them, whatever range or filter the list below is showing.
+                if let load = trainingLoad, load.weeks.contains(where: { $0.daysWithData > 0 }) {
+                    AnyView(TrainingLoadCard(summary: load))
+                }
                 AnyView(rangeBar(rows: windowRows, effectiveRange: resolved))
                 if let postLogNote { AnyView(postLogBanner(postLogNote)) }
                 AnyView(effortHero(rows: windowRows, effectiveRange: resolved, groups: groups))
@@ -169,6 +178,7 @@ struct WorkoutsView: View {
             }
         }
         .task(id: repo.refreshSeq) {
+            refreshTrainingLoad()
             guard !usesPreviewRows else { return }
             // #797: read only the currently-loaded window (bounded on first paint), not the whole history.
             let r = await repo.workoutRows(days: loadedWindowDays ?? 4000)
@@ -254,6 +264,13 @@ struct WorkoutsView: View {
     /// Present the read-only detail for a tapped row. The primary affordance; the ••• menu stays the
     /// secondary path for edit/relabel/delete.
     private func openDetail(_ row: WorkoutRow) { detail = WorkoutDetailTarget(row: row) }
+
+    /// Recompute the training-load comparison from the daily Effort history. The day key is the same
+    /// logical day Today uses (it rolls at 04:00), so the small hours still count as the day before.
+    private func refreshTrainingLoad() {
+        let efforts: [(day: String, effort: Double?)] = repo.days.map { (day: $0.day, effort: $0.strain) }
+        trainingLoad = TrainingLoad.summary(days: efforts, today: Repository.logicalDayKey(Date()))
+    }
 
     /// Re-read every source after a mutation so the screen reflects the new state immediately.
     /// Keeps the user's current range — only the initial load picks a default — and the auto-widen
