@@ -133,19 +133,21 @@ struct HeartRateRecoveryCard: View {
     // MARK: - Charts
 
     /// The first hour as 15-second medians: the last 2 minutes of the workout, then the fall, with the end of
-    /// the workout and the "80% of the way back to resting" level marked.
+    /// the workout and the "80% of the way back to resting" level marked. The x axis is the clock time of day
+    /// (hours and minutes), so the chart reads against the rest of the day.
     @ViewBuilder private func curveChart(_ r: HeartRateRecovery) -> some View {
         let levels: [Double] = r.recoveryThreshold.map { [$0] } ?? []
+        let end = Date(timeIntervalSince1970: TimeInterval(r.endTs))
         VStack(alignment: .leading, spacing: 6) {
             Chart {
                 ForEach(r.curve, id: \.seconds) { p in
-                    LineMark(x: .value("Minutes after the end", Double(p.seconds) / 60.0),
+                    LineMark(x: .value("Time", end.addingTimeInterval(TimeInterval(p.seconds))),
                              y: .value("Heart rate", p.bpm))
                         .foregroundStyle(StrandPalette.metricRose)
                         .interpolationMethod(.monotone)
                         .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                 }
-                RuleMark(x: .value("End", 0.0))
+                RuleMark(x: .value("End", end))
                     .foregroundStyle(StrandPalette.hairlineStrong)
                     .lineStyle(StrokeStyle(lineWidth: 1))
                     // No overflowResolution: it needs macOS 14 and this card is shared with the macOS 13 app.
@@ -159,7 +161,12 @@ struct HeartRateRecoveryCard: View {
                 }
             }
             .chartYScale(domain: .automatic(includesZero: false))
-            .chartXAxisLabel("Minutes after the end")
+            .chartXAxis {
+                AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+                    AxisGridLine()
+                    AxisValueLabel(format: .dateTime.hour().minute())
+                }
+            }
             .chartYAxisLabel("bpm")
             .frame(height: 170)
             .accessibilityLabel(Text("Heart rate after the workout"))
@@ -178,7 +185,7 @@ struct HeartRateRecoveryCard: View {
     /// How the 1-minute drop moved over the last workouts.
     private var historyChart: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("1-minute recovery, recent workouts")
+            Text("1-minute recovery, one point per recent workout")
                 .font(StrandFont.subhead)
                 .foregroundStyle(StrandPalette.textSecondary)
             Chart {

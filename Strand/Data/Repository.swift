@@ -1282,10 +1282,9 @@ final class Repository: ObservableObject {
         let hr = (try? await store.hrSamples(deviceId: deviceId, from: lo, to: hi, limit: 200_000)) ?? []
         let rr = (try? await store.rrIntervals(deviceId: deviceId, from: lo, to: hi, limit: 200_000)) ?? []
         let resp = (try? await store.respSamples(deviceId: deviceId, from: lo, to: hi, limit: 200_000)) ?? []
-        // Opt-in experimental staging (Settings → Experimental · Sleep staging): when the user has flipped
-        // the V2 flag on, re-stage with the cardiorespiratory recipe `SleepStagerV2`; otherwise the default
-        // V1 `SleepStager`. Read once here off the actor; the switch is purely which engine runs over the
-        // already-detected window , V1 stays the default and is untouched. (V7 Pillar 3b)
+        // Staging engine (Settings → Sleep staging): the PSG-calibrated `SleepStagerV2` by default; V1
+        // `SleepStager` when the user turned V2 off. Read once here off the actor; the switch is purely which
+        // engine runs over the already-detected window. (V7 Pillar 3b)
         let useV2 = PuffinExperiment.experimentalSleepV2Enabled
         let segs = await Task.detached(priority: .utility) {
             useV2

@@ -374,8 +374,8 @@ fun SettingsScreen(vm: AppViewModel, onOpenTestCentre: () -> Unit = {}) {
     var puffinCapture by remember { mutableStateOf(puffinExperiment.isCaptureEnabled) }
     var deepData by remember { mutableStateOf(puffinExperiment.isDeepDataEnabled) }
     var broadcastHr by remember { mutableStateOf(puffinExperiment.broadcastHr) }
-    // Opt-in "Experimental sleep staging (V2)" (off by default). Model-agnostic, so it lives outside the
-    // 5/MG-only card — it works on WHOOP 4 and 5. Re-stages detected nights with SleepStagerV2; V1 default.
+    // "Sleep staging V2" (on by default since its PSG check). Model-agnostic, so it lives outside the
+    // 5/MG-only card — it works on WHOOP 4 and 5. Stages detected nights with SleepStagerV2; off → V1.
     var experimentalSleepV2 by remember { mutableStateOf(puffinExperiment.experimentalSleepV2) }
 
     // Whether to surface the WHOOP 5/MG-only probes (puffin / R22 / broadcast-HR / frame-capture). Gated
@@ -1492,14 +1492,14 @@ fun SettingsScreen(vm: AppViewModel, onOpenTestCentre: () -> Unit = {}) {
             blurb = "A read-only export of the decoded sensor streams NOOP already stores. Works on any strap. Nothing is written to your device, and nothing is uploaded.",
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                // --- Experimental sleep staging (V2) — opt-in, default OFF, every model. (V7 Pillar 3b) ---
+                // --- Sleep staging V2 — default ON since its PSG check, every model. (V7 Pillar 3b) ---
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     Text(
-                        "Experimental sleep staging (V2)",
+                        "Sleep staging V2 (lab-checked)",
                         style = NoopType.subhead,
                         color = Palette.textPrimary,
                         modifier = Modifier.weight(1f),
@@ -1518,15 +1518,15 @@ fun SettingsScreen(vm: AppViewModel, onOpenTestCentre: () -> Unit = {}) {
                             uncheckedBorderColor = Palette.hairline,
                         ),
                         modifier = Modifier.semantics {
-                            contentDescription = "Experimental sleep staging V2"
+                            contentDescription = "Sleep staging V2"
                         },
                     )
                 }
                 Text(
-                    "A transparent cardiorespiratory recipe that recovers deep and REM better than the " +
-                        "default staging. Opt-in and experimental: it only changes how already-detected " +
-                        "nights are split into stages (detection and scores are unchanged), and the default " +
-                        "staging stays in place if you leave this off. Takes effect on the next nights staged.",
+                    "On by default. Checked against laboratory sleep recordings (polysomnography, 31 " +
+                        "nights), it puts deep and REM sleep much closer to the real amounts than the " +
+                        "previous staging, which is used when this is off. It only changes how detected " +
+                        "nights are split into stages, from the next nights staged.",
                     style = NoopType.caption,
                     color = Palette.textTertiary,
                 )
