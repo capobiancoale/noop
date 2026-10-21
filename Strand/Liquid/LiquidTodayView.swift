@@ -666,11 +666,13 @@ struct LiquidTodayView: View {
         case ("respRate", _): return Text("A little above your baseline")
         case ("monotony", _): return Text("A similar load every day")
         case ("acwr", _):
-            let ratio = readiness.acwr ?? 1
-            if ratio < 0.8 { return Text("Lighter than usual: room to build") }
-            if ratio < 1.3 { return Text("In line with your usual load") }
-            if ratio < 1.5 { return Text("Building fast: watch for fatigue") }
-            return Text("Well above your usual load")
+            // The Workouts card's bands (`TrainingLoad`), so both screens read the same week the same way.
+            switch TrainingLoad.band(ratio: readiness.acwr ?? 1) {
+            case .below: return Text("Lighter than usual: room to build")
+            case .steady: return Text("In line with your usual load")
+            case .higher: return Text("Building fast: watch for fatigue")
+            case .sharpRise: return Text("Well above your usual load")
+            }
         default: return Text("In your normal range")
         }
     }

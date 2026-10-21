@@ -1595,7 +1595,7 @@ struct TodayView: View {
                                 Text("load \(DisplayNumber.decimal(acwr, digits: 2))")
                                     .font(StrandFont.captionNumber)
                                     .foregroundStyle(StrandPalette.textTertiary)
-                                    .help("Acute (7-day) vs chronic (28-day) training load. 0.8-1.3 is the sweet spot.")
+                                    .help("This week's training load against the four weeks before it, as on the Workouts screen. 0.8-1.3 is in line with your usual.")
                             }
                         }
                         Text(r.summary).font(StrandFont.subhead)

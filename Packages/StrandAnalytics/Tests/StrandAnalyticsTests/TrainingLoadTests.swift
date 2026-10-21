@@ -77,7 +77,7 @@ final class TrainingLoadTests: XCTestCase {
         let inWindow = series(Array(7...20), effort: 60)
         let s = TrainingLoad.summary(days: inWindow, today: today)
         XCTAssertEqual(s.chronicDays, 14)
-        XCTAssertEqual(try XCTUnwrap(s.chronicWeekly), 14 * t / 4, accuracy: 1e-9)
+        XCTAssertEqual(try XCTUnwrap(s.chronicWeekly), 7 * t, accuracy: 1e-9, "mean daily load × 7")
 
         let edge = TrainingLoad.summary(days: series(Array(7...19) + [34], effort: 60), today: today)
         XCTAssertEqual(edge.chronicDays, 14, "the 35th day back (offset 34) is the last chronic day")
@@ -104,6 +104,18 @@ final class TrainingLoadTests: XCTestCase {
         XCTAssertEqual(s.band, .steady)
         XCTAssertEqual(s.acuteDays, 7)
         XCTAssertEqual(s.chronicDays, 28)
+    }
+
+    /// Unworn days in either window don't skew the ratio: steady training reads 1.0 with 20 of 28 chronic days
+    /// and 5 of 7 acute days recorded (a sum ÷ 4 would have read the usual week 29 % low).
+    func testPartialCoverageDoesNotSkewTheRatio() throws {
+        let days = series([0, 1, 2, 4, 6], effort: 55) + series(Array(7...26), effort: 55)
+        let s = TrainingLoad.summary(days: days, today: today)
+        XCTAssertEqual(s.acuteDays, 5)
+        XCTAssertEqual(s.chronicDays, 20)
+        XCTAssertEqual(try XCTUnwrap(s.ratio), 1.0, accuracy: 1e-9)
+        XCTAssertEqual(try XCTUnwrap(s.chronicWeekly), 7 * TrainingLoad.trimp(fromEffort: 55), accuracy: 1e-9)
+        XCTAssertEqual(s.acute, 5 * TrainingLoad.trimp(fromEffort: 55), accuracy: 1e-9, "the 7-day load stays a sum")
     }
 
     func testARisingWeekReadsAsHigher() throws {
