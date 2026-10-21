@@ -16,15 +16,18 @@ import Foundation
 //     logarithm on those is an approximation (WHOOP's curve is not NOOP's), which is fine for a comparison of
 //     a person's own weeks.
 //   • Acute load = Σ TRIMP over the last 7 days (today and the 6 days before).
-//   • Chronic load = the average WEEKLY load of the 4 weeks before those 7 days (days 8–35 back, counting
-//     today as day 1), i.e. Σ TRIMP(days 8…35) / 4. The chronic window deliberately leaves the acute week out
-//     ("uncoupled": Lolli et al. 2019; Windt & Gabbett 2019), so the ratio is not pulled toward 1 by the two
-//     windows sharing days.
-//   • Ratio = acute / chronic (Gabbett 2016, Br J Sports Med 50:273). Gabbett reported 0.8–1.3 as the
-//     "sweet spot". Impellizzeri et al. 2020 (Int J Sports Physiol Perform) showed the ratio is NOT a
-//     validated injury predictor, so the bands below are readings of the number, never a risk statement.
-//   • A day without an Effort is unknown, not zero training. Days with data are counted, and the ratio is only
-//     given when there is enough of both windows (see `Summary`). A recorded Effort of 0 is a known easy day.
+//   • Chronic load = the usual WEEK of the 4 weeks before those 7 days (days 8–35 back, counting today as
+//     day 1): the mean daily TRIMP of the days there that have an Effort, × 7. The chronic window
+//     deliberately leaves the acute week out ("uncoupled": Lolli et al. 2019; Windt & Gabbett 2019), so the
+//     ratio is not pulled toward 1 by the two windows sharing days.
+//   • Ratio = this week's mean daily load ÷ the usual mean daily load (the acute:chronic ratio of Gabbett
+//     2016, Br J Sports Med 50:273, on daily means). Gabbett reported 0.8–1.3 as the "sweet spot".
+//     Impellizzeri et al. 2020 (Int J Sports Physiol Perform) showed the ratio is NOT a validated injury
+//     predictor, so the bands below are readings of the number, never a risk statement.
+//   • A day without an Effort is unknown, not zero training. Both windows are compared on the days that have
+//     data (daily means), so a few unworn days in either window don't skew the ratio (a sum ÷ 4 over a
+//     chronic window with 22 of 28 days read the usual week 21 % low); the ratio is only given when both
+//     windows are mostly covered (see `Summary`). A recorded Effort of 0 is a known easy day.
 //
 // Pure maths on "yyyy-MM-dd" day keys (no time zone, no clock): the caller says what "today" is.
 public enum TrainingLoad {
@@ -96,13 +99,14 @@ public enum TrainingLoad {
         public let acute: Double
         /// Days among those 7 that have an Effort.
         public let acuteDays: Int
-        /// The average weekly load of the 4 weeks before the acute week (Σ TRIMP of days 8–35 back, ÷ 4);
-        /// nil when fewer than `minChronicDays` of those 28 days have an Effort.
+        /// The usual week: the mean daily TRIMP of the days 8–35 back that have an Effort, × 7; nil when
+        /// fewer than `minChronicDays` of those 28 days have one.
         public let chronicWeekly: Double?
         /// Days among those 28 that have an Effort.
         public let chronicDays: Int
-        /// acute ÷ chronicWeekly; nil unless the acute week has ≥ `minAcuteDays` days with an Effort, the
-        /// chronic window has ≥ `minChronicDays`, and the chronic load is above 0.
+        /// This week's mean daily TRIMP ÷ the usual mean daily TRIMP (both over days with an Effort); nil
+        /// unless the acute week has ≥ `minAcuteDays` days with an Effort, the chronic window has
+        /// ≥ `minChronicDays`, and the usual load is above 0.
         public let ratio: Double?
         /// The band of `ratio`; nil exactly when `ratio` is.
         public let band: Band?
@@ -128,8 +132,9 @@ public enum TrainingLoad {
     ///   - weeks: how many rolling 7-day blocks to return in `Summary.weeks` (at least 1). The acute and
     ///     chronic figures do not depend on it.
     ///
-    /// Gaps count as no recorded load rather than being filled in with a guess, which is why the ratio needs
-    /// both windows to be mostly covered (`minAcuteDays`, `minChronicDays`).
+    /// Gaps are unknown days: sums (`acute`, each week's `load`) add only the recorded days, and the ratio
+    /// compares daily means over the recorded days, which is why it needs both windows to be mostly covered
+    /// (`minAcuteDays`, `minChronicDays`).
     public static func summary(days: [(day: String, effort: Double?)], today: String, weeks: Int = 8) -> Summary {
         let blocks = max(1, weeks)
         // Look-back, in days, that covers the acute week, the chronic window and every returned block.
@@ -170,11 +175,11 @@ public enum TrainingLoad {
         let chronic = total(chronicRange)
 
         var chronicWeekly: Double?
-        if chronic.days >= minChronicDays { chronicWeekly = chronic.load / Double(chronicWeeks) }
+        if chronic.days >= minChronicDays { chronicWeekly = chronic.load / Double(chronic.days) * Double(blockDays) }
 
         var ratio: Double?
         if acute.days >= minAcuteDays, let usual = chronicWeekly, usual > 0 {
-            ratio = acute.load / usual
+            ratio = (acute.load / Double(acute.days) * Double(blockDays)) / usual
         }
 
         var rolling: [Week] = []

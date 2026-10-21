@@ -36,7 +36,9 @@ final class ReadinessEngineTests: XCTestCase {
         XCTAssertEqual(r.signals.first { $0.key == "acwr" }?.flag, .good)
         XCTAssertEqual(r.signals.first { $0.key == "hrv" }?.evidence, "72 vs 60 ms")
         XCTAssertEqual(r.signals.first { $0.key == "rhr" }?.evidence, "46 vs 52 bpm")
-        XCTAssertEqual(r.signals.first { $0.key == "acwr" }?.evidence, "7d 10.0 / 28d 10.0")
+        // The Workouts card's TrainingLoad ratio: daily TRIMP behind Effort 10, this week vs the weeks before.
+        XCTAssertEqual(r.signals.first { $0.key == "acwr" }?.evidence, "7d 10 / usual week 10")
+        XCTAssertEqual(r.acwr ?? 0, 1.0, accuracy: 1e-9)
     }
 
     func testRundownWhenTwoRecoverySignalsDown() {
@@ -56,6 +58,26 @@ final class ReadinessEngineTests: XCTestCase {
         XCTAssertEqual(r.level, .strained)
         XCTAssertNotNil(r.acwr)
         XCTAssertGreaterThan(r.acwr!, 1.5)
+    }
+
+    /// The readiness ratio is the Workouts card's: the same days give the same number.
+    func testLoadSignalMatchesTheWorkoutsCard() {
+        var days: [DailyMetric] = []
+        for i in 1...21 { days.append(d(i, hrv: 60, rhr: 52, strain: 40)) }
+        for i in 22...29 { days.append(d(i, hrv: 60, rhr: 52, strain: i % 2 == 0 ? 55 : 45)) }
+        let r = ReadinessEngine.evaluate(days: days)
+        let card = TrainingLoad.summary(days: days.map { (day: $0.day, effort: $0.strain) }, today: "2024-03-29")
+        XCTAssertEqual(r.acwr ?? -1, card.ratio ?? -2, accuracy: 1e-12)
+    }
+
+    /// A lighter week is no readiness concern, and no load signal ever talks about injury.
+    func testLighterWeekIsNeutralAndNoInjuryWording() {
+        var days: [DailyMetric] = []
+        for i in 1...22 { days.append(d(i, hrv: 60, rhr: 52, strain: 50)) }
+        for i in 23...29 { days.append(d(i, hrv: 60, rhr: 52, strain: 20)) }
+        let signal = ReadinessEngine.evaluate(days: days).signals.first { $0.key == "acwr" }
+        XCTAssertEqual(signal?.flag, .neutral)
+        XCTAssertFalse(signal?.detail.contains("injury") ?? true)
     }
 
     func testRespRateRiseFlags() {
