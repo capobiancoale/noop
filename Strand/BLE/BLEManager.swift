@@ -3470,6 +3470,9 @@ extension BLEManager: @preconcurrency CBPeripheralDelegate {
                         // preserve/order/process them in the sliced drain.
                         armBackfillTimeout()
                         routeBackfillFrame(frame)
+                        // Bounded sample of the v20/v21 optical records for SpO2 channel mapping (no-op
+                        // unless the raw-capture toggle is on).
+                        puffinRecorder.captureOpticalHistory(frame: frame, char: characteristic.uuid)
                         // A real-time double-tap / wrist gesture still fires during a 5/MG offload (which
                         // runs for minutes, #69); the ts≈now gate rejects replayed historical EVENTs.
                         router.dispatchLiveGestureIfFresh(frame: frame, now: strapClockNow)
