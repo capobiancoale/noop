@@ -25,9 +25,15 @@ final class PuffinFrameRecorder {
     /// the file the current session is still writing.
     private static let directorySoftCapBytes = 50 * 1024 * 1024
 
+    /// Most v20/v21 optical history records kept per capture file. Each is 1.2-2.1 kB, so this bounds the
+    /// file to a few MB (the whole JSON is rewritten on every flush, on the main actor) while still holding
+    /// minutes of contiguous signal, enough to tell the optical channels apart offline.
+    private static let maxOpticalHistoryFrames = 1_200
+
     private weak var state: LiveState?
     private let buffer = PuffinCapture()
     private var sinceFlush = 0
+    private var opticalHistoryCaptured = 0
     private var fileURL: URL?
 
     init(state: LiveState) {
@@ -56,6 +62,17 @@ final class PuffinFrameRecorder {
         sinceFlush += 1
         state?.puffinCaptureCount = buffer.count
         if sinceFlush >= Self.flushEvery { flush() }
+    }
+
+    /// Record a historical-offload frame, but only a v20/v21 optical record and only up to
+    /// `maxOpticalHistoryFrames` per capture file. Offload traffic otherwise stays out of the capture; these
+    /// records are kept because finding the red and infrared channels in them is the prerequisite for any
+    /// SpO2 from a 5/MG (`Tools/spo2-validation`). No-op unless capture is enabled.
+    func captureOpticalHistory(frame: [UInt8], char: CBUUID) {
+        guard isEnabled, opticalHistoryCaptured < Self.maxOpticalHistoryFrames,
+              PuffinCapture.isOpticalHistoryRecord(frame) else { return }
+        opticalHistoryCaptured += 1
+        capture(frame: frame, char: char)
     }
 
     /// Write the full capture to disk (best-effort, atomic). Called periodically and on disconnect.
