@@ -74,7 +74,9 @@ Each record's R against the mean of its start and end reference (sensor A = `ple
   less than 0.2 points.
 - R measured on a 25 Hz copy equals R at 500 Hz (median difference 0.03 points). From one sample a second (as a
   strap that banks one red/infrared pair a second would give) the 60 s R differs by a median 0.7 points (90th
-  percentile 3.2); from one-second averages by 1.6 (5.4).
+  percentile 3.2); from one-second averages by 1.6 (5.4). That figure is a best case: a slow wobble shared by both
+  channels (breathing, 0.1-0.5 Hz) survives the one-a-second baseline removal and pulls R towards 1 while the
+  two residuals still correlate (the Swift tests pin this), so a one-sample-a-second R is only rough.
 
 **What this does not show.** The references only span 94-99 %, so the check cannot show that R tracks a real
 fall in saturation: a model that always answers 97 % scores ARMS 0.9 on this set, and a linear fit trained on
