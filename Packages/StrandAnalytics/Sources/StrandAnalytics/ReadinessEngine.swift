@@ -11,7 +11,14 @@ import WhoopStore
 /// - **HRV readiness** — z-score of today's HRV against the personal trailing baseline. A drop of
 ///   roughly half a standard deviation flags autonomic fatigue (Plews et al. 2013; Buchheit 2014).
 /// - **Resting-HR drift** — elevated resting HR vs baseline is a classic overtraining / illness
-///   signal (Lamberts et al. 2004).
+///   signal (Lamberts et al. 2004). Resting HR moves a few beats from one morning to the next with
+///   nothing behind it (Buchheit 2014), so a rise must also clear 3 bpm (watch) / 5 bpm (flag): for a
+///   very steady resting HR a 3-4 bpm rise is already 1.5 SD without meaning anything.
+///
+/// The verdict is anchored to the day's **Charge**, the recovery composite shown right above it, which
+/// already weighs HRV, resting HR, sleep, breathing and skin temperature: a red Charge always reads as
+/// recover, and a green one is never turned into "recover" by the vitals alone (only a sharp load rise or
+/// a breathing-rate rise, which Charge barely weighs, still can). Without a Charge the signals decide alone.
 /// - **Respiratory-rate drift** — a rise in sleeping respiratory rate is an early illness signal.
 /// - **Training load** — this week's daily training load against the usual of the four weeks before it,
 ///   the same `TrainingLoad` ratio the Workouts card shows (daily TRIMP behind the stored Effort, uncoupled
@@ -71,6 +78,8 @@ public enum ReadinessEngine {
     private static let baselineWindow = 30   // days for HRV / RHR / RR baselines
     private static let minBaseline    = 7    // need at least this many baseline nights
     private static let monotonyWindow = 7    // days of daily load behind Foster monotony
+    static let rhrWatchMinBpm         = 3.0  // a resting-HR rise smaller than this is never a watch
+    static let rhrBadMinBpm           = 5.0  // ...and smaller than this never a flag
 
     // MARK: Entry point
 
@@ -82,7 +91,7 @@ public enum ReadinessEngine {
         // a Compose recompose) re-runs the full-history sort on each ~1 Hz live-HR tick. The Today view also
         // memoizes this at the View layer (its `todayInputKey`); this engine-level cache additionally shields
         // every OTHER caller and the first/uncached read. Key = `today` + a fingerprint over ONLY the row
-        // fields the synthesis reads (day + avgHrv/restingHr/respRateBpm/strain), so a new sync re-keys but a
+        // fields the synthesis reads (day + avgHrv/restingHr/respRateBpm/strain/recovery), so a new sync re-keys but a
         // cosmetic reorder does not. Result is a small `Readiness`; no row arrays are retained.
         let key = ReadinessKey(today: today, rows: Self.rowsFingerprint(days))
         return evaluateCache.value(key) { evaluateUncached(days: days, today: today) }
@@ -105,6 +114,7 @@ public enum ReadinessEngine {
             h = (h &* 1099511628211) ^ (d.restingHr.map { UInt64(bitPattern: Int64($0)) } ?? .max)
             h = (h &* 1099511628211) ^ (d.respRateBpm ?? -1).bitPattern
             h = (h &* 1099511628211) ^ (d.strain ?? -1).bitPattern
+            h = (h &* 1099511628211) ^ (d.recovery ?? -1).bitPattern
             sum ^= h                                   // commutative fold → order-independent
             let dh = d.day.hashValue
             if i == 0 { minDayHash = dh; maxDayHash = dh } else { minDayHash = min(minDayHash, dh); maxDayHash = max(maxDayHash, dh) }
@@ -153,6 +163,7 @@ public enum ReadinessEngine {
             unit: "bpm",
             decimals: 0,
             higherIsBetter: false,
+            watchMinDelta: rhrWatchMinBpm, badMinDelta: rhrBadMinBpm,
             goodText: "at or below baseline",
             neutralText: "in your normal range",
             watchText: "running a little high",
@@ -209,30 +220,43 @@ public enum ReadinessEngine {
         }
 
         let (level, headline, summary) = synthesize(signals: signals,
-                                                    hasHistory: !history.isEmpty || acwr != nil)
+                                                    hasHistory: !history.isEmpty || acwr != nil,
+                                                    charge: latest.recovery)
         return Readiness(level: level, headline: headline, summary: summary,
                          signals: signals, acwr: acwr, monotony: monotony)
     }
 
     // MARK: Signal builders
 
-    /// Build a z-score signal for a metric where the baseline is the trailing window.
+    /// Build a z-score signal for a metric where the baseline is the trailing window. `watchMinDelta` /
+    /// `badMinDelta` are the smallest moves in the worse direction (in the metric's own unit) that may count
+    /// as watch / bad, so a very steady baseline (tiny SD) can't turn a trivial change into a flag.
     private static func zSignal(value: Double?, baseline: [Double],
                                 key: String, label: String, unit: String, decimals: Int,
                                 higherIsBetter: Bool,
+                                watchMinDelta: Double = 0, badMinDelta: Double = 0,
                                 goodText: String, neutralText: String,
                                 watchText: String, badText: String) -> Signal? {
         guard let v = value, baseline.count >= minBaseline,
               let m = mean(baseline), let sd = sampleSD(baseline), sd > 0 else { return nil }
         // Orient z so positive always means "better".
-        let z = (higherIsBetter ? (v - m) : (m - v)) / sd
-        let flag: Flag
-        let text: String
+        let worse = higherIsBetter ? (m - v) : (v - m)
+        let z = -worse / sd
+        var flag: Flag
         switch z {
-        case 0.5...:        flag = .good;    text = goodText
-        case -0.5..<0.5:    flag = .neutral; text = neutralText
-        case -1.0 ..< -0.5: flag = .watch;   text = watchText
-        default:            flag = .bad;     text = badText
+        case 0.5...:        flag = .good
+        case -0.5..<0.5:    flag = .neutral
+        case -1.0 ..< -0.5: flag = .watch
+        default:            flag = .bad
+        }
+        if flag == .bad, worse < badMinDelta { flag = .watch }
+        if flag == .watch, worse < watchMinDelta { flag = .neutral }
+        let text: String
+        switch flag {
+        case .good:    text = goodText
+        case .neutral: text = neutralText
+        case .watch:   text = watchText
+        case .bad:     text = badText
         }
         return Signal(key: key, label: label,
                       evidence: evidence(value: v, baseline: m, unit: unit, decimals: decimals),
@@ -273,7 +297,7 @@ public enum ReadinessEngine {
 
     // MARK: Synthesis
 
-    private static func synthesize(signals: [Signal], hasHistory: Bool) -> (Level, String, String) {
+    static func synthesize(signals: [Signal], hasHistory: Bool, charge: Double? = nil) -> (Level, String, String) {
         guard hasHistory, !signals.isEmpty else {
             return (.insufficient, "Readiness",
                     "A few more nights of data and your readiness read will sharpen.")
@@ -283,21 +307,33 @@ public enum ReadinessEngine {
         let good = signals.filter { $0.flag == .good }
         let recoveryDown = signals.contains { ["hrv", "rhr", "respRate"].contains($0.key) && ($0.flag == .bad) }
         let loadHigh = signals.contains { $0.key == "acwr" && $0.flag == .bad }
+        let breathingUp = signals.contains { $0.key == "respRate" && $0.flag == .bad }
 
-        if bad.count >= 2 || (recoveryDown && loadHigh) {
-            return (.rundown, "Run down",
-                    "Several signals are down at once. Treat today as recovery - easy movement, real sleep tonight.")
+        let rundown: (Level, String, String) = (.rundown, "Run down",
+            "Several signals are down at once. Treat today as recovery - easy movement, real sleep tonight.")
+        let strained: (Level, String, String) = (.strained, "Strained",
+            "One of your signals is flagging. You can train, but keep it controlled and bank the recovery.")
+        let primed: (Level, String, String) = (.primed, "Primed",
+            "Your signals are aligned and your load is supported. A harder session is well backed today.")
+        let balanced: (Level, String, String) = (.balanced, "Balanced",
+            "Nothing's flagging. Train to feel - your body's holding steady.")
+
+        // Anchor to Charge (see the type doc): red always reads as recover, green is never overturned by
+        // the vitals Charge already weighs.
+        if let charge, charge.isFinite {
+            if charge < RecoveryScorer.bandRedMax {
+                return (bad.count >= 1 || loadHigh) ? rundown : strained
+            }
+            if charge >= RecoveryScorer.bandYellowMax {
+                if loadHigh || breathingUp { return strained }
+                return (good.count >= 2 && watch.isEmpty && bad.isEmpty) ? primed : balanced
+            }
         }
-        if recoveryDown || loadHigh || bad.count >= 1 {
-            return (.strained, "Strained",
-                    "One of your signals is flagging. You can train, but keep it controlled and bank the recovery.")
-        }
-        if good.count >= 2 && watch.isEmpty {
-            return (.primed, "Primed",
-                    "Your signals are aligned and your load is supported. A harder session is well backed today.")
-        }
-        return (.balanced, "Balanced",
-                "Nothing's flagging. Train to feel - your body's holding steady.")
+
+        if bad.count >= 2 || (recoveryDown && loadHigh) { return rundown }
+        if recoveryDown || loadHigh || bad.count >= 1 { return strained }
+        if good.count >= 2 && watch.isEmpty { return primed }
+        return balanced
     }
 
     // MARK: Stats helpers

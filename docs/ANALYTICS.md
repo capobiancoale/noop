@@ -461,6 +461,13 @@ readiness "Training load" signal (`ReadinessEngine`): how much you trained over 
 - **Missing days are unknown, not zero training.** The ratio needs at least 4 days with an Effort in the acute week, at least 14 of the 28 chronic days, and a chronic load above 0; otherwise the card shows the 7-day load and "Not enough history yet" (it needs about five weeks of data). A recorded Effort of 0 is a known easy day and counts as data. A day without an Effort adds nothing to a sum (it is not filled in) and is left out of the daily means, which is why both windows must be mostly covered before a ratio is shown.
 - A bar chart shows the load of the last 8 rolling 7-day blocks (each ending on its labelled day, this week highlighted).
 
+### Today's verdict (`ReadinessEngine`)
+
+The word under Today's three rings (Push / Maintain / Recover) and the signals listed with it: HRV and resting HR against their 30-day baselines (z-scores), breathing rate, the training-load ratio above and Foster monotony.
+
+- **Anchored to Charge.** Charge, shown right above, already weighs HRV, resting HR, sleep, breathing and skin temperature, so the verdict follows its band: a red Charge (< 34) always reads *Recover* (*run down* when a signal is also flagged or the load rose sharply), and a green Charge (≥ 67) is never turned into *Recover* by the vitals alone; only a sharp load rise or a breathing-rate rise (which Charge barely weighs) still can. *Push* needs at least two good signals and none on watch or flagged. With a yellow Charge, or none yet, the signals decide as before: one flagged signal → *Recover*, two (or one plus a sharp load rise) → *run down*.
+- **Resting HR needs a real rise.** Resting HR moves a few beats from one morning to the next with nothing behind it (Buchheit 2014, Front Physiol 5:73), so for someone whose resting HR is very steady a 3-4 bpm rise is already 1.5 SD. A rise has to clear 3 bpm to read as *a little above* and 5 bpm to be flagged, whatever the z-score.
+
 ### Glucose and heart rate on one clock (`WodTimeWindow`, `GlucoseTrace`, `TimelineTicks`, `TimelineEvents`)
 
 The WOD screen and Today's "Heart & Glucose" card show glucose (Apple Health), heart rate (the strap) and carbs /
