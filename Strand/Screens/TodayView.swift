@@ -670,7 +670,7 @@ struct TodayView: View {
         RecoveryScorer.skinTempRelative(deviationC: chargeBreakdownRow?.skinTempDevC)
     }
 
-    /// #205 (one-word readiness read kept on the hero: Push / Maintain / Rest). PURE mapping of the
+    /// #205 (one-word readiness read kept on the hero: Push / Maintain / Recover). PURE mapping of the
     /// existing `ReadinessEngine.Level` so the hero keeps a glanceable verdict even though the full
     /// Readiness card folds into the Charge breakdown sheet (S4). `insufficient` returns nil (the hero then
     /// shows no readiness word, matching the old card hiding itself). Mirror EXACTLY in Kotlin.
@@ -678,8 +678,10 @@ struct TodayView: View {
         switch level {
         case .primed:       return String(localized: "Push")
         case .balanced:     return String(localized: "Maintain")
-        case .strained:     return String(localized: "Rest")
-        case .rundown:      return String(localized: "Rest")
+        // "Recover", not "Rest": Rest is the sleep score's name and stays "Rest" in every language, so the
+        // verdict word has to be a different catalog key (the Liquid Today hero says "Recover" too).
+        case .strained:     return String(localized: "Recover")
+        case .rundown:      return String(localized: "Recover")
         case .insufficient: return nil
         }
     }
@@ -951,7 +953,7 @@ struct TodayView: View {
     }
 
     private static let navDayFmt: DateFormatter = {
-        let f = DateFormatter(); f.dateFormat = "EEE d MMM"; f.locale = Locale(identifier: "en_US_POSIX"); return f
+        let f = DateFormatter(); f.locale = Locale.autoupdatingCurrent; f.setLocalizedDateFormatFromTemplate("EEEdMMM"); return f
     }()
 
     /// The selected day as a small locale-aware numeric date ("28/06/2026" or "6/28/2026" per region). The
@@ -1590,10 +1592,10 @@ struct TodayView: View {
                                 .accessibilityLabel("Readiness: \(levelWord(r.level)). \(r.headline)")
                             Spacer()
                             if let acwr = r.acwr {
-                                Text("load \(String(format: "%.2f", acwr))")
+                                Text("load \(DisplayNumber.decimal(acwr, digits: 2))")
                                     .font(StrandFont.captionNumber)
                                     .foregroundStyle(StrandPalette.textTertiary)
-                                    .help("Acute (7-day) vs chronic (28-day) training load. 0.8-1.3 is the sweet spot.")
+                                    .help("This week's training load against the four weeks before it, as on the Workouts screen. 0.8-1.3 is in line with your usual.")
                             }
                         }
                         Text(r.summary).font(StrandFont.subhead)
@@ -2149,13 +2151,13 @@ struct TodayView: View {
             #endif
             return withUnit(d?.restingHr.map { "\($0)" } ?? "—")
         case .respiratory:
-            return withUnit(d?.respRateBpm.map { String(format: "%.1f", $0) }
-                            ?? sparks["resp_rate"]?.last.map { String(format: "%.1f", $0) } ?? "—")
+            return withUnit(d?.respRateBpm.map { DisplayNumber.decimal($0) }
+                            ?? sparks["resp_rate"]?.last.map { DisplayNumber.decimal($0) } ?? "—")
         case .bloodOxygen:
             return d?.spo2Pct.map { String(format: "%.0f%%", $0) } ?? "—"
         case .skinTemp:
             // Stored as a deviation from baseline (°C); show it signed so +/- reads honestly.
-            return d?.skinTempDevC.map { String(format: "%+.1f°", $0) } ?? "—"
+            return d?.skinTempDevC.map { "\(DisplayNumber.signed($0))°" } ?? "—"
         case .sleep:
             return sleepValue(d)
         case .steps:
@@ -2358,7 +2360,7 @@ struct TodayView: View {
                 metricRow(icon: "lungs.fill", label: "Respiratory",
                           // Today's own respiratory, else the carried night's; a non-carrying today keeps the
                           // sparkline-tail fallback so a sparse-but-recent value still reads.
-                          value: resp.map { String(format: "%.1f", $0) }
+                          value: resp.map { DisplayNumber.decimal($0) }
                               ?? (vd == nil ? latestString("resp_rate", decimals: 1) : "—"),
                           unit: "rpm",
                           tint: StrandPalette.accent)
@@ -2713,7 +2715,7 @@ struct TodayView: View {
     private func effortRing(d: DailyMetric?, diameter: CGFloat) -> some View {
         if effortStrain(d) != nil, let gv = effortGaugeValue(d) {
             GlowRing(fraction: gv / effortGaugeMax, value: gv,
-                     format: { effortScale == .whoop ? String(format: "%.1f", $0) : "\(Int($0.rounded()))" },
+                     format: { effortScale == .whoop ? DisplayNumber.decimal($0) : "\(Int($0.rounded()))" },
                      color: StrandPalette.effortColor, diameter: diameter, lineWidth: diameter * 0.10)
         } else {
             emptyHeroRing(diameter: diameter) { ringNoData(diameter: diameter) }
@@ -3258,7 +3260,7 @@ struct TodayView: View {
             // Respiratory keeps its sparkline-tail fallback for a NON-carrying today (a sparse-but-recent
             // value still reads); when carrying, the prior scored night's respiratory is shown + stamped.
             let respCarry = carriedVital(unit: "rpm", today: d?.respRateBpm,
-                                         prior: { $0.respRateBpm }, format: { String(format: "%.1f", $0) })
+                                         prior: { $0.respRateBpm }, format: { DisplayNumber.decimal($0) })
             let respValue = respCarry.value == "—" && lastScoredRecoveryDay == nil
                 ? latestString("resp_rate", decimals: 1) : respCarry.value
             StatTile(
@@ -3951,10 +3953,25 @@ struct TodayView: View {
         // gauge falls back to the stored row (never a fabricated value); a navigated past day clears it.
         let liveStrainLocal: Double?
         if selectedDayOffset == 0 {
-            let todayHr = await repo.hrSamples(from: windowStart, to: windowEnd)
+            // The whole day, like the engine's day read: the default 8 000-row cap is ~2 h of a 1 Hz strap.
+            let todayHr = await repo.hrSamples(from: windowStart, to: windowEnd, limit: 200_000)
             let maxHR = profile.age > 0 ? StrainScorer.tanakaHRmax(age: Double(profile.age)) : nil
             let restHR = displayDay?.restingHr.map(Double.init) ?? StrainScorer.defaultRestingHR
-            liveStrainLocal = StrainScorer.strain(todayHr, maxHR: maxHR, restingHR: restHR, sex: profile.sex)
+            // Today's logged WODs fold in exactly as the engine folds them (session-RPE load the heart rate
+            // under-reads), matched against today's workouts, so the live gauge agrees with the stored day.
+            let tzOffset = TimeZone.current.secondsFromGMT()
+            let todayKey = Repository.dayString(dayStart)
+            let sessions = await repo.allWods().filter { $0.day == todayKey }
+                .compactMap { StrainScorer.LoggedSession(wod: $0, tzOffsetSeconds: tzOffset) }
+            var bouts: [(start: Int, end: Int)] = []
+            if !sessions.isEmpty {
+                bouts = await repo.workoutRows(days: 2, reconcileHr: false)
+                    .filter { $0.endTs > windowStart && $0.startTs < windowEnd }
+                    .map { (start: $0.startTs, end: $0.endTs) }
+            }
+            liveStrainLocal = StrainScorer.strain(todayHr, maxHR: maxHR, restingHR: restHR, sex: profile.sex,
+                                                  sessions: sessions, bouts: bouts,
+                                                  dayStart: windowStart, dayEnd: windowStart + 86_400)
         } else {
             liveStrainLocal = nil
         }
@@ -4059,7 +4076,7 @@ struct TodayView: View {
     /// can't be read off `appleDailyRows` (e.g. respiratory from apple-health).
     private func latestString(_ key: String, decimals: Int, unit: String = "") -> String {
         guard let last = sparks[key]?.last else { return "—" }
-        let n = decimals == 0 ? intString(last) : String(format: "%.\(decimals)f", last)
+        let n = decimals == 0 ? intString(last) : DisplayNumber.decimal(last, digits: decimals)
         return unit.isEmpty ? n : "\(n) \(unit)"
     }
 
@@ -4093,8 +4110,8 @@ struct TodayView: View {
 
     private var dateLine: String {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "EEEE, d MMMM"
+        f.locale = Locale.autoupdatingCurrent
+        f.setLocalizedDateFormatFromTemplate("EEEEdMMMM")
         // The selected day's date when navigated; today's banked-row date (or today) at offset 0.
         if selectedDayOffset == 0, let day = repo.today?.day, let date = Self.dayParser.date(from: day) {
             return f.string(from: date)
@@ -4118,8 +4135,8 @@ struct TodayView: View {
         case 1:  return String(localized: "Yesterday")
         default:
             let f = DateFormatter()
-            f.locale = Locale(identifier: "en_US_POSIX")
-            f.dateFormat = "EEE d MMM"
+            f.locale = Locale.autoupdatingCurrent
+            f.setLocalizedDateFormatFromTemplate("EEEdMMM")
             return f.string(from: selectedLogicalDay)
         }
     }
@@ -4239,8 +4256,8 @@ struct TodayView: View {
     /// segment was dropped: the StatTile caption is lineLimit(1) and date + range + bpm clips,     /// avg HR remains on the Workouts screen.
     private func workoutCaption(_ w: WorkoutRow) -> String {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "d MMM"
+        f.locale = Locale.autoupdatingCurrent
+        f.setLocalizedDateFormatFromTemplate("dMMM")
         let start = Date(timeIntervalSince1970: TimeInterval(w.startTs))
         let date = f.string(from: start)
         guard w.endTs > w.startTs else { return "\(date) · \(Self.hrTimeFmt.string(from: start))" }

@@ -115,6 +115,39 @@ The home dashboard (`TodayView.swift`, titled "Control Center"). A tight, gaples
 
 ---
 
+## Today (liquid)
+
+**iPhone and Mac: the default Today (`LiquidTodayView.swift`).** Three blocks first, the rest folded:
+
+1. **Your state.** Charge, Effort and Rest as liquid vessels, and under them a one-word verdict (Push /
+   Maintain / Recover) with one sentence. Tap it for the signals behind it (HRV, resting HR, respiratory
+   rate, training load, training variety), each against your own baseline. While a score is still missing
+   today, a line says why; for Charge, how many of the 4 baseline nights are in, and tapping that line opens
+   **Why there's no Charge yet**: how many of the last 7 nights had a usable HRV, and for last night the hours of
+   heart rate recorded, the beat-to-beat intervals, the share of the night they cover and the usable 5-minute
+   stretches, then only the fixes that apply (keep NOOP connected overnight with Low Power Mode off and
+   Background App Refresh on, charge the strap, wear it snugly). Each score also carries its plain name under
+   it (Charge: recovery, Effort: strain, Rest: sleep), and the Key metrics tile reads "Charge · recovery". A
+   night-time low from your CGM sits right under this block, because Charge can't see it.
+2. **Glucose now** (only with CGM readings in Apple Health). The latest reading with a CGM-style trend arrow
+   and its age, the last three hours against the 70–180 mg/dL band, and the day's time in range, average and
+   lows. A past day shows that day's trace and figures. Informational only.
+3. **Today's workout.** The day's latest session: its Effort, time in heart-rate zones, glucose at its start
+   and end (with a note if it went below 70 during it or in the hour after) and the WOD logged for it. A
+   detected session asks what it was: rename it, or mark it as not a workout. **Log WOD** (its session
+   starts and ends with the workout; adjust both, e.g. an hour of warm-up, skill and a 15-minute AMRAP, and
+   heart rate, zones, Effort and glucose read the whole hour) and **Start session** (beta) sit here too; **All workouts** opens the full list. Once the
+   strap has recorded heart rate after the session, a **Recovery** line shows how far the heart rate fell in
+   the first minute and where it was 30 minutes after, e.g. "−28 bpm in 1 min · 30 min after: 92 bpm" (only
+   the parts that were recorded).
+
+**Details** (folded until opened, and remembered) holds the rest: live heart rate (with a *Check accuracy* link
+to the Heart-rate accuracy screen), the Heart & Glucose
+timeline, recovery vitals, key metrics, Charge vs Effort over 30 days, the week, glucose & insulin, your
+cards and data sources.
+
+---
+
 ## Live
 
 **Sidebar: Live · needs a bonded strap for HR; the hardware-test surface.**
@@ -202,6 +235,17 @@ metric opens its **detail dossier**:
 Sparse metrics (weight, body fat) auto-widen the window when the selected range holds no points,
 and flag that they did, so you always see real data instead of an empty state.
 
+Metrics with no data at all are hidden from the list by default, behind a **Show metrics without
+data (N)** switch (remembered). A metric with no data opens a **Why there's no data / How to get it**
+card instead of an empty chart, e.g. blood oxygen on a WHOOP 5.0/MG, or "Needs a CGM writing to
+Apple Health" for glucose. The text comes from `Strand/Data/MetricAvailability.swift`.
+
+**Blood pressure** (`Blood Pressure (sys)` / `(dia)`) is measured only: from a cuff that writes to
+Apple Health, plus the readings you add in the Lab Book. Both feed one value per day (the mean of
+that day's readings). Their detail shows the latest reading ("128/82 mmHg") with its ESH 2023
+category word, the 30-day averages, and an **Add a reading** button. NOOP does not estimate blood
+pressure from the strap. See [ANALYTICS.md](ANALYTICS.md#blood-pressure-and-the-metrics-noop-cant-measure).
+
 ---
 
 ## Compare
@@ -250,7 +294,10 @@ just the most recent (step through earlier nights to compare):
 
 - **Stage breakdown hero** — a **hypnogram** (reconstructed from stage durations) or, if intervals
   can't be reconstructed, a proportional stacked stage bar. Footer shows REM / Deep / Light / Awake
-  each as "Xh Ym · NN%", with time-in-bed, efficiency, and onset–wake times.
+  each as "Xh Ym · NN%", with time-in-bed, efficiency, and onset–wake times. Stages computed from the
+  strap come from **Sleep staging V2**, the default since it was checked against laboratory polysomnography
+  (31 nights: deep and REM within a point of the lab's shares, where the earlier staging read far off; see
+  `docs/ANALYTICS.md`). Settings → Sleep staging turns it off to go back to the earlier staging.
 - **Night detail** — a uniform tile grid, each with a sparkline and a "vs typical" caption: Sleep
   Performance, Efficiency, Consistency, Hours vs Needed, Restorative (deep + REM share),
   Respiratory, and Sleep Debt (vs your personal sleep need, floored at 7.5 h).
@@ -291,6 +338,19 @@ Windows are taken relative to your latest recorded day and auto-widen on sparse 
   icons.
 - **All Sessions** — a uniform table: date/time, sport, duration, avg HR, kcal, distance, and a
   **source badge** (WHOOP or Apple) per row.
+- **Training load** — at the top: this week's load against your usual, as a ratio ("1.24× your usual") with a
+  plain word (below, in line with, higher than your usual, or a sharp rise) and a bar chart of the last 8 weeks.
+  Load is each day's heart-rate training load (TRIMP, WODs included); "usual" is the average of the four weeks
+  before this one (Gabbett 2016; the weeks are kept apart as in Lolli et al. 2019). It needs about five weeks of
+  data and shows "Not enough history yet" until then. It compares your own weeks and does not predict injury
+  (Impellizzeri et al. 2020).
+- **Heart-rate recovery** (in a session's detail, and on a WOD's screen) — how fast the heart rate falls after
+  you stop: the drop after 1 and 2 minutes (with a slow / typical / fast word for the first), the heart rate
+  5, 10 and 30 minutes after, how long until it was 80 % of the way back to resting, a chart of the first hour
+  on the clock (hours and minutes) and, with at least three sessions, how the 1-minute drop moved over recent
+  ones (one point per session). It needs heart rate after
+  the session ended, so keep the strap connected for a while after training. Informational only: it depends
+  on how you cool down and is not a clinical test.
 
 ---
 
@@ -303,6 +363,13 @@ Windows are taken relative to your latest recorded day and auto-widen on sparse 
 - **Live heart rate hero** — a streaming HR sparkline tinted by zone, with a zone pill, "% Max",
   your Max HR (from Settings) and a streaming/idle state. When the strap reports HR as 0, NOOP
   derives it from the latest R-R interval and notes "from R-R".
+- **Night heart rhythm** — a screen of last night's beat-to-beat intervals for a rhythm that is irregular the
+  way atrial fibrillation is (also on the Heart-rate accuracy screen). It shows last night's verdict (regular,
+  a few irregular stretches, an irregular rhythm lasting 30 minutes or more, or not enough clean beats), how
+  much of the night was analysed, the irregular share, the longest irregular stretch and a 14-night strip; the
+  share is also an Explore metric ("Irregular rhythm (night)"). It is a screen, never a diagnosis: only an ECG
+  can confirm atrial fibrillation, brief episodes and frequent extra beats can fool it, and NOOP is not a
+  medical device. Nothing is sent as a notification. See `docs/ANALYTICS.md`, "Irregular rhythm screening".
 - **Vital Signs** — a tile grid from your most recent imported day: Respiratory Rate, Blood O₂,
   Resting HR, HRV and Skin Temp, each colored by whether it sits in a healthy range ("In range" /
   "Out of range").
@@ -470,9 +537,24 @@ Shortcuts run via the `shortcuts://` URL scheme — anything you can build in Sh
 
 NOOP watches for the classic early-illness/strain signature on-device. It compares your last ~2
 days against a ~28-day baseline (ending 3 days ago) for resting HR, HRV, skin-temperature
-deviation and respiration. When **two or more** anomalies appear — e.g. resting HR up ≥5 bpm,
-HRV down ≥20%, skin temp up ≥0.6 °C, respiration up — a banner appears on **Control Center**:
-*"Your body looks strained — … Consider taking it easy."*
+deviation and respiration. When **two or more** of them drift together, and nothing you logged
+explains it, a banner appears on **Control Center** and a **Heads-up** card shows in the Health hub
+(*Skin temperature*): *"Your body looks strained (RHR +6, HRV −22%). … consider taking it easy."* The wording
+follows the app language, and the card says plainly that it is an on-device estimate, not a diagnosis.
+
+**It knows when something else explains it.** Alcohol or a workout you logged, and a **low glucose at night**
+(the lowest CGM reading between midnight and 6 am under 70 mg/dL, read from Apple Health), turn the card into
+*"Probably not illness"* with an *Explained by* line. A night low disturbs the heart's autonomic control, so that
+night's heart rate and HRV say little about illness. No glucose data, no change.
+
+**Your own false-alarm rate.** Once there are 120 healthy days in your history, the alert checks how often it would
+have fired on your healthy days (days with no illness logged within a week and nothing logged that explains a
+signal) and, if needed, raises its own threshold so that it would have cried wolf at most once in 60 days. It
+never gets more sensitive than the default. The card shows the result: *"Calibrated on your last N healthy days:
+expect about 1 false alarm every X days (at most 1 every Y days, 95%)"*, or *"Calibration starts after 120 healthy
+days (N so far)"*. The same line sits under the toggle in **Automations**. What it cannot do is measure how well it
+catches a real illness: one person has too few illnesses for that, so that part comes from published studies, and
+the card says so.
 
 On a banner transition from clear to raised, NOOP also posts a **system notification** (at most
 once per local day) so the warning reaches you when the window is closed. The toggle lives in
@@ -480,6 +562,8 @@ once per local day) so the warning reaches you when the window is closed. The to
 **opt-in** (off by default — enabling it triggers the notification-permission prompt), while
 Android is **opt-out** (on by default — the watch has always run there). Needs at least 14 days
 of history. On-device and approximate — informational only, **not** a diagnosis.
+(Android has the night-low and personal-threshold fields in the engine; the glucose reading and the calibration run
+in the iPhone/Mac app.)
 
 ---
 
@@ -491,6 +575,12 @@ of history. On-device and approximate — informational only, **not** a diagnosi
 
 - **Profile** — age, sex, weight, height, and max heart rate (auto-estimated via Tanaka, or a
   manual override). These power your zones, calorie estimates and Charge baselines.
+- **Heart-rate accuracy** — opens the accuracy check (also reachable from Today's Heart rate card, *Check
+  accuracy*): how well the strap's heart rate agrees with its own beat-to-beat timing over the last 24 hours, a
+  guided 30-second pulse count against the strap (Start, count, enter the beats: "You 72 bpm · Strap 74 bpm"),
+  and your own sleeping floor, waking range and the max heart rate your zones use, with age and max heart rate
+  editable there. It checks consistency, not absolute accuracy, and is informational only. The same screen also
+  carries the **Night heart rhythm** card described under Health Monitor.
 - **Step calibration** — tune the stride/step estimate to your own walking so step and distance
   figures read closer to reality.
 - **Units** — choose your preferred measurement units (metric / imperial) across the app.

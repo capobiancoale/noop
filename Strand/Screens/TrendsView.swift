@@ -186,12 +186,15 @@ struct TrendsView: View {
     @ViewBuilder
     private func changeChip(_ pts: [TrendPoint], higherIsBetter: Bool?, fmt: @escaping (Double) -> String) -> some View {
         if let d = periodChange(pts), abs(d) > 0.0001 {
-            let sign = d >= 0 ? "+" : "−"
+            // A change that formats as zero carries no sign ("−0" read as a drop): "±" claims no direction.
+            let shown = fmt(abs(d))
+            let isZero = shown == fmt(0)
+            let sign = isZero ? "±" : (d >= 0 ? "+" : "−")
             let color: Color = {
-                guard let better = higherIsBetter else { return StrandPalette.textTertiary }
+                guard let better = higherIsBetter, !isZero else { return StrandPalette.textTertiary }
                 return (d > 0) == better ? StrandPalette.statusPositive : StrandPalette.metricRose
             }()
-            TrendChip(text: "\(sign)\(fmt(abs(d)))", color: color)
+            TrendChip(text: "\(sign)\(shown)", color: color)
         }
     }
 
@@ -250,25 +253,27 @@ struct TrendsView: View {
                 // (#732); see sleepPerfByDay. resolve() still does the windowing/widening.
                 let rest = resolve { sleepPerfByDay[$0.day] }
                 VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
-                    // The main card list ripples in once on appear (Reduce-Motion safe).
+                    // The main card list ripples in once on appear (Reduce-Motion safe). Each card is type-erased:
+                    // in the optimised build the column otherwise becomes one deeply nested type whose metadata
+                    // lookup can overflow the main thread's stack (see LiquidTodayView).
                     Group {
                         // Week-in-review digest (#208) with prev/next week browsing (#710) — self-hides
                         // only when NO week in history has data. Past weeks render in the same format.
-                        weeklyDigestNav
-                            .staggeredAppear(index: 0)
+                        AnyView(weeklyDigestNav
+                            .staggeredAppear(index: 0))
                         // The Charge / Effort / Rest trio, presented in NOOP's pip language.
-                        weekInReview(charge: recovery, effort: strain, rest: rest)
-                            .staggeredAppear(index: 1)
-                        rangeBar(recovery: recovery)
-                            .staggeredAppear(index: 2)
-                        heroRecovery(recovery: recovery)
-                            .staggeredAppear(index: 3)
-                        smallMultiples(hrv: hrv, rhr: rhr, strain: strain)
-                            .staggeredAppear(index: 4)
-                        yearStrip
-                            .staggeredAppear(index: 5)
-                        exportReportRow
-                            .staggeredAppear(index: 6)
+                        AnyView(weekInReview(charge: recovery, effort: strain, rest: rest)
+                            .staggeredAppear(index: 1))
+                        AnyView(rangeBar(recovery: recovery)
+                            .staggeredAppear(index: 2))
+                        AnyView(heroRecovery(recovery: recovery)
+                            .staggeredAppear(index: 3))
+                        AnyView(smallMultiples(hrv: hrv, rhr: rhr, strain: strain)
+                            .staggeredAppear(index: 4))
+                        AnyView(yearStrip
+                            .staggeredAppear(index: 5))
+                        AnyView(exportReportRow
+                            .staggeredAppear(index: 6))
                     }
                 }
             }
@@ -428,7 +433,7 @@ struct TrendsView: View {
                         // Charge/Rest vessels regardless of the displayed Effort unit.
                         pipScoreRow(label: "Effort", value: display, range: 0...maxV,
                                     tint: StrandPalette.effortColor, frac: v / 100,
-                                    format: { oneDecimal ? String(format: "%.1f", $0) : "\(Int($0.rounded()))" })
+                                    format: { oneDecimal ? DisplayNumber.decimal($0) : "\(Int($0.rounded()))" })
                     }
                     if let v = restAvg {
                         pipScoreRow(label: "Rest", value: v, range: 0...100,
@@ -508,10 +513,21 @@ struct TrendsView: View {
         let cap = recovery.caption
         let isWide = recovery.widened
         return VStack(alignment: .leading, spacing: NoopMetrics.space2) {
-            HStack {
-                SegmentedPillControl(Range.allCases, selection: $range) { $0.label }
-                Spacer()
-                Text(rangeSubtitle).strandOverline()
+            // The pills claim their width first; the trailing subtitle is the one that gives way. It is
+            // dropped when it does not fit whole (never shrunk into a clipped "ULTIMI 9…"): the hero card
+            // below carries the same window name, so nothing is lost.
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    SegmentedPillControl(Range.allCases, selection: $range) { $0.label }
+                    Spacer(minLength: NoopMetrics.space2)
+                    Text(rangeSubtitle).strandOverline()
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                HStack {
+                    SegmentedPillControl(Range.allCases, selection: $range) { $0.label }
+                    Spacer(minLength: 0)
+                }
             }
             Text(cap)
                 .font(StrandFont.footnote)

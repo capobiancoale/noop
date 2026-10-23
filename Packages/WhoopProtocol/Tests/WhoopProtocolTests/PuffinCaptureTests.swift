@@ -72,4 +72,20 @@ final class PuffinCaptureTests: XCTestCase {
         XCTAssertEqual(obj?.first?.keys.sorted(), ["hex"])
         XCTAssertEqual(obj?.first?["hex"] as? String, helloHex)
     }
+
+    /// Only type-47 records in the v20/v21 optical layouts qualify for the offload sample.
+    func testOpticalHistoryRecordFilter() {
+        func frame(type: UInt8, version: UInt8) -> [UInt8] {
+            var f = [UInt8](repeating: 0, count: 40)
+            f[0] = 0xAA; f[8] = type; f[9] = version
+            return f
+        }
+        XCTAssertTrue(PuffinCapture.isOpticalHistoryRecord(frame(type: 0x2f, version: 20)))
+        XCTAssertTrue(PuffinCapture.isOpticalHistoryRecord(frame(type: 0x2f, version: 21)))
+        XCTAssertFalse(PuffinCapture.isOpticalHistoryRecord(frame(type: 0x2f, version: 18)))
+        XCTAssertFalse(PuffinCapture.isOpticalHistoryRecord(frame(type: 0x2f, version: 26)))
+        XCTAssertFalse(PuffinCapture.isOpticalHistoryRecord(frame(type: 0x31, version: 21)))   // metadata
+        XCTAssertFalse(PuffinCapture.isOpticalHistoryRecord(Array(frame(type: 0x2f, version: 21).prefix(9))))
+        XCTAssertFalse(PuffinCapture.isOpticalHistoryRecord(helloFrame()))
+    }
 }

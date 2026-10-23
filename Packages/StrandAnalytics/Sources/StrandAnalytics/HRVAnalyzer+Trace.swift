@@ -2,8 +2,8 @@ import Foundation
 
 // HRVAnalyzer+Trace.swift - the HRV & Autonomic test-mode cleaning trace.
 //
-// Recomputes the cleaning-pipeline counts (range filter, Malik ectopic rejection, the minBeats gate,
-// the spot rejected-fraction gate) from the SAME raw RR the analyzer reads, then reuses analyze(...)
+// Recomputes the cleaning-pipeline counts (implausible drops, Lipponen-Tarvainen corrections, the minBeats
+// gate, the spot rejected-fraction gate) from the SAME raw RR the analyzer reads, then reuses analyze(...)
 // verbatim for the result so the trace can never disagree with the RMSSD/SDNN the screen shows. Pure
 // and side-effect-free: no clock, no I/O, so a fixture beat series pins the exact lines. The HRV test
 // mode gates this behind TestCentre.active(.hrv) at the call site (the spot reading); when the mode is
@@ -13,12 +13,12 @@ extension HRVAnalyzer {
 
     /// Side-effect-free diagnostic twin of `analyze(rawRR:maxRejectedFraction:)`: returns the SAME
     /// HRVResult analyze(...) would, plus the cleaning trace. Reports nInput / nClean / rejected fraction,
-    /// RMSSD / SDNN / meanNN, whether the `minBeats` gate cleared, the range + Malik ectopic rejection
-    /// counts, and (when a ceiling is supplied) the spot rejected-fraction honesty gate. `path` tags the
+    /// RMSSD / SDNN / meanNN, whether the `minBeats` gate cleared, the dropped and corrected-beat counts
+    /// per artefact class, and (when a ceiling is supplied) the spot rejected-fraction honesty gate. `path` tags the
     /// reading "spot" or "continuous" so a report shows which window produced it.
     ///
-    /// The returned result IS `analyze(...)` verbatim, and every count is recomputed with the EXACT same
-    /// filters (`rangeFilter` then `rejectEctopic`), so the trace and the headline can never diverge. The
+    /// The returned result IS `analyze(...)` verbatim, and every count comes from the EXACT same
+    /// `clean(_:)` call analyze(...) makes, so the trace and the headline can never diverge. The
     /// Kotlin twin is HrvAnalyzer.analyzeTrace.
     ///
     /// - Parameter maxRejectedFraction: the SPOT-ONLY ceiling (#585). nil (the nightly/continuous default)
@@ -37,17 +37,18 @@ extension HRVAnalyzer {
         var lines: [String] = []
         let nInput = rawRR.count
 
-        // Stage counts: range filter then Malik ectopic rejection (the SAME order cleanRR runs).
-        let ranged = rangeFilter(rawRR)
-        let clean = rejectEctopic(ranged)
-        let outOfRange = nInput - ranged.count
-        let ectopic = ranged.count - clean.count
-        let rejectedFraction = nInput > 0 ? 1.0 - Double(clean.count) / Double(nInput) : 0.0
+        // Stage counts from the SAME cleaning call analyze(...) makes, so they cannot diverge.
+        let cleaned = clean(rawRR)
+        let clean = cleaned.nn
+        let rejectedFraction = nInput > 0
+            ? Double(cleaned.nDropped + cleaned.corrected) / Double(nInput) : 0.0
 
         lines.append("hrv path=\(path) nInput=\(nInput) nClean=\(clean.count) "
             + "rejectedFraction=\(r2(rejectedFraction))")
-        lines.append("hrv reject range=\(outOfRange) (bounds \(Int(rrMinMs))..\(Int(rrMaxMs))ms) "
-            + "ectopic=\(ectopic) (Malik >\(Int(ectopicThreshold * 100))% of local median)")
+        lines.append("hrv dropped=\(cleaned.nDropped) (hard \(Int(hardMinMs))..\(Int(hardMaxMs))ms, "
+            + "range \(Int(rrMinMs))..\(Int(rrMaxMs))ms) corrected=\(cleaned.corrected) "
+            + "(Lipponen-Tarvainen: ectopic=\(cleaned.ectopic) missed=\(cleaned.missed) "
+            + "extra=\(cleaned.extra) longShort=\(cleaned.longShort))")
 
         // minBeats gate: the first reason analyze(...) returns an empty result.
         let minBeatsCleared = clean.count >= minBeats

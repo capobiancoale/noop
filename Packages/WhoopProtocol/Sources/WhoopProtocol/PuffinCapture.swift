@@ -72,6 +72,14 @@ public final class PuffinCapture {
         return rec
     }
 
+    /// True for a WHOOP 5.0 HISTORICAL_DATA (type 47) record in the bulk multi-channel optical layouts
+    /// (version 20 or 21). Offload frames normally bypass the capture (bulk sync traffic), but these are the
+    /// only records whose optical channels could hold the red and infrared signals SpO2 needs, so the
+    /// recorder keeps a bounded sample of them to let a capture show which channel is which.
+    public static func isOpticalHistoryRecord(_ frame: [UInt8]) -> Bool {
+        frame.count > 9 && frame[8] == 0x2f && (frame[9] == 20 || frame[9] == 21)
+    }
+
     /// The full capture (provenance + decode hints), pretty-printed with stable key order.
     public func encodedJSON() throws -> Data {
         let enc = JSONEncoder()

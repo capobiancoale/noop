@@ -309,6 +309,12 @@ public enum AnalyticsEngine {
                                   // byte-identical default for pure-function callers/tests; IntelligenceEngine
                                   // threads `PuffinExperiment.experimentalSleepV2Enabled`. (V7 / #690)
                                   useSleepStagerV2: Bool = false,
+                                  // Logged sessions with a perceived-exertion rating (WODs) for the day. Their
+                                  // session-RPE load adds to Effort only where the heart rate recorded for them
+                                  // under-reads it (StrainScorer, Foster 2001 / Tibana 2018). Default empty keeps
+                                  // pure-function callers/tests byte-identical; IntelligenceEngine passes the
+                                  // day's logged WODs.
+                                  loggedSessions: [StrainScorer.LoggedSession] = [],
                                   // Sleep PROVENANCE for the per-day sleep trace (CAPTURE-C / #799). The
                                   // measured BLE path is `.measured` (the default); the caller passes
                                   // `.imported(...)` when a previously-imported sleep row WON the daily merge,
@@ -515,23 +521,27 @@ public enum AnalyticsEngine {
         // today's Effort same-day instead of being cut off at the night window's ≈ noon bound, and
         // the prior evening's HR (the night window's −30h tail) no longer bleeds in. Falls back to the
         // night `hr` for pure-function callers/tests.
-        let effMaxHR: Double? = maxHROverride ?? (profile.age > 0 ? StrainScorer.tanakaHRmax(age: profile.age) : nil)
-        let restForStrain = restingHRDaily.map(Double.init) ?? StrainScorer.defaultRestingHR
-        let strain = StrainScorer.strain(dayHr ?? hr, maxHR: effMaxHR, restingHR: restForStrain,
-                                         sex: profile.sex)
-
         // ── Workouts ──────────────────────────────────────────────────────────
         // Detect over the full CALENDAR day (dayHr/dayGravity) when the caller supplies it, so a
         // current-day afternoon/evening workout is caught on its own day rather than lagging until
         // a later pass re-reads it through the next night window (which ends at ≈ noon). Falls back
         // to the night window for pure-function callers/tests. restingHR still comes from the night's
-        // sleep sessions; nil → WorkoutDetector derives it from the day's own HR floor.
+        // sleep sessions; nil → WorkoutDetector derives it from the day's own HR floor. Detected before
+        // Effort so logged WODs can be matched to the heart rate that recorded them.
         let workouts = WorkoutDetector.detect(
             hr: dayHr ?? hr, gravity: dayGravity ?? gravity,
             restingHR: restingHRDaily.map(Double.init),
             maxHR: maxHROverride,
             age: profile.age > 0 ? profile.age : nil,
             profile: profile)
+
+        let effMaxHR: Double? = maxHROverride ?? (profile.age > 0 ? StrainScorer.tanakaHRmax(age: profile.age) : nil)
+        let restForStrain = restingHRDaily.map(Double.init) ?? StrainScorer.defaultRestingHR
+        let strain = StrainScorer.strain(dayHr ?? hr, maxHR: effMaxHR, restingHR: restForStrain,
+                                         sex: profile.sex, sessions: loggedSessions,
+                                         bouts: workouts.map { (start: $0.start, end: $0.end) },
+                                         dayStart: dayStartUtc - tzOffsetSeconds,
+                                         dayEnd: dayEndUtc - tzOffsetSeconds)
 
         // ── Steps (APPROXIMATE) ───────────────────────────────────────────────
         // step_motion_counter@57 is a CUMULATIVE u16 running counter (it climbs while you move, holds

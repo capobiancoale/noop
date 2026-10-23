@@ -103,6 +103,26 @@ public enum MarkerCatalog {
         // Electrolytes
         .init(key: "sodium", displayName: "Sodium", category: .bloodPanel, canonicalUnit: "mmol/L", decimals: 0, referenceTextHint: fromReport),
         .init(key: "potassium", displayName: "Potassium", category: .bloodPanel, canonicalUnit: "mmol/L", decimals: 1, referenceTextHint: fromReport),
+        // Metabolic / kidney extras
+        .init(key: "uric_acid", displayName: "Uric acid", category: .bloodPanel, canonicalUnit: "mg/dL", decimals: 1, referenceTextHint: fromReport),
+        .init(key: "microalbumin", displayName: "Microalbumin (urine)", category: .bloodPanel, canonicalUnit: "mg/L", decimals: 1, referenceTextHint: fromReport),
+        // Thyroid (free T3 alongside the free T4 above)
+        .init(key: "free_t3", displayName: "Free T3", category: .bloodPanel, canonicalUnit: "pmol/L", decimals: 1, referenceTextHint: fromReport),
+        // Coeliac screen (relevant alongside type-1 diabetes)
+        .init(key: "anti_ttg_iga", displayName: "Anti-tTG IgA", category: .bloodPanel, canonicalUnit: "U/mL", decimals: 1, referenceTextHint: fromReport),
+        .init(key: "anti_ttg_igg", displayName: "Anti-tTG IgG", category: .bloodPanel, canonicalUnit: "U/mL", decimals: 1, referenceTextHint: fromReport),
+        // Complete blood count (hemogram)
+        .init(key: "wbc", displayName: "White blood cells (WBC)", category: .bloodPanel, canonicalUnit: "10⁹/L", decimals: 2, referenceTextHint: fromReport),
+        .init(key: "rbc", displayName: "Red blood cells (RBC)", category: .bloodPanel, canonicalUnit: "10¹²/L", decimals: 2, referenceTextHint: fromReport),
+        .init(key: "hematocrit", displayName: "Hematocrit (HCT)", category: .bloodPanel, canonicalUnit: "%", decimals: 1, referenceTextHint: fromReport),
+        .init(key: "mcv", displayName: "MCV", category: .bloodPanel, canonicalUnit: "fL", decimals: 1, referenceTextHint: fromReport),
+        .init(key: "mch", displayName: "MCH", category: .bloodPanel, canonicalUnit: "pg", decimals: 1, referenceTextHint: fromReport),
+        .init(key: "mchc", displayName: "MCHC", category: .bloodPanel, canonicalUnit: "g/L", decimals: 0, referenceTextHint: fromReport),
+        .init(key: "platelets", displayName: "Platelets (PLT)", category: .bloodPanel, canonicalUnit: "10⁹/L", decimals: 0, referenceTextHint: fromReport),
+        .init(key: "neutrophils", displayName: "Neutrophils", category: .bloodPanel, canonicalUnit: "%", decimals: 1, referenceTextHint: fromReport),
+        .init(key: "lymphocytes", displayName: "Lymphocytes", category: .bloodPanel, canonicalUnit: "%", decimals: 1, referenceTextHint: fromReport),
+        .init(key: "monocytes", displayName: "Monocytes", category: .bloodPanel, canonicalUnit: "%", decimals: 1, referenceTextHint: fromReport),
+        .init(key: "eosinophils", displayName: "Eosinophils", category: .bloodPanel, canonicalUnit: "%", decimals: 1, referenceTextHint: fromReport),
         // Blood pressure (the paired marker — see LabBookProjection.bpSystolicKey/bpDiastolicKey)
         .init(key: "bp_systolic", displayName: "Blood pressure (systolic)", category: .bloodPressure, canonicalUnit: "mmHg", decimals: 0, referenceTextHint: fromReport),
         .init(key: "bp_diastolic", displayName: "Blood pressure (diastolic)", category: .bloodPressure, canonicalUnit: "mmHg", decimals: 0, referenceTextHint: fromReport),
@@ -112,6 +132,7 @@ public enum MarkerCatalog {
         .init(key: "body_fat", displayName: "Body fat", category: .bodyMeasurement, canonicalUnit: "%", decimals: 1),
         .init(key: "waist", displayName: "Waist circumference", category: .bodyMeasurement, canonicalUnit: "cm", decimals: 1),
         .init(key: "height", displayName: "Height", category: .bodyMeasurement, canonicalUnit: "cm", decimals: 1),
+        .init(key: "bmi", displayName: "BMI", category: .bodyMeasurement, canonicalUnit: "kg/m²", decimals: 1),
     ]
 
     /// Fast lookup by key. Built once from `builtIn`.

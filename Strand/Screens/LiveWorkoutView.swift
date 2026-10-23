@@ -2,6 +2,7 @@ import SwiftUI
 import StrandDesign
 import StrandAnalytics
 import WhoopStore
+import WhoopProtocol
 
 /// Live workout mode (#238) — the in-exercise screen: a big live heart rate, the current HR zone,
 /// elapsed time, and live effort building, all from the SAME live feed and scorers the rest of the
@@ -36,6 +37,14 @@ struct LiveWorkoutView: View {
 
     private var zoneSet: HRZoneSet { HRZones.zones(maxHR: Double(model.profile.hrMax)) }
     private var zone: Int { model.bpm.map { zoneSet.zoneNumber(forBPM: Double($0)) } ?? 0 }
+    /// The time this workout has spent in each zone so far, from the heart rate it has captured. The
+    /// workout records a sample on every heart-rate update (one to three a second, stamped to the whole
+    /// second), so it keeps one per second: several with the same time would each count as a second.
+    private var timeInZones: TimeInZone {
+        var perSecond: [Int: HRSample] = [:]
+        for sample in model.activeWorkout?.samples ?? [] { perSecond[sample.ts] = sample }
+        return HRZones.timeInZone(Array(perSecond.values), zoneSet: zoneSet)
+    }
 
     var body: some View {
         ScrollView {
@@ -160,27 +169,38 @@ struct LiveWorkoutView: View {
     }
 
     private var zoneRail: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let times = timeInZones
+        return VStack(alignment: .leading, spacing: 8) {
             Text("HR ZONE")
                 .font(StrandFont.overline).tracking(StrandFont.overlineTracking)
                 .foregroundStyle(StrandPalette.textSecondary)
-            HStack(spacing: 6) {
+            HStack(alignment: .bottom, spacing: 6) {
                 ForEach(1...5, id: \.self) { z in
                     let active = z == zone
                     let color = StrandPalette.hrZoneColor(z)
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(active ? color : color.opacity(0.18))
-                        .frame(height: active ? 44 : 34)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .strokeBorder(active ? color : StrandPalette.hairline, lineWidth: 1)
-                        )
-                        .overlay(
-                            Text("Z\(z)")
-                                .font(StrandFont.captionNumber)
-                                .foregroundStyle(active ? StrandPalette.surfaceBase : StrandPalette.textTertiary)
-                        )
+                    VStack(spacing: 4) {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(active ? color : color.opacity(0.18))
+                            .frame(height: active ? 44 : 34)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .strokeBorder(active ? color : StrandPalette.hairline, lineWidth: 1)
+                            )
+                            .overlay(
+                                Text("Z\(z)")
+                                    .font(StrandFont.captionNumber)
+                                    .foregroundStyle(active ? StrandPalette.surfaceBase : StrandPalette.textTertiary)
+                            )
+                        // Time spent in this zone so far in the workout.
+                        Text(verbatim: HRZoneSplitView.clock(seconds: times.seconds(inZone: z)))
+                            .font(StrandFont.captionNumber)
+                            .foregroundStyle(active ? StrandPalette.textPrimary : StrandPalette.textSecondary)
+                    }
                 }
+            }
+            if times.belowZone1 >= 1 {
+                Text("Below zone 1: \(HRZoneSplitView.clock(seconds: times.belowZone1))")
+                    .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
             }
             if let band = zoneSet.zones.first(where: { $0.number == zone }) {
                 Text("Zone \(zone): \(Int(band.lower))-\(Int(band.upper)) bpm (\(Int(band.lowerPct * 100))-\(Int(band.upperPct * 100))% max HR)")
