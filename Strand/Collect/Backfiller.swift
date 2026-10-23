@@ -97,6 +97,14 @@ final class Backfiller {
     /// Logged once per session when the strap reports trim=0xFFFFFFFF — the "no valid flash cursor"
     /// sentinel: it has no banked history to offload (a clock/charge state, not a decode bug).
     private var loggedNoCursor = false
+    /// When rows last landed, in ANY session (#783 follow-up). The auto-continuation (#364) and the periodic
+    /// sync each start a NEW session, and begin() zeroes `sessionRowsPersisted`, so a trim=0xFFFFFFFF END
+    /// right after a pass that banked records still read as "no banked history - fully charge it". It means
+    /// "caught up since the last pass". Deliberately NOT reset in begin().
+    private var lastRowsPersistedAt: Date?
+    /// A no-cursor END within this long of rows last landing reads as caught up, not as a strap problem.
+    static let caughtUpWindow: TimeInterval = 30 * 60
+
     /// #773: logged once per session the first time a HISTORY_END's own timestamp is dated implausibly far
     /// in the FUTURE (a corrupt strap RTC). Distinct from #547's per-record drop tally: this fires on the
     /// chunk metadata's own clock, the earliest visible tell that the strap's RTC is bogus. Reset in begin().
@@ -264,9 +272,14 @@ final class Backfiller {
     /// "caught up, nothing left past the last trim", NOT "no history". Emitting the alarming "fully charge
     /// it" line there falsely scared users whose strap had just synced fine. So pick by `rowsPersisted`:
     /// > 0 gives a neutral caught-up line; 0 gives the genuine no-history guidance. Pure so a fixture pins both.
-    nonisolated static func noCursorLine(rowsPersisted: Int) -> String {
+    /// `recentlyBanked` covers the same "caught up" meaning across sessions: rows landed in an earlier pass
+    /// within `caughtUpWindow` (an auto-continuation or the next periodic sync starts a fresh session).
+    nonisolated static func noCursorLine(rowsPersisted: Int, recentlyBanked: Bool = false) -> String {
         if rowsPersisted > 0 {
             return "Backfill: reached the end of available history (trim=0xFFFFFFFF) - caught up after persisting \(rowsPersisted) row(s) this run. Nothing more to offload."
+        }
+        if recentlyBanked {
+            return "Backfill: reached the end of available history (trim=0xFFFFFFFF) - caught up; the strap banked records in a recent pass and has nothing new since. Nothing more to offload."
         }
         return "Backfill: strap reported no flash cursor (trim=0xFFFFFFFF) - it has no banked history to offload. This is a clock/charge state on the strap, not a decode problem; fully charge it and reconnect so it starts banking."
     }
@@ -371,6 +384,13 @@ final class Backfiller {
                     return ConnectionTrace.firmwareLine(version: v, decodable: decodable)
                 }())
             }
+            // A chunk can mix layouts (a 5/MG may interleave the v20/v21 multi-channel optical records with
+            // v18), and only its first record is named above, so a log could not show whether the strap banks
+            // the optical records SpO2 channel mapping needs. Name every other layout once per session too.
+            for v in Set(parsed.compactMap { $0.parsed["hist_version"]?.intValue }).sorted()
+            where loggedLayoutVersions.insert(v).inserted {
+                log?("Backfill: historical records also include layout v\(v)")
+            }
             // SpO2 RE dump (PR #945, reimplemented): while the Connection test mode is on, dump a few FULL
             // historical records + their mapped raw SpO2 channels so an offline pass can tell whether the
             // strap banks a COMPUTED SpO2 (a byte tracking the WHOOP app's nightly %) vs only the raw
@@ -470,6 +490,7 @@ final class Backfiller {
             // "persisted N rows (M with motion) across K night(s)" — the win-rate signal a log never had.
             let tally = Backfiller.chunkTally(counts: counts, timestamps: decoded.gravity.map(\.ts) + decoded.hr.map(\.ts))
             sessionRowsPersisted += tally.rows
+            if tally.rows > 0 { lastRowsPersistedAt = Date() }
             sessionMotionRows += tally.motion
             sessionSkinTempRows += counts.skinTemp
             sessionNightKeys.formUnion(tally.nights)
@@ -527,7 +548,8 @@ final class Backfiller {
         // session (loggedNoCursor) and the ack still proceeds below.
         if trim == 0xFFFFFFFF, !loggedNoCursor {
             loggedNoCursor = true
-            log?(Backfiller.noCursorLine(rowsPersisted: sessionRowsPersisted))
+            let recentlyBanked = lastRowsPersistedAt.map { Date().timeIntervalSince($0) < Backfiller.caughtUpWindow } ?? false
+            log?(Backfiller.noCursorLine(rowsPersisted: sessionRowsPersisted, recentlyBanked: recentlyBanked))
             // Connection test mode: the no-cursor sentinel as a compact tagged line (gated zero-cost).
             emitConnection(ConnectionTrace.noCursorLine())
         }
