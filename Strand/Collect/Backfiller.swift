@@ -155,6 +155,10 @@ final class Backfiller {
     /// on EVERY export, not only in Connection mode. Called UNCONDITIONALLY (it is observability, not gated)
     /// once per distinct layout this session. Default nil (inert) so tests / non-prod inits are untouched.
     private let firmwareLayout: ((Int) -> Void)?
+    /// Counts every decoded record's layout version into the persisted `HistoryLayoutTally`, so the strap
+    /// log header keeps whether layout vN ever arrived after the offload lines scroll out of the log ring.
+    /// Default nil (inert) so tests / non-prod inits are untouched.
+    private let layoutTally: (([Int]) -> Void)?
 
     init(store: BackfillStoreWriting,
          deviceId: String,
@@ -166,6 +170,7 @@ final class Backfiller {
          connectionActive: @escaping () -> Bool = { false },
          connectionLog: ((String) -> Void)? = nil,
          firmwareLayout: ((Int) -> Void)? = nil,
+         layoutTally: (([Int]) -> Void)? = nil,
          extract: @escaping Extractor = { extractHistoricalStreams($0, deviceClockRef: $1, wallClockRef: $2,
                                                                     sessionOldestUnix: $3, sessionNewestUnix: $4) }) {
         self.store = store
@@ -178,6 +183,7 @@ final class Backfiller {
         self.connectionActive = connectionActive
         self.connectionLog = connectionLog
         self.firmwareLayout = firmwareLayout
+        self.layoutTally = layoutTally
         self.extract = extract
     }
 
@@ -387,10 +393,11 @@ final class Backfiller {
             // A chunk can mix layouts (a 5/MG may interleave the v20/v21 multi-channel optical records with
             // v18), and only its first record is named above, so a log could not show whether the strap banks
             // the optical records SpO2 channel mapping needs. Name every other layout once per session too.
-            for v in Set(parsed.compactMap { $0.parsed["hist_version"]?.intValue }).sorted()
-            where loggedLayoutVersions.insert(v).inserted {
+            let chunkVersions = parsed.compactMap { $0.parsed["hist_version"]?.intValue }
+            for v in Set(chunkVersions).sorted() where loggedLayoutVersions.insert(v).inserted {
                 log?("Backfill: historical records also include layout v\(v)")
             }
+            layoutTally?(chunkVersions)
             // SpO2 RE dump (PR #945, reimplemented): while the Connection test mode is on, dump a few FULL
             // historical records + their mapped raw SpO2 channels so an offline pass can tell whether the
             // strap banks a COMPUTED SpO2 (a byte tracking the WHOOP app's nightly %) vs only the raw

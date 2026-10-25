@@ -532,6 +532,7 @@ public final class LiveState: ObservableObject {
         #endif
         var header = "NOOP strap log (scheduled export) — \(osName)\nApp: \(v)\n\(osName): "
             + ProcessInfo.processInfo.operatingSystemVersionString + "\n"
+        header += HistoryLayoutTallyStore.summaryLine() + "\n"
         header += String(repeating: "-", count: 40) + "\n"
         return header + persistedLogTail().joined(separator: "\n")
     }
@@ -578,6 +579,7 @@ public final class LiveState: ObservableObject {
         let diagLines = IOSDiagnostics.capture().summaryLines()
         if !diagLines.isEmpty { header += diagLines.joined(separator: "\n") + "\n" }
         #endif
+        header += HistoryLayoutTallyStore.summaryLine() + "\n"
         header += String(repeating: "-", count: 40) + "\n"
         return header + log.joined(separator: "\n")
     }

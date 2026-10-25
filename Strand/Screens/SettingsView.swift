@@ -1532,6 +1532,14 @@ struct SettingsView: View {
     /// hand it to the system share sheet (iOS).
     private func exportPuffinCaptures() {
         model.ble.flushPuffinCaptures()
+        // Several launches in the last day and a half (a night the app was relaunched through): bundle every
+        // file, so the night's capture is not left behind with only this launch's shared.
+        let recent = PuffinFrameRecorder.recentCaptureFiles()
+        if recent.count > 1 {
+            FileExport.exportBundle(entries: Self.captureEntries(recent),
+                                    suggestedName: FileExport.timestampedName("noop-raw-captures", ext: "zip"))
+            return
+        }
         guard let src = live.puffinCaptureURL else { return }
         // Suggest a friendly, timestamped name so a reporter saving several captures gets sortable,
         // non-colliding files (#510) — e.g. noop-raw-capture-260617-1042.json.
@@ -1562,16 +1570,31 @@ struct SettingsView: View {
     /// each via its own NSSavePanel on macOS (no new file plumbing).
     private func exportRawAndLog() {
         model.ble.flushPuffinCaptures()
-        guard let capture = live.puffinCaptureURL else {
+        let recent = PuffinFrameRecorder.recentCaptureFiles()
+        guard let capture = live.puffinCaptureURL ?? recent.last else {
             backupAlertTitle = String(localized: "Nothing to export")
             backupAlertMessage = String(localized: "No raw capture has been recorded yet this session.")
             showBackupAlert = true
             return
         }
         let stamp = FileExport.timestamp()
-        FileExport.exportPair(
-            file: capture, fileSuggestedName: "noop-raw-capture-\(stamp).json",
-            text: live.exportableLogText(), textSuggestedName: "noop-strap-log-\(stamp).txt")
+        guard recent.count > 1 else {
+            FileExport.exportPair(
+                file: capture, fileSuggestedName: "noop-raw-capture-\(stamp).json",
+                text: live.exportableLogText(), textSuggestedName: "noop-strap-log-\(stamp).txt")
+            return
+        }
+        // A night the app was relaunched through spans several capture files: ship them all with the log.
+        let log = FileExport.BundleEntry(name: "noop-strap-log-\(stamp).txt", data: Data(live.exportableLogText().utf8))
+        FileExport.exportBundle(entries: Self.captureEntries(recent) + [log],
+                                suggestedName: FileExport.timestampedName("noop-export", ext: "zip"))
+    }
+
+    /// Zip entries for capture files, each under its own timestamped name (`puffin-yyyyMMdd-HHmmss.json`).
+    private static func captureEntries(_ urls: [URL]) -> [FileExport.BundleEntry] {
+        urls.compactMap { url in
+            (try? Data(contentsOf: url)).map { FileExport.BundleEntry(name: url.lastPathComponent, data: $0) }
+        }
     }
 
     #if os(macOS)
