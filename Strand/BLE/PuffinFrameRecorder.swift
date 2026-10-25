@@ -119,6 +119,24 @@ final class PuffinFrameRecorder {
         }
     }
 
+    /// Capture files written in the last `window` seconds, oldest first. One file is written per app
+    /// launch, so a night the app was relaunched through (iOS restarts it in the background) spans several
+    /// files; the export bundles them all so the night's records are not left behind with an older file.
+    static func recentCaptureFiles(within window: TimeInterval = 36 * 3600, now: Date = Date()) -> [URL] {
+        guard let dir = try? captureDirectory(),
+              let entries = try? FileManager.default.contentsOfDirectory(
+                at: dir, includingPropertiesForKeys: [.contentModificationDateKey],
+                options: [.skipsHiddenFiles]) else { return [] }
+        return entries
+            .filter { url in
+                guard url.pathExtension == "json",
+                      let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
+                        .contentModificationDate else { return false }
+                return now.timeIntervalSince(modified) <= window
+            }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+    }
+
     /// One file per recorder lifetime (i.e. per app launch), named on first use. Re-flushing rewrites
     /// the same file, so the capture file always holds the complete session.
     private func sessionFileURL() throws -> URL {

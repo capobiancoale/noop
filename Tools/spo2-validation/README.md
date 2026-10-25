@@ -95,7 +95,10 @@ labels. So no SpO2 can be computed for a 5.0 until the red and infrared channels
 `identify_channels.py` runs the physics check that caught the swapped labels above on a NOOP raw capture: it
 finds the channels that carry a heartbeat, measures each one's AC/DC, correlates every pair, and lists the pairs
 that behave like red + infrared (correlation of 0.9 or better, R between 0.3 and 1.0; green pulses most). With
-the raw-capture toggle on, NOOP keeps up to 1,200 v20/v21 history records per capture file for this. Two
+the raw-capture toggle on, NOOP keeps up to 1,200 v20/v21 history records per capture file for this ("Export
+raw + log" bundles every capture file from the last 36 hours, since each app launch starts a new one), and
+the strap-log header counts every history record by layout since the tally started ("History layouts since
+..."), so a log shared in the morning still shows whether any v20/v21 record arrived overnight. Two
 outcomes are possible: a pair is found (then a capture made while wearing a finger oximeter can fix the
 offset), or no pair behaves, for example because the strap's front end subtracts the steady level, in which case
 AC/DC, and SpO2 with it, cannot be recovered from these records.

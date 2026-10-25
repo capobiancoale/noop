@@ -844,7 +844,8 @@ public final class BLEManager: NSObject, ObservableObject {
                                 connectionLog: { [weak self] s in self?.state.append(log: s, domain: .connection) },
                                 // UNIVERSAL clock-drift: bank the strap's historical layout so the export's
                                 // universal clock-drift line is firmware-aware on every export. Unconditional.
-                                firmwareLayout: { [weak self] v in self?.state.setStrapFirmwareLayout(v) })
+                                firmwareLayout: { [weak self] v in self?.state.setStrapFirmwareLayout(v) },
+                                layoutTally: { HistoryLayoutTallyStore.record(versions: $0) })
         // Strand: no server uploader/sync — all data stays on-device.
 
         // Retro-decode: when the decoder gains a historical layout (e.g. WHOOP 4.0 v25), re-run every
