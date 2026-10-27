@@ -106,3 +106,9 @@ AC/DC, and SpO2 with it, cannot be recovered from these records.
 ```sh
 python3 -I identify_channels.py noop-raw-capture-....json
 ```
+
+**First field result (October 2026).** One WHOOP 5.0, captured over two nights and the days around them,
+the second night after the strap accepted all 15 R22 deep-data flags: about 150,000 history records, all v18
+(one a second) plus about 5,000 v26, and not one v20/v21. Its real-time frames are 32-byte heart-rate
+packets. That strap gives NOOP no red/infrared pair, so no SpO2 can be computed for it. Other 5.0 firmware
+that banks v20/v21 (issue #344) may still do so.
