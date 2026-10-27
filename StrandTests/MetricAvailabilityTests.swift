@@ -15,10 +15,12 @@ final class MetricAvailabilityTests: XCTestCase {
         }
     }
 
-    /// Blood oxygen on a WHOOP 5.0/MG is stated as unavailable, never estimated.
+    /// Blood oxygen on a WHOOP 5.0/MG comes from the strap's own readings and needs at least 8 of them for
+    /// a night: the note names the strap and the 8, and never promises a value without them.
     func testSpo2NoteNamesTheStrap() {
         let note = MetricAvailability.note(key: "spo2", source: "my-whoop")
         XCTAssertTrue(note.reason.contains("5.0/MG"))
+        XCTAssertTrue(note.reason.contains("8"))
     }
 
     /// The same key under different sources gets the note for its own source (carbs: Apple Health vs a CSV).

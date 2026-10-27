@@ -96,6 +96,10 @@ final class IntelligenceEngine: ObservableObject {
     private struct DayScan {
         let result: AnalyticsEngine.DayResult
         let rhrLine: String?
+        /// Counts-only strap log line for the night's blood oxygen from the strap's own readings
+        /// (`StrapSpo2.logLine`), nil when the strap sent nothing in the night. Pure inputs, replayed through
+        /// `diagnosticSink` right after `rhrLine` in the SAME per-day order.
+        let spo2Line: String?
         /// CAPTURE-B (#814/#799): the resolved READ owner id this day was scored from, and how many HR rows
         /// that owner returned for the night window, carried out of the off-actor loop so the main-actor
         /// fold can emit the universal `dayOwner …` self-diagnostic line (it needs the registry active id +
@@ -577,6 +581,12 @@ final class IntelligenceEngine: ObservableObject {
                     bandSleepState = await Self.bandSleepStateSamples(computedId: computedId,
                                                                      from: from, to: to, store: store)
                 }
+                // The strap's OWN blood-oxygen byte (WHOOP 5.0/MG, v18 @82) for the same window: nonzero seconds
+                // only, a percentage (70...100) or a status code. analyzeDay aggregates the main night's 30 s
+                // readings into DailyMetric.spo2Pct (needs 8 usable windows, never a guess). Empty on a
+                // WHOOP 4.0 or an unoffloaded window, so spo2Pct stays nil there.
+                let strapSpo2 = (try? await store.strapSpo2Samples(deviceId: owner, from: from, to: to))?
+                    .map { (ts: $0.ts, raw: $0.raw) } ?? []
 
                 // #690: read the experimental-V2 toggle ONCE here (off the detached executor, matching the
                 // Repository self-heal call site) and capture the Bool, so the Settings toggle now drives the
@@ -599,6 +609,7 @@ final class IntelligenceEngine: ObservableObject {
                                                      tzOffsetSeconds: tzOffset, wristOff: wristOff,
                                                      habitualMidsleepSec: habitualMidsleepSec,
                                                      bandSleepState: bandSleepState,
+                                                     strapSpo2: strapSpo2,
                                                      // #690: thread the V2 toggle into the NORMAL staging path so
                                                      // it affects detected nights, not just the self-heal restage.
                                                      useSleepStagerV2: useSleepStagerV2,
@@ -641,10 +652,16 @@ final class IntelligenceEngine: ObservableObject {
                     }.map { $0.bpm }
                     rhrLine = Self.rhrFloorMeanLogLine(day: res.daily.day, floor: floor, inBedBpms: inBedBpms)
                 }
+                // Counts-only line for the night's strap blood oxygen (usable/attempted windows, in-range
+                // seconds, the nightly value or why there is none), so a report shows what the strap sent.
+                var spo2Line: String?
+                if let n = res.strapSpo2 {
+                    spo2Line = StrapSpo2.logLine(day: res.daily.day, night: n)
+                }
                 // The calendar day's average / maximum heart rate for the Explore avg_hr / max_hr metrics:
                 // `dayHr` is exactly [local midnight, local midnight + 24 h) from the owning strap.
                 let hrStats = Self.dayHeartRateStats(dayHr.map { $0.bpm })
-                out.append(DayScan(result: res, rhrLine: rhrLine,
+                out.append(DayScan(result: res, rhrLine: rhrLine, spo2Line: spo2Line,
                                    readOwner: owner, hrRows: hr.count,
                                    sleepTrace: sleepTrace, stepsTrace: stepsTrace,
                                    dayAvgHr: hrStats?.avg, dayMaxHr: hrStats?.max))
@@ -673,6 +690,7 @@ final class IntelligenceEngine: ObservableObject {
             nightlyRespByDay[res.daily.day] = res.daily.respRateBpm
             nightlySkinByDay[res.daily.day] = res.nightlySkinTempC
             if let line = scan.rhrLine { diagnosticSink?(line, nil) }
+            if let line = scan.spo2Line { diagnosticSink?(line, nil) }
             // Sleep & Rest test mode (E5): replay this day's gate-trace + Rest lines tagged `.sleep` so they
             // land under the profile tag in the export. Empty unless the mode is active.
             for line in scan.sleepTrace { diagnosticSink?(line, .sleep) }

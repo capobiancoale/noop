@@ -221,7 +221,7 @@ enum BodyVitalSigns {
                 metricColor: StrandPalette.metricCyan,
                 day: spo2Row?.day,
                 source: spo2Row?.source,
-                missingCaption: String(localized: "No SpO₂ import or Health value"),
+                missingCaption: String(localized: "No SpO₂ from the strap, an import or Health"),
                 sparkline: trail(spo2Points)
             ),
             BodyVitalReading(

@@ -157,6 +157,19 @@ public struct SleepStateSample: Equatable, Codable {
     public init(ts: Int, state: Int) { self.ts = ts; self.state = state }
 }
 
+/// The strap's OWN blood-oxygen channel (v18 frame-absolute byte 82), one row per second the byte is
+/// nonzero. The byte is 0 nearly always; while the band scores the wearer asleep the strap takes a 30 s
+/// reading about every 20 min, and during it the byte holds either a percentage (70...100) or a status
+/// code (1, 2, 8, 16, 32, 128, 160 and sums; bit-7 values are sentinels). Carried VERBATIM, codes
+/// included (the strap's own byte, never fabricated), so `StrapSpo2` can count attempted readings as well
+/// as usable ones. Only 70...100 is a percentage. Only the 5.0/MG v18 decoder emits the key, so a WHOOP
+/// 4.0 adds nothing. No Android twin yet.
+public struct StrapSpo2Sample: Equatable, Codable {
+    public let ts: Int
+    public let raw: Int         // raw byte 82, nonzero only: 70...100 is a percentage, other values are status codes
+    public init(ts: Int, raw: Int) { self.ts = ts; self.raw = raw }
+}
+
 public struct Streams: Equatable, Codable {
     public var hr: [HRSample]
     public var rr: [RRInterval]
@@ -169,6 +182,10 @@ public struct Streams: Equatable, Codable {
     /// signal (only 5/MG v18 records emit it today; a WHOOP 4.0 leaves it empty), consumed by the H7
     /// re-onset CONFIRM guard and shown as a Deep Timeline track. Never overrides the derived stage.
     public var sleepState: [SleepStateSample]
+    /// The strap's own blood-oxygen byte (v18 @82), nonzero seconds only: a percentage (70...100) during
+    /// the 30 s readings the strap takes about every 20 min while it scores sleep, or a status code.
+    /// Optional signal (a WHOOP 4.0 leaves it empty); the nightly value is built by `StrapSpo2`.
+    public var strapSpo2: [StrapSpo2Sample]
     /// PPG-derived per-second HR from the WHOOP 5.0 v26 optical buffer (issue #156). Kept separate from
     /// `hr` (the measured stream) so consumers can COALESCE without conflating the two sources.
     public var ppgHr: [PpgHrSample]
@@ -183,11 +200,11 @@ public struct Streams: Equatable, Codable {
                 spo2: [SpO2Sample] = [], skinTemp: [SkinTempSample] = [],
                 resp: [RespSample] = [], gravity: [GravitySample] = [],
                 steps: [StepSample] = [], sleepState: [SleepStateSample] = [],
-                ppgHr: [PpgHrSample] = [],
+                strapSpo2: [StrapSpo2Sample] = [], ppgHr: [PpgHrSample] = [],
                 events: [WhoopEvent] = [], battery: [BatterySample] = []) {
         self.hr = hr; self.rr = rr
         self.spo2 = spo2; self.skinTemp = skinTemp; self.resp = resp; self.gravity = gravity
-        self.steps = steps; self.sleepState = sleepState; self.ppgHr = ppgHr
+        self.steps = steps; self.sleepState = sleepState; self.strapSpo2 = strapSpo2; self.ppgHr = ppgHr
         self.events = events; self.battery = battery
     }
 
@@ -196,13 +213,14 @@ public struct Streams: Equatable, Codable {
     /// diagnostic in `Backfiller.finishChunk` (#77).
     public var isEmpty: Bool {
         hr.isEmpty && rr.isEmpty && spo2.isEmpty && skinTemp.isEmpty && resp.isEmpty
-            && gravity.isEmpty && steps.isEmpty && sleepState.isEmpty && ppgHr.isEmpty
+            && gravity.isEmpty && steps.isEmpty && sleepState.isEmpty && strapSpo2.isEmpty && ppgHr.isEmpty
             && events.isEmpty && battery.isEmpty
     }
 
     private enum CodingKeys: String, CodingKey {
         case hr, rr, spo2, skinTemp = "skin_temp", resp, gravity, steps
         case sleepState = "sleep_state"
+        case strapSpo2 = "strap_spo2"
         case ppgHr = "ppg_hr"
         case events, battery
     }
@@ -219,6 +237,7 @@ public struct Streams: Equatable, Codable {
         gravity = try c.decodeIfPresent([GravitySample].self, forKey: .gravity) ?? []
         steps = try c.decodeIfPresent([StepSample].self, forKey: .steps) ?? []
         sleepState = try c.decodeIfPresent([SleepStateSample].self, forKey: .sleepState) ?? []
+        strapSpo2 = try c.decodeIfPresent([StrapSpo2Sample].self, forKey: .strapSpo2) ?? []
         ppgHr = try c.decodeIfPresent([PpgHrSample].self, forKey: .ppgHr) ?? []
         events = try c.decodeIfPresent([WhoopEvent].self, forKey: .events) ?? []
         battery = try c.decodeIfPresent([BatterySample].self, forKey: .battery) ?? []

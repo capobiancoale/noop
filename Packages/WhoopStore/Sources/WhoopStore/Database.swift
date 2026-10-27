@@ -490,6 +490,24 @@ extension WhoopStore {
                 t.add(column: "endTs", .integer)
             }
         }
+
+        // v26 (strap blood oxygen): a WHOOP 5.0/MG v18 record carries the strap's OWN SpO2 channel at
+        // frame-absolute byte 82. It is 0 nearly always; while the band scores the wearer asleep the strap
+        // takes a 30 s reading about every 20 min and the byte then holds a percentage (70...100) or a
+        // status code. The Interpreter decoded it as `aux_byte_82` but stream extraction dropped it, so the
+        // nightly SpO2 had no source. This adds the RAW per-second table (nonzero seconds only), keyed by
+        // (deviceId, ts) exactly like sleepStateSample, so a re-sync is idempotent (ON CONFLICT DO NOTHING).
+        // New table only (no existing data touched); history the strap has already trimmed can't be re-sent,
+        // so this is forward-looking for a 5.0/MG. `raw` is the byte stored VERBATIM, status codes included,
+        // never a fabricated value; a strap that never reports it just has no rows. No Android twin yet.
+        migrator.registerMigration("v26-strap-spo2-sample") { db in
+            try db.create(table: "strapSpo2Sample") { t in
+                t.column("deviceId", .text).notNull()
+                t.column("ts", .integer).notNull()
+                t.column("raw", .integer).notNull()
+                t.primaryKey(["deviceId", "ts"])
+            }
+        }
         return migrator
     }
 }
