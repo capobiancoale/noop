@@ -35,6 +35,8 @@ final class PuffinFrameRecorder {
     private var sinceFlush = 0
     private var opticalHistoryCaptured = 0
     private var fileURL: URL?
+    private var historyHandle: FileHandle?
+    private var historyDay: String?
 
     init(state: LiveState) {
         self.state = state
@@ -74,6 +76,79 @@ final class PuffinFrameRecorder {
         opticalHistoryCaptured += 1
         capture(frame: frame, char: char)
     }
+
+    /// Append every WHOOP 5.0 history record (any layout) to the day's append-only log. The decoder keeps
+    /// only the mapped fields, so without this the unmapped part of v18, where the SpO2 inputs may sit, is
+    /// lost; a night of records is about 4 MB. Each record is written straight through, so a background
+    /// kill loses nothing. No-op unless capture is enabled.
+    func captureHistoryRecord(frame: [UInt8]) {
+        guard isEnabled, PuffinCapture.isHistoryRecord(frame) else { return }
+        let day = Self.dayFormatter.string(from: Date())
+        if historyDay != day {
+            try? historyHandle?.close()
+            historyHandle = nil
+            historyDay = day
+            guard let dir = try? Self.historyDirectory() else { return }
+            let url = dir.appendingPathComponent("history-\(day).bin")
+            if !FileManager.default.fileExists(atPath: url.path) {
+                FileManager.default.createFile(atPath: url.path, contents: nil)
+                Self.evictOldHistoryLogs(keeping: url)
+            }
+            historyHandle = try? FileHandle(forWritingTo: url)
+            _ = try? historyHandle?.seekToEnd()
+        }
+        try? historyHandle?.write(contentsOf: Data(PuffinCapture.historyLogEntry(frame)))
+    }
+
+    /// History-record logs written in the last `window` seconds, oldest first.
+    static func recentHistoryLogs(within window: TimeInterval = 36 * 3600, now: Date = Date()) -> [URL] {
+        guard let dir = try? historyDirectory(),
+              let entries = try? FileManager.default.contentsOfDirectory(
+                at: dir, includingPropertiesForKeys: [.contentModificationDateKey],
+                options: [.skipsHiddenFiles]) else { return [] }
+        return entries
+            .filter { url in
+                guard url.pathExtension == "bin",
+                      let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
+                        .contentModificationDate else { return false }
+                return now.timeIntervalSince(modified) <= window
+            }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+    }
+
+    /// `<AppSupport>/OpenWhoop/history-records/`, created on demand.
+    private static func historyDirectory() throws -> URL {
+        let dir = try captureDirectory().deletingLastPathComponent()
+            .appendingPathComponent("history-records", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    /// Keep the history logs under `historyDirectorySoftCapBytes`, oldest day first, never today's file.
+    private static func evictOldHistoryLogs(keeping keep: URL) {
+        let fm = FileManager.default
+        guard let dir = try? historyDirectory(),
+              let entries = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.fileSizeKey],
+                                                        options: [.skipsHiddenFiles]) else { return }
+        let files = entries
+            .filter { $0.pathExtension == "bin" }
+            .map { (url: $0, size: (try? $0.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0) }
+            .sorted { $0.url.lastPathComponent < $1.url.lastPathComponent }
+        var total = files.reduce(0) { $0 + $1.size }
+        for file in files where total > historyDirectorySoftCapBytes && file.url != keep {
+            if (try? fm.removeItem(at: file.url)) != nil { total -= file.size }
+        }
+    }
+
+    /// About two weeks of nightly history-record logs.
+    private static let historyDirectorySoftCapBytes = 80 * 1024 * 1024
+
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyyMMdd"
+        return f
+    }()
 
     /// Write the full capture to disk (best-effort, atomic). Called periodically and on disconnect.
     func flush() {

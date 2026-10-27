@@ -88,4 +88,16 @@ final class PuffinCaptureTests: XCTestCase {
         XCTAssertFalse(PuffinCapture.isOpticalHistoryRecord(Array(frame(type: 0x2f, version: 21).prefix(9))))
         XCTAssertFalse(PuffinCapture.isOpticalHistoryRecord(helloFrame()))
     }
+
+    func testHistoryLogRoundTripsAndDropsATruncatedTail() {
+        var v18 = [UInt8](repeating: 7, count: 124); v18[8] = 0x2f; v18[9] = 18
+        var v26 = [UInt8](repeating: 9, count: 84); v26[8] = 0x2f; v26[9] = 26
+        XCTAssertTrue(PuffinCapture.isHistoryRecord(v18))
+        XCTAssertFalse(PuffinCapture.isHistoryRecord(helloFrame()))
+        let entry = PuffinCapture.historyLogEntry(v18)
+        XCTAssertEqual(Array(entry.prefix(2)), [124, 0])
+        let log = entry + PuffinCapture.historyLogEntry(v26)
+        XCTAssertEqual(PuffinCapture.parseHistoryLog(log), [v18, v26])
+        XCTAssertEqual(PuffinCapture.parseHistoryLog(Array(log.dropLast(5))), [v18])
+    }
 }

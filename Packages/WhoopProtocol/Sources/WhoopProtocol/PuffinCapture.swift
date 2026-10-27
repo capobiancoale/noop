@@ -80,6 +80,33 @@ public final class PuffinCapture {
         frame.count > 9 && frame[8] == 0x2f && (frame[9] == 20 || frame[9] == 21)
     }
 
+    /// True for any WHOOP 5.0 HISTORICAL_DATA (type 47) record, whatever its layout version.
+    public static func isHistoryRecord(_ frame: [UInt8]) -> Bool {
+        frame.count > 9 && frame[8] == 0x2f
+    }
+
+    /// One entry of the append-only history-record log: a u16 little-endian length, then the frame bytes.
+    /// The log keeps every record's full bytes (the decoder stores only the mapped fields), so the still
+    /// unmapped part of v18, where the SpO2 inputs may sit, can be studied over whole nights.
+    public static func historyLogEntry(_ frame: [UInt8]) -> [UInt8] {
+        let n = min(frame.count, Int(UInt16.max))
+        return [UInt8(n & 0xff), UInt8(n >> 8)] + frame.prefix(n)
+    }
+
+    /// Split a history-record log back into frames. A truncated last entry (the app was killed mid-write)
+    /// is dropped.
+    public static func parseHistoryLog(_ data: [UInt8]) -> [[UInt8]] {
+        var out: [[UInt8]] = []
+        var i = 0
+        while i + 2 <= data.count {
+            let n = Int(data[i]) | (Int(data[i + 1]) << 8)
+            guard i + 2 + n <= data.count else { break }
+            out.append(Array(data[(i + 2)..<(i + 2 + n)]))
+            i += 2 + n
+        }
+        return out
+    }
+
     /// The full capture (provenance + decode hints), pretty-printed with stable key order.
     public func encodedJSON() throws -> Data {
         let enc = JSONEncoder()
