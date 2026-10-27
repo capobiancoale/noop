@@ -139419,6 +139419,56 @@
           }
         }
       }
+    },
+    "On a WHOOP 5.0/MG, NOOP reads the strap's own blood-oxygen readings (30 seconds about every 20 minutes while it scores you asleep) and needs at least 8 of them for a night's value. A WHOOP 4.0 doesn't send one.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su un WHOOP 5.0/MG, NOOP legge le misurazioni di ossigeno nel sangue fatte dalla fascia stessa (30 secondi circa ogni 20 minuti, mentre rileva che dormi) e gliene servono almeno 8 per il valore di una notte. Un WHOOP 4.0 non le invia."
+          }
+        }
+      }
+    },
+    "Wear the strap overnight and sync it. A WHOOP export imported in Data Sources replaces it with WHOOP's own value, and a Xiaomi band reports its own.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indossa la fascia di notte e sincronizza. Un export WHOOP importato in Sorgenti dati lo sostituisce con il valore calcolato da WHOOP, e una fascia Xiaomi riporta il suo."
+          }
+        }
+      }
+    },
+    "Heart rate · HRV · Skin temp* · Resp rate* · SpO₂* · Steps* · Sleep · Strain · Battery": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frequenza cardiaca · HRV · Temp. cutanea* · Freq. respiratoria* · SpO₂* · Passi* · Sonno · Carico · Batteria"
+          }
+        }
+      }
+    },
+    "* on-device estimate: skin temp is a nightly ±°C deviation, steps are a raw motion count (#78), SpO₂ is the strap's own readings while you sleep, averaged over the night. A WHOOP CSV value you import wins.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "* stima sul dispositivo: la temperatura della pelle è una deviazione notturna in ±°C, i passi sono un conteggio grezzo del movimento (#78), la SpO₂ è la media notturna delle misurazioni della fascia mentre dormi. Un valore importato da un CSV WHOOP ha la precedenza."
+          }
+        }
+      }
+    },
+    "No SpO₂ from the strap, an import or Health": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna SpO₂ dalla fascia, da un'importazione o da Health"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

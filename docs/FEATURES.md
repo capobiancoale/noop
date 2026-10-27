@@ -237,7 +237,7 @@ and flag that they did, so you always see real data instead of an empty state.
 
 Metrics with no data at all are hidden from the list by default, behind a **Show metrics without
 data (N)** switch (remembered). A metric with no data opens a **Why there's no data / How to get it**
-card instead of an empty chart, e.g. blood oxygen on a WHOOP 5.0/MG, or "Needs a CGM writing to
+card instead of an empty chart, e.g. blood oxygen on a WHOOP 4.0, or "Needs a CGM writing to
 Apple Health" for glucose. The text comes from `Strand/Data/MetricAvailability.swift`.
 
 **Blood pressure** (`Blood Pressure (sys)` / `(dia)`) is measured only: from a cuff that writes to

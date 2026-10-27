@@ -90,7 +90,8 @@ access.
 The WHOOP 4.0 history record carries two values it names red and infrared (`spo2_red`/`spo2_ir`, one pair a
 second). The WHOOP 5.0 records that NOOP decodes do not: v26 has one 24 Hz optical channel (used for heart
 rate), and the bulk v20/v21 records carry three (v21) or up to ten (v20) optical waveforms with no LED
-labels. So no SpO2 can be computed for a 5.0 until the red and infrared channels are found.
+labels. So NOOP cannot compute SpO2 from light for a 5.0 until the red and infrared channels are found (the
+strap's own percentage is a separate route, below).
 
 `identify_channels.py` runs the physics check that caught the swapped labels above on a NOOP raw capture: it
 finds the channels that carry a heartbeat, measures each one's AC/DC, correlates every pair, and lists the pairs
@@ -113,17 +114,28 @@ the second night after the strap accepted all 15 R22 deep-data flags: about 150,
 packets. That strap gives NOOP no red/infrared waveform pair. Other 5.0 firmware that banks v20/v21 (issue #344) may
 still do so.
 
-**A candidate in v18.** WHOOP computes SpO2 for the 4.0 in its cloud from per-second red/IR values in the
-history record, and the official app offloads the same v18/v26 records NOOP gets, so the 5.0's inputs are
-probably in v18's unmapped tail. In 359 v18 records from that strap (three nights, sampled), frame bytes 108
-and 109 read 37-61 only while the wearer was still (median dynamic acceleration 0.007 g) and exactly 0x80
-(128) while moving; they change slowly, correlate with each other (r = 0.69) and do not follow HRV from the
-same records' R-R intervals. Their range matches a ratio of ratios times 100 at normal saturation (0.4-0.5,
-see the results above), which is the working hypothesis; bytes 106 and 107 (110-240) change slowly too and
-are unexplained. With the raw-capture toggle on, NOOP now also writes every history record's full bytes to a
-day log (`history-yyyyMMdd.bin`, exported with "Export raw + log"); `v18_tail.py` summarises those bytes by
-hour and night. Turning them into a percentage needs nights paired with a reference (the WHOOP app's nightly
-SpO2, or a recording finger oximeter); until then NOOP shows nothing.
+**The strap's own SpO2 is in v18, at byte 82.** Frame byte 82 of a 5.0/MG v18 history record (one a second) is
+0 nearly always. While the band scores the wearer asleep the strap takes a 30 second reading about every 20
+minutes (the first one about 1175 s after the band's sleep bout starts, the firmware console logs "generated a
+valid SPO2 during sleep"), and during those 30 seconds the byte holds either a percentage (70-100) or a status
+code (1, 2, 8, 16, 32, 128, 160 and sums; bit-7 values are sentinels). The community recipe turns that into a
+night: group the seconds into windows (a new window starts after a gap of more than 30 s, or 60 s or more after
+the window's first second), keep a window with at least 5 in-range seconds, take its median (the lower middle
+for an even count), average the window medians, round to one decimal, and give a value only with at least 8
+usable windows. Against the WHOOP app's own nightly SpO2 it agreed well on the nights its authors tried:
+ryanbr/noop PR 709 (eight nights, correlation +0.99, about 0.4 points a night of error) and reinmaker/noop
+PR 73 (six nights, mean 94.4 against WHOOP's 94.8). It did not agree everywhere: on the device of the original
+report (#103) two nights moved the opposite way to the WHOOP app, so one night proves nothing and the number is
+the strap's own computation, not a medical measurement. NOOP now uses it: `StrapSpo2` (StrandAnalytics) builds a
+WHOOP 5.0/MG night's value from the persisted byte (`strapSpo2Sample`), and a WHOOP export imported in Data
+Sources still wins. `v18_tail.py` prints the same recipe night by night, with the window list behind each value.
+
+**Bytes 106-109 are not SpO2.** An earlier version of this paragraph guessed that bytes 108 and 109 were a ratio
+of ratios times 100 because they read 37-61 while the wearer was still and exactly 0x80 (128) while moving. That
+guess was wrong: they track heart rate and motion, and the byte that carries oxygen is 82. `v18_tail.py` still
+summarises 106-109 by hour and night, for anyone checking. With the raw-capture toggle on, NOOP writes every
+history record's full bytes to a day log (`history-yyyyMMdd.bin`, exported with "Export raw + log"), which is
+what the script reads.
 
 ```sh
 python3 -I v18_tail.py history-*.bin puffin-*.json

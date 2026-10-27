@@ -9,9 +9,11 @@ import Foundation
 //
 // Honesty rules baked in here: a metric NOOP cannot measure from the user's hardware is said to be
 // unavailable, never estimated; the text states what the metric NEEDS, not what the user did wrong.
-// Blood oxygen on a WHOOP 5.0/MG: the strap's historical records carry no SpO2 channel NOOP decodes
-// (the red/infrared samples exist only in the WHOOP 4.0 layout, and even there WHOOP computes the
-// percentage server-side), so there is nothing to show; NOOP leaves it empty rather than guess.
+// Blood oxygen on a WHOOP 5.0/MG: the strap takes its own blood-oxygen readings (30 seconds about every
+// 20 minutes) while it scores the wearer asleep, and NOOP averages them into the night's value once it has
+// at least 8 of them (StrapSpo2). It is the strap's own number, not a medical measurement, and a night with
+// fewer readings has no value rather than a guess. A WHOOP export imported in Data Sources replaces it with
+// WHOOP's own value. A WHOOP 4.0 sends no percentage (its red/infrared samples are not one), so it stays empty.
 
 /// Why one metric may have no values, and what would fill it. Both strings are already localized.
 struct MetricAvailabilityNote: Equatable {
@@ -153,8 +155,8 @@ enum MetricAvailability {
                 howTo: String(localized: "Wear the strap overnight, snug against the skin, and sync it."))
         case "spo2":
             return MetricAvailabilityNote(
-                reason: String(localized: "WHOOP 5.0/MG doesn't send blood oxygen to apps other than WHOOP's yet. NOOP shows no estimate rather than a guess."),
-                howTo: String(localized: "A WHOOP export imported in Data Sources carries the value WHOOP computed, and a Xiaomi band reports its own."))
+                reason: String(localized: "On a WHOOP 5.0/MG, NOOP reads the strap's own blood-oxygen readings (30 seconds about every 20 minutes while it scores you asleep) and needs at least 8 of them for a night's value. A WHOOP 4.0 doesn't send one."),
+                howTo: String(localized: "Wear the strap overnight and sync it. A WHOOP export imported in Data Sources replaces it with WHOOP's own value, and a Xiaomi band reports its own."))
         case "skin_temp":
             return MetricAvailabilityNote(
                 reason: String(localized: "Skin temperature is shown as the change from your own baseline, which needs at least 4 nights of wrist temperature."),

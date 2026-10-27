@@ -69,7 +69,8 @@ final class PuffinFrameRecorder {
     /// Record a historical-offload frame, but only a v20/v21 optical record and only up to
     /// `maxOpticalHistoryFrames` per capture file. Offload traffic otherwise stays out of the capture; these
     /// records are kept because finding the red and infrared channels in them is the prerequisite for any
-    /// SpO2 from a 5/MG (`Tools/spo2-validation`). No-op unless capture is enabled.
+    /// SpO2 computed from a 5/MG's light (`Tools/spo2-validation`; the strap's own percentage in v18 byte 82
+    /// is a separate route). No-op unless capture is enabled.
     func captureOpticalHistory(frame: [UInt8], char: CBUUID) {
         guard isEnabled, opticalHistoryCaptured < Self.maxOpticalHistoryFrames,
               PuffinCapture.isOpticalHistoryRecord(frame) else { return }
