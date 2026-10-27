@@ -110,5 +110,21 @@ python3 -I identify_channels.py noop-raw-capture-....json
 **First field result (October 2026).** One WHOOP 5.0, captured over two nights and the days around them,
 the second night after the strap accepted all 15 R22 deep-data flags: about 150,000 history records, all v18
 (one a second) plus about 5,000 v26, and not one v20/v21. Its real-time frames are 32-byte heart-rate
-packets. That strap gives NOOP no red/infrared pair, so no SpO2 can be computed for it. Other 5.0 firmware
-that banks v20/v21 (issue #344) may still do so.
+packets. That strap gives NOOP no red/infrared waveform pair. Other 5.0 firmware that banks v20/v21 (issue #344) may
+still do so.
+
+**A candidate in v18.** WHOOP computes SpO2 for the 4.0 in its cloud from per-second red/IR values in the
+history record, and the official app offloads the same v18/v26 records NOOP gets, so the 5.0's inputs are
+probably in v18's unmapped tail. In 359 v18 records from that strap (three nights, sampled), frame bytes 108
+and 109 read 37-61 only while the wearer was still (median dynamic acceleration 0.007 g) and exactly 0x80
+(128) while moving; they change slowly, correlate with each other (r = 0.69) and do not follow HRV from the
+same records' R-R intervals. Their range matches a ratio of ratios times 100 at normal saturation (0.4-0.5,
+see the results above), which is the working hypothesis; bytes 106 and 107 (110-240) change slowly too and
+are unexplained. With the raw-capture toggle on, NOOP now also writes every history record's full bytes to a
+day log (`history-yyyyMMdd.bin`, exported with "Export raw + log"); `v18_tail.py` summarises those bytes by
+hour and night. Turning them into a percentage needs nights paired with a reference (the WHOOP app's nightly
+SpO2, or a recording finger oximeter); until then NOOP shows nothing.
+
+```sh
+python3 -I v18_tail.py history-*.bin puffin-*.json
+```

@@ -3474,6 +3474,8 @@ extension BLEManager: @preconcurrency CBPeripheralDelegate {
                         // Bounded sample of the v20/v21 optical records for SpO2 channel mapping (no-op
                         // unless the raw-capture toggle is on).
                         puffinRecorder.captureOpticalHistory(frame: frame, char: characteristic.uuid)
+                        // Every history record's full bytes, for mapping the unmapped part of v18 (SpO2).
+                        puffinRecorder.captureHistoryRecord(frame: frame)
                         // A real-time double-tap / wrist gesture still fires during a 5/MG offload (which
                         // runs for minutes, #69); the ts≈now gate rejects replayed historical EVENTs.
                         router.dispatchLiveGestureIfFresh(frame: frame, now: strapClockNow)

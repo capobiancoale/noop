@@ -1534,7 +1534,8 @@ struct SettingsView: View {
         model.ble.flushPuffinCaptures()
         // Several launches in the last day and a half (a night the app was relaunched through): bundle every
         // file, so the night's capture is not left behind with only this launch's shared.
-        let recent = PuffinFrameRecorder.recentCaptureFiles()
+        // The day logs of full history records (SpO2 mapping) ride along too.
+        let recent = PuffinFrameRecorder.recentCaptureFiles() + PuffinFrameRecorder.recentHistoryLogs()
         if recent.count > 1 {
             FileExport.exportBundle(entries: Self.captureEntries(recent),
                                     suggestedName: FileExport.timestampedName("noop-raw-captures", ext: "zip"))
@@ -1570,8 +1571,9 @@ struct SettingsView: View {
     /// each via its own NSSavePanel on macOS (no new file plumbing).
     private func exportRawAndLog() {
         model.ble.flushPuffinCaptures()
-        let recent = PuffinFrameRecorder.recentCaptureFiles()
-        guard let capture = live.puffinCaptureURL ?? recent.last else {
+        let captures = PuffinFrameRecorder.recentCaptureFiles()
+        let recent = captures + PuffinFrameRecorder.recentHistoryLogs()
+        guard let capture = live.puffinCaptureURL ?? captures.last ?? recent.last else {
             backupAlertTitle = String(localized: "Nothing to export")
             backupAlertMessage = String(localized: "No raw capture has been recorded yet this session.")
             showBackupAlert = true
@@ -1584,13 +1586,15 @@ struct SettingsView: View {
                 text: live.exportableLogText(), textSuggestedName: "noop-strap-log-\(stamp).txt")
             return
         }
-        // A night the app was relaunched through spans several capture files: ship them all with the log.
+        // A night the app was relaunched through spans several capture files, plus the day logs of full
+        // history records: ship them all with the log.
         let log = FileExport.BundleEntry(name: "noop-strap-log-\(stamp).txt", data: Data(live.exportableLogText().utf8))
         FileExport.exportBundle(entries: Self.captureEntries(recent) + [log],
                                 suggestedName: FileExport.timestampedName("noop-export", ext: "zip"))
     }
 
-    /// Zip entries for capture files, each under its own timestamped name (`puffin-yyyyMMdd-HHmmss.json`).
+    /// Zip entries for capture files and history logs, each under its own timestamped name
+    /// (`puffin-yyyyMMdd-HHmmss.json`, `history-yyyyMMdd.bin`).
     private static func captureEntries(_ urls: [URL]) -> [FileExport.BundleEntry] {
         urls.compactMap { url in
             (try? Data(contentsOf: url)).map { FileExport.BundleEntry(name: url.lastPathComponent, data: $0) }
