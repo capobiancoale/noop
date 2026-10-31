@@ -298,7 +298,7 @@ NOOP is an independent, **experimental** project — capable, but a work in prog
 > | Sleep duration / detection | Experimental; can fall back to heart rate when motion is sparse |
 > | Sleep stages | Approximate and not reliable while full overnight motion and cardiorespiratory inputs remain incomplete |
 > | Skin temperature | Raw values decode on supported historical layouts; not available consistently across 5/MG firmware |
-> | Blood oxygen / SpO₂ | Not recoverable offline from current time-multiplexed PPG data |
+> | Blood oxygen / SpO₂ | Not recoverable from the light signal offline (time-multiplexed PPG). A WHOOP 5.0/MG's own readings while it scores sleep are averaged into a night's value when there are enough of them; this is the strap's computation, not a measurement |
 > | Overnight HRV and respiratory rate | Incomplete unless sufficient R-R intervals are captured |
 >
 > In short: seeing the Sleep, Health, Readiness, or Insights screens doesn't mean their deepest

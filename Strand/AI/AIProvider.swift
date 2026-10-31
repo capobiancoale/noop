@@ -19,6 +19,18 @@ enum AIProvider: String, CaseIterable, Identifiable {
         }
     }
 
+    /// The segment label in the provider picker: the four segments share one phone-width row, so "Google
+    /// Gemini" and "Custom (OpenAI-compatible)" were cut to "Google G…" / "Custom (…". The full name still
+    /// heads the status lines; a custom endpoint says "Custom" (translated, it is not a product name).
+    var shortName: String {
+        switch self {
+        case .openAI:    return "OpenAI"
+        case .anthropic: return "Anthropic"
+        case .gemini:    return "Gemini"
+        case .custom:    return String(localized: "Custom")
+        }
+    }
+
     var defaultModel: String {
         switch self {
         case .openAI:    return "gpt-4o-mini"

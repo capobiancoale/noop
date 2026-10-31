@@ -52,10 +52,10 @@ struct SettingsView: View {
     /// See [PuffinExperiment.continuousHrvOvernightOnlyKey].
     @AppStorage(PuffinExperiment.continuousHrvOvernightOnlyKey) private var continuousHrvOvernightOnly = false
 
-    /// Opt-in "Experimental sleep staging (V2)" (off by default). When on, detected nights are re-staged with
-    /// `SleepStagerV2` (the transparent cardiorespiratory recipe) instead of the default V1 stager. Read at
-    /// the staging call site in `Repository`. See [PuffinExperiment.experimentalSleepV2Key].
-    @AppStorage(PuffinExperiment.experimentalSleepV2Key) private var experimentalSleepV2Enabled = false
+    /// "Sleep staging V2" (on by default since its PSG check). When on, detected nights are staged with
+    /// `SleepStagerV2` (the calibrated cardiorespiratory recipe); off, with the V1 stager. Read at the staging
+    /// call site in `Repository`. See [PuffinExperiment.experimentalSleepV2Key].
+    @AppStorage(PuffinExperiment.experimentalSleepV2Key) private var experimentalSleepV2Enabled = true
 
     // Imperial/Metric display preference (D#103). Stored data is always SI; this only changes how
     // distances/weights/heights/temperatures are SHOWN — and lets the profile fields below take
@@ -150,6 +150,10 @@ struct SettingsView: View {
     /// and offers a manual coefficient override. See [StepsCalibrationSheet].
     @State private var showStepsCalibration = false
 
+    /// Heart-rate accuracy sheet (strap vs its own beats, a 30-second pulse count, your own baseline).
+    /// Reached from the Profile card, beside the max heart rate it uses.
+    @State private var showHeartRateAccuracy = false
+
     /// iOS environment-diagnostics sheet (device, iOS+build, Data Protection, background refresh,
     /// low-power, sideload + cert expiry). iOS-only; the macOS strap log already carries OS + version.
     @State private var showDiagnostics = false
@@ -173,13 +177,15 @@ struct SettingsView: View {
                        // Settings' own frosted cards sit on the dark canvas below the sky band, unchanged.
                        topBackground: liquidScaffoldSky()) {
             VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
-                // Everyday sections stay expanded (S3): the ones a first-run user actually needs.
-                profilePhotoCard.staggeredAppear(index: 0)
-                profileCard.staggeredAppear(index: 1)
-                unitsCard.staggeredAppear(index: 2)
-                appearanceCard.staggeredAppear(index: 3)
-                strapCard.staggeredAppear(index: 4)
-                featuresCard.staggeredAppear(index: 5)
+                // Everyday sections stay expanded (S3): the ones a first-run user actually needs. Each card is
+                // type-erased: in the optimised build the column otherwise becomes one deeply nested type whose
+                // metadata lookup can overflow the main thread's stack (see LiquidTodayView).
+                AnyView(profilePhotoCard.staggeredAppear(index: 0))
+                AnyView(profileCard.staggeredAppear(index: 1))
+                AnyView(unitsCard.staggeredAppear(index: 2))
+                AnyView(appearanceCard.staggeredAppear(index: 3))
+                AnyView(strapCard.staggeredAppear(index: 4))
+                AnyView(featuresCard.staggeredAppear(index: 5))
 
                 // Lower-frequency sections collapse behind a single default-closed disclosure so the
                 // screen opens at ~6 sections instead of 11. Nothing is removed; every section here
@@ -190,15 +196,15 @@ struct SettingsView: View {
                     subtitle: "Recovery, Test Centre, experimental probes, and backup. Tucked away to keep the everyday screen tidy.",
                     isExpanded: $advancedOpen
                 ) {
-                    recoveryCard
-                    testCentreCard
-                    experimentalCard
-                    backupCard
+                    AnyView(recoveryCard)
+                    AnyView(testCentreCard)
+                    AnyView(experimentalCard)
+                    AnyView(backupCard)
                 }
                 .staggeredAppear(index: 6)
 
                 // About stays expanded at the foot (version, links and the help sheets people return to).
-                aboutCard.staggeredAppear(index: 7)
+                AnyView(aboutCard.staggeredAppear(index: 7))
             }
         }
         .alert(backupAlertTitle, isPresented: $showBackupAlert) {
@@ -228,6 +234,12 @@ struct SettingsView: View {
         .sheet(isPresented: $showStepsCalibration) {
             StepsCalibrationSheet(repo: model.repo, onClose: { showStepsCalibration = false })
                 .environmentObject(profile)
+        }
+        .sheet(isPresented: $showHeartRateAccuracy) {
+            HeartRateAccuracyView(onClose: { showHeartRateAccuracy = false })
+                .environmentObject(model.repo)
+                .environmentObject(profile)
+                .environmentObject(live)
         }
         #if os(iOS)
         .sheet(isPresented: $showDiagnostics) {
@@ -319,7 +331,7 @@ struct SettingsView: View {
                         poundsField(weightKg: $profile.weightKg)
                     } else {
                         measureField(value: $profile.weightKg, unit: "kg",
-                                     range: 30...250, step: 0.5, format: "%.1f",
+                                     range: 30...250, step: 0.5, digits: 1,
                                      accessibility: String(localized: "Weight in kilograms"))
                     }
                 }
@@ -330,7 +342,7 @@ struct SettingsView: View {
                         feetInchesField(heightCm: $profile.heightCm)
                     } else {
                         measureField(value: $profile.heightCm, unit: "cm",
-                                     range: 120...230, step: 1, format: "%.0f",
+                                     range: 120...230, step: 1, digits: 0,
                                      accessibility: String(localized: "Height in centimetres"))
                     }
                 }
@@ -370,13 +382,32 @@ struct SettingsView: View {
                     }
                 }
                 rowDivider
+                // Heart-rate accuracy: right under the max heart rate it depends on. Opens the check that
+                // sets the strap against its own beat timing and against a pulse the person counts.
+                Button {
+                    showHeartRateAccuracy = true
+                } label: {
+                    FormRow(label: "Heart-rate accuracy") {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(StrandPalette.textTertiary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(LiquidPressStyle())
+                .accessibilityLabel("Heart-rate accuracy. Opens the accuracy check.")
+                Text("Checks your strap's heart rate against its own beat-to-beat timing and against a pulse you count yourself, and shows your own sleeping and waking numbers.")
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                rowDivider
                 // Step calibration (#139/#132): daily steps = @57 counter ticks ÷ this divisor.
                 // 1.0 = raw pass-through until the true 5/MG tick rate is known. The divisor goes
                 // up to 30 because a 5/MG motion counter can overcount by ~24×; the stepper uses a
                 // variable increment (fine near 1.0, coarse up top) so high values stay reachable.
                 FormRow(label: "Step calibration") {
                     HStack(spacing: 10) {
-                        Text(String(format: "%.1f", profile.stepTicksPerStep))
+                        Text(DisplayNumber.decimal(profile.stepTicksPerStep))
                             .font(StrandFont.bodyNumber)
                             .foregroundStyle(StrandPalette.textPrimary)
                             .frame(minWidth: 44, alignment: .trailing)
@@ -386,7 +417,7 @@ struct SettingsView: View {
                             profile.stepTicksPerStep = ProfileStore.steppedStepScale(profile.stepTicksPerStep, up: false)
                         }
                             .labelsHidden()
-                            .accessibilityLabel("Step calibration, \(String(format: "%.1f", profile.stepTicksPerStep)) counter ticks per step")
+                            .accessibilityLabel("Step calibration, \(DisplayNumber.decimal(profile.stepTicksPerStep)) counter ticks per step")
                     }
                 }
                 Text("Counter ticks per step. Leave at 1.0 unless your steps run high. On a WHOOP 5/MG they can run very high (10× or more), so this goes up to 30. Walk a known 1,000 steps and divide NOOP's count by the real count to get your value.")
@@ -437,10 +468,10 @@ struct SettingsView: View {
     /// Numeric weight/height field: tabular value + small +/- stepper.
     private func measureField(value: Binding<Double>, unit: String,
                               range: ClosedRange<Double>, step: Double,
-                              format: String, accessibility: String) -> some View {
+                              digits: Int, accessibility: String) -> some View {
         HStack(spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(String(format: format, value.wrappedValue))
+                Text(DisplayNumber.decimal(value.wrappedValue, digits: digits))
                     .font(StrandFont.bodyNumber)
                     .foregroundStyle(StrandPalette.textPrimary)
                     .frame(minWidth: 48, alignment: .trailing)
@@ -595,10 +626,12 @@ struct SettingsView: View {
                 }
                 rowDivider
                 FormRow(label: "Temperature") {
-                    // Three-way: "Match" follows the system above; °C / °F pin it explicitly. Stored as
-                    // an empty string ("match") or the TemperatureUnit raw value.
+                    // Three-way: "Auto" follows the system above; °C / °F pin it explicitly. Stored as
+                    // an empty string ("match") or the TemperatureUnit raw value. The segment says "Auto"
+                    // (its own key, not the old "Match": its Italian, "Corrispondenza", was wrong here and
+                    // wide enough to push the whole page past the screen edge).
                     Picker("Temperature", selection: $temperatureRaw) {
-                        Text("Match").tag("")
+                        Text("Auto").tag("")
                         Text("°C").tag(TemperatureUnit.celsius.rawValue)
                         Text("°F").tag(TemperatureUnit.fahrenheit.rawValue)
                     }
@@ -626,6 +659,18 @@ struct SettingsView: View {
 
     // MARK: - Appearance (Theme everywhere; alternate app icon iOS-only)
 
+    /// The theme segment labels. "Light" is also the sleep-stage word ("Leggero" in Italian) and a catalog
+    /// key carries one translation, so the light option has its own key ("theme.light": English "Light",
+    /// Italian "Chiaro").
+    /// System and Dark keep the design system's labels.
+    private func themeLabel(_ mode: AppearanceMode) -> String {
+        switch mode {
+        case .system: return mode.label
+        case .light:  return String(localized: "theme.light", defaultValue: "Light")
+        case .dark:   return mode.label
+        }
+    }
+
     /// Theme (System / Light / Dark) on every platform, plus the iOS app-icon choice. The Theme picker
     /// writes `AppearanceMode.storageKey`, which both app roots read via `.preferredColorScheme`; because
     /// every palette token is a dynamic `Color(light:dark:)`, the whole UI re-resolves on change.
@@ -639,7 +684,7 @@ struct SettingsView: View {
                 FormRow(label: "Theme") {
                     Picker("Theme", selection: $appearanceRaw) {
                         ForEach(AppearanceMode.allCases) { mode in
-                            Text(mode.label).tag(mode.rawValue)
+                            Text(themeLabel(mode)).tag(mode.rawValue)
                         }
                     }
                     .labelsHidden()
@@ -737,15 +782,17 @@ struct SettingsView: View {
                 Text(strapStatusDetail)
                     .font(StrandFont.subhead)
                     .foregroundStyle(StrandPalette.textSecondary)
-                HStack(spacing: NoopMetrics.space3) {
-                    NoopButton("Re-scan", systemImage: "arrow.clockwise", kind: .primary) {
-                        model.scan()
+                // Side by side when both fit; stacked when a longer translation would clip a label.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: NoopMetrics.space3) {
+                        strapRescanButton
+                        strapDisconnectButton
+                        Spacer(minLength: 0)
                     }
-
-                    NoopButton("Disconnect", systemImage: "xmark.circle", kind: .secondary) {
-                        model.disconnect()
+                    VStack(alignment: .leading, spacing: NoopMetrics.space3) {
+                        strapRescanButton
+                        strapDisconnectButton
                     }
-                    .disabled(!live.connected && !live.bonded)
                 }
 
                 Divider().overlay(StrandPalette.hairline)
@@ -869,6 +916,19 @@ struct SettingsView: View {
 
     // Shares LiveState.connectionStatus* with the sidebar footer (RootView) so the two never drift (#266).
     private var strapStatusTitle: String { live.connectionStatusLabel }
+
+    private var strapRescanButton: some View {
+        NoopButton("Re-scan", systemImage: "arrow.clockwise", kind: .primary) {
+            model.scan()
+        }
+    }
+
+    private var strapDisconnectButton: some View {
+        NoopButton("Disconnect", systemImage: "xmark.circle", kind: .secondary) {
+            model.disconnect()
+        }
+        .disabled(!live.connected && !live.bonded)
+    }
 
     private var strapTone: StrandTone {
         if live.connectionStatusIsActive { return .positive }
@@ -1095,18 +1155,18 @@ struct SettingsView: View {
     private var sleepStagingCard: some View {
         SettingsSection(
             icon: "bed.double.fill",
-            title: "Experimental · Sleep staging",
-            blurb: "How NOOP splits a night into light / deep / REM. This is a separate, opt-in recipe. Your default staging is unchanged unless you turn it on."
+            title: "Sleep staging",
+            blurb: "How NOOP splits a night into light, deep and REM sleep."
         ) {
             VStack(alignment: .leading, spacing: NoopMetrics.rowSpacing) {
                 Toggle(isOn: $experimentalSleepV2Enabled) {
-                    Text("Experimental sleep staging (V2)")
+                    Text("Sleep staging V2 (lab-checked)")
                         .font(StrandFont.subhead)
                         .foregroundStyle(StrandPalette.textPrimary)
                 }
                 .toggleStyle(.switch)
                 .tint(StrandPalette.accent)
-                Text("A transparent cardiorespiratory recipe that recovers deep and REM better than the default staging. Opt-in and experimental: it only changes how already-detected nights are split into stages (detection and scores are unchanged), and the default staging stays in place if you leave this off. Takes effect on the next nights staged.")
+                Text("On by default. Checked against laboratory sleep recordings (polysomnography, 31 nights), it puts deep and REM sleep much closer to the real amounts than the previous staging, which is used when this is off. It only changes how detected nights are split into stages, from the next nights staged.")
                     .font(StrandFont.caption)
                     .foregroundStyle(StrandPalette.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1472,6 +1532,16 @@ struct SettingsView: View {
     /// hand it to the system share sheet (iOS).
     private func exportPuffinCaptures() {
         model.ble.flushPuffinCaptures()
+        // Several launches in the last day and a half (a night the app was relaunched through): bundle every
+        // file, so the night's capture is not left behind with only this launch's shared.
+        // The day logs of full history records (SpO2 mapping) ride along too.
+        let recent = PuffinFrameRecorder.recentCaptureFiles()
+            + PuffinFrameRecorder.recentHistoryLogs(within: Self.historyLogExportWindow)
+        if recent.count > 1 {
+            FileExport.exportBundle(entries: Self.captureEntries(recent),
+                                    suggestedName: FileExport.timestampedName("noop-raw-captures", ext: "zip"))
+            return
+        }
         guard let src = live.puffinCaptureURL else { return }
         // Suggest a friendly, timestamped name so a reporter saving several captures gets sortable,
         // non-colliding files (#510) — e.g. noop-raw-capture-260617-1042.json.
@@ -1502,16 +1572,38 @@ struct SettingsView: View {
     /// each via its own NSSavePanel on macOS (no new file plumbing).
     private func exportRawAndLog() {
         model.ble.flushPuffinCaptures()
-        guard let capture = live.puffinCaptureURL else {
+        let captures = PuffinFrameRecorder.recentCaptureFiles()
+        let recent = captures + PuffinFrameRecorder.recentHistoryLogs(within: Self.historyLogExportWindow)
+        guard let capture = live.puffinCaptureURL ?? captures.last ?? recent.last else {
             backupAlertTitle = String(localized: "Nothing to export")
             backupAlertMessage = String(localized: "No raw capture has been recorded yet this session.")
             showBackupAlert = true
             return
         }
         let stamp = FileExport.timestamp()
-        FileExport.exportPair(
-            file: capture, fileSuggestedName: "noop-raw-capture-\(stamp).json",
-            text: live.exportableLogText(), textSuggestedName: "noop-strap-log-\(stamp).txt")
+        guard recent.count > 1 else {
+            FileExport.exportPair(
+                file: capture, fileSuggestedName: "noop-raw-capture-\(stamp).json",
+                text: live.exportableLogText(), textSuggestedName: "noop-strap-log-\(stamp).txt")
+            return
+        }
+        // A night the app was relaunched through spans several capture files, plus the day logs of full
+        // history records: ship them all with the log.
+        let log = FileExport.BundleEntry(name: "noop-strap-log-\(stamp).txt", data: Data(live.exportableLogText().utf8))
+        FileExport.exportBundle(entries: Self.captureEntries(recent) + [log],
+                                suggestedName: FileExport.timestampedName("noop-export", ext: "zip"))
+    }
+
+    /// How far back the raw exports reach for the day logs of history records: the last four days, so a
+    /// night reported a couple of days later still ships (the capture files keep their 36 h window).
+    private static let historyLogExportWindow: TimeInterval = 4 * 86_400
+
+    /// Zip entries for capture files and history logs, each under its own timestamped name
+    /// (`puffin-yyyyMMdd-HHmmss.json`, `history-yyyyMMdd.bin`).
+    private static func captureEntries(_ urls: [URL]) -> [FileExport.BundleEntry] {
+        urls.compactMap { url in
+            (try? Data(contentsOf: url)).map { FileExport.BundleEntry(name: url.lastPathComponent, data: $0) }
+        }
     }
 
     #if os(macOS)
@@ -2472,7 +2564,7 @@ struct StepsCalibrationSheet: View {
                     let coeff = profile.stepsManualCoefficient > 0
                         ? profile.stepsManualCoefficient : profile.stepsCalibrationCoefficient
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(String(format: "%.1f", coeff))
+                        Text(DisplayNumber.decimal(coeff))
                             .font(StrandFont.number(30))
                             .foregroundStyle(StrandPalette.accent)
                         Text("steps per motion unit")
@@ -2579,7 +2671,7 @@ struct StepsCalibrationSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(draftManual > 0 ? String(format: "%.1f", draftManual) : String(localized: "Auto"))
+                    Text(draftManual > 0 ? DisplayNumber.decimal(draftManual) : String(localized: "Auto"))
                         .font(StrandFont.number(24))
                         .foregroundStyle(draftManual > 0 ? StrandPalette.accent : StrandPalette.textSecondary)
                     Text(draftManual > 0 ? "steps / motion unit" : "fit from your phone")
@@ -2600,7 +2692,7 @@ struct StepsCalibrationSheet: View {
                 }
                 .tint(StrandPalette.accent)
                 .accessibilityValue(draftManual > 0
-                                    ? "\(String(format: "%.1f", draftManual)) steps per motion unit"
+                                    ? "\(DisplayNumber.decimal(draftManual)) steps per motion unit"
                                     : "Automatic")
 
                 // Live preview: a typical recent day re-estimated at the draft coefficient.
@@ -2712,17 +2804,39 @@ struct StepsCalibrationSheet: View {
 // MARK: - Two-column form row
 
 /// Label on the left, control on the right — the two-column form feel.
+///
+/// A control with a fixed width (a segmented picker, a stepper with its value) can be wider than the row
+/// leaves it once the label is translated: the Italian "Corrispondenza" segment made the Temperature
+/// picker wider than the card, and the whole Settings page grew past the screen and slid off its left
+/// edge. So when the control and a label of at least `minLabelWidth` do not fit side by side, the label
+/// goes on its own line above the control instead of the control overflowing.
 private struct FormRow<Control: View>: View {
     let label: LocalizedStringKey
     @ViewBuilder var control: () -> Control
 
+    /// The narrowest the label may be squeezed to (two short lines) before the row stacks.
+    private let minLabelWidth: CGFloat = 110
+
+    private var labelText: some View {
+        Text(label)
+            .font(StrandFont.body)
+            .foregroundStyle(StrandPalette.textPrimary)
+    }
+
     var body: some View {
-        HStack(alignment: .center, spacing: NoopMetrics.space4) {
-            Text(label)
-                .font(StrandFont.body)
-                .foregroundStyle(StrandPalette.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            control()
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: NoopMetrics.space4) {
+                // idealWidth is what ViewThatFits measures: the label counts as `minLabelWidth`, not as
+                // its full one-line width, so a label that can wrap does not force the stacked layout.
+                labelText
+                    .frame(minWidth: 0, idealWidth: minLabelWidth, maxWidth: .infinity, alignment: .leading)
+                control()
+            }
+            VStack(alignment: .leading, spacing: NoopMetrics.space2) {
+                labelText
+                control()
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
         }
         .frame(minHeight: 32)
     }

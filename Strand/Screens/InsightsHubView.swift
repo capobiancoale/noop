@@ -64,7 +64,7 @@ struct InsightsHubView: View {
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             // Header and the 4-segment outcome control each get their own row — one HStack
             // crushed the pill control on narrow widths and truncated the segment labels.
-            SectionHeader("What moves your \(outcome.outcomeName.lowercased())",
+            SectionHeader("What moves your \(outcome.outcomeName)",
                           overline: "Ranked · your data")
             SegmentedPillControl(InsightsHubViewModel.Outcome.allCases, selection: $outcome) { $0.label }
                 .accessibilityLabel("Outcome metric")
@@ -72,7 +72,7 @@ struct InsightsHubView: View {
 
             if model.ranked.isEmpty {
                 NoopCard {
-                    Text(String(localized: "Not enough overlap between your journal answers and \(outcome.outcomeName.lowercased()) yet. Keep logging. Each behaviour needs days both with and without it before NOOP can read its effect."))
+                    Text(String(localized: "Not enough overlap between your journal answers and \(outcome.outcomeName) yet. Keep logging. Each behaviour needs days both with and without it before NOOP can read its effect."))
                         .font(StrandFont.subhead)
                         .foregroundStyle(StrandPalette.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -84,6 +84,18 @@ struct InsightsHubView: View {
                         .staggeredAppear(index: i)
                 }
             }
+        }
+    }
+
+    /// The behaviour name with its sign-aware dot, shared by both header layouts of `moverCard`.
+    private func moverName(_ label: String, tint: Color, lineLimit: Int) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Circle().fill(tint).frame(width: 8, height: 8)
+            Text(verbatim: label)
+                .font(StrandFont.headline)
+                .foregroundStyle(StrandPalette.textPrimary)
+                .lineLimit(lineLimit)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -102,27 +114,39 @@ struct InsightsHubView: View {
         let deltaText: String = {
             let arrow = e.delta > 0 ? "↑" : (e.delta < 0 ? "↓" : "→")
             if let pct = e.pctChange { return "\(arrow) \(Int(abs(pct).rounded()))%" }
-            return "\(arrow) \(String(format: "%.1f", abs(e.delta)))"
+            return "\(arrow) \(DisplayNumber.decimal(abs(e.delta)))"
         }()
+
+        // Built once, reused for the visible copy and the accessibility label. The sentence and the lead/lag
+        // chip are rendered from the measured numbers (InsightsCopy), not the engine's English text.
+        let sentence = InsightsCopy.rankedSentence(r)
+        let behaviorLabel = JournalCatalogStore.displayLabel(forQuestion: r.behavior)
+        let leadLag = InsightsCopy.leadLag(r.lag)
 
         return NoopCard(tint: outcome.domain.color) {
             VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-                // Header: behaviour name + lead/lag chip + confidence pill.
-                HStack(alignment: .firstTextBaseline) {
-                    HStack(spacing: 8) {
-                        Circle().fill(tintColor).frame(width: 8, height: 8)
-                        Text(r.behavior)
-                            .font(StrandFont.headline)
-                            .foregroundStyle(StrandPalette.textPrimary)
-                            .lineLimit(1)
+                // Header: behaviour name + lead/lag chip + confidence pill. A question is a whole sentence
+                // ("Did you have caffeine late in the day?"), so when the chips do not fit beside it the
+                // name takes its own lines above them instead of being cut to "Did you have…".
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline) {
+                        moverName(behaviorLabel, tint: tintColor, lineLimit: 1)
+                        Spacer(minLength: 8)
+                        StatePill("\(leadLag)", tone: .accent, showsDot: false)
+                        ScoreStatePill(Self.scoreState(r.confidence))
                     }
-                    Spacer(minLength: 8)
-                    StatePill(LocalizedStringKey(r.leadLagText), tone: .accent, showsDot: false)
-                    ScoreStatePill(Self.scoreState(r.confidence))
+                    VStack(alignment: .leading, spacing: NoopMetrics.space2) {
+                        moverName(behaviorLabel, tint: tintColor, lineLimit: 3)
+                        HStack(spacing: 8) {
+                            StatePill("\(leadLag)", tone: .accent, showsDot: false)
+                            ScoreStatePill(Self.scoreState(r.confidence))
+                            Spacer(minLength: 0)
+                        }
+                    }
                 }
 
-                // The engine's sign-aware sentence (includes the lead/lag clause).
-                Text(r.sentence())
+                // The sign-aware sentence (includes the lead/lag clause).
+                Text(sentence)
                     .font(StrandFont.body)
                     .foregroundStyle(StrandPalette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -149,7 +173,7 @@ struct InsightsHubView: View {
                     Text("Effect size").strandOverline()
                     Spacer()
                     HStack(spacing: 6) {
-                        Text(String(format: "d = %.2f", e.cohensD))
+                        Text(verbatim: "d = \(DisplayNumber.decimal(e.cohensD, digits: 2))")
                             .font(StrandFont.captionNumber)
                             .foregroundStyle(tintColor)
                         Text(Self.effectMagnitudeWord(e.cohensD))
@@ -161,7 +185,7 @@ struct InsightsHubView: View {
         }
         .accessibilityElement(children: .combine)
         // One whole-string key; the args are complete sentences, never concatenated tails.
-        .accessibilityLabel(String(localized: "\(r.sentence()) Cohen's d \(String(format: "%.2f", e.cohensD)). \(Self.scoreState(r.confidence).accessibilityWord)"))
+        .accessibilityLabel(String(localized: "\(sentence) Cohen's d \(DisplayNumber.decimal(e.cohensD, digits: 2)). \(Self.scoreState(r.confidence).accessibilityWord)"))
     }
 
     // MARK: - Alcohol / caffeine dose-response
@@ -267,8 +291,8 @@ private struct DoseResponseCardView: View {
             VStack(alignment: .leading, spacing: NoopMetrics.gap) {
                 header(r)
 
-                // The engine's honest read sentence (prior / yours / contradicts-prior).
-                Text(r.sentence())
+                // The honest read sentence (prior / yours / contradicts-prior), in the UI language.
+                Text(InsightsCopy.doseSentence(r))
                     .font(StrandFont.body)
                     .foregroundStyle(StrandPalette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -361,18 +385,18 @@ private struct DoseResponseCardView: View {
     /// lower/higher or basis fragments.
     private func forecastSentence(delta: Double, projected: Double?, stepLabel: String) -> String {
         if previewDose <= 1 {
-            return String(localized: "No extra tonight. Your \(card.outcomeName.lowercased()) forecast stays where it is.")
+            return String(localized: "No extra tonight. Your \(card.outcomeName) forecast stays where it is.")
         }
         let magText = "\(Int(abs(delta).rounded()))\(card.outcomeSuffix)"
         let lower = delta <= 0
         if card.response.priorDominated {
             return lower
-                ? String(localized: "A \(stepLabel) tonight tends to line up with about \(magText) lower on tomorrow\u{2019}s \(card.outcomeName.lowercased()) for you, based on typical patterns.")
-                : String(localized: "A \(stepLabel) tonight tends to line up with about \(magText) higher on tomorrow\u{2019}s \(card.outcomeName.lowercased()) for you, based on typical patterns.")
+                ? String(localized: "A \(stepLabel) tonight tends to line up with about \(magText) lower on tomorrow\u{2019}s \(card.outcomeName) for you, based on typical patterns.")
+                : String(localized: "A \(stepLabel) tonight tends to line up with about \(magText) higher on tomorrow\u{2019}s \(card.outcomeName) for you, based on typical patterns.")
         }
         return lower
-            ? String(localized: "A \(stepLabel) tonight tends to line up with about \(magText) lower on tomorrow\u{2019}s \(card.outcomeName.lowercased()) for you, based on \(card.response.nUser) of your \(card.unitLabel.lowercased()) days.")
-            : String(localized: "A \(stepLabel) tonight tends to line up with about \(magText) higher on tomorrow\u{2019}s \(card.outcomeName.lowercased()) for you, based on \(card.response.nUser) of your \(card.unitLabel.lowercased()) days.")
+            ? String(localized: "A \(stepLabel) tonight tends to line up with about \(magText) lower on tomorrow\u{2019}s \(card.outcomeName) for you, based on \(card.response.nUser) of your \(card.unitLabel.lowercased()) days.")
+            : String(localized: "A \(stepLabel) tonight tends to line up with about \(magText) higher on tomorrow\u{2019}s \(card.outcomeName) for you, based on \(card.response.nUser) of your \(card.unitLabel.lowercased()) days.")
     }
 
     // MARK: Bits
@@ -397,7 +421,7 @@ private struct DoseResponseCardView: View {
         let rounded = (mag * 10).rounded() / 10
         let sign = v < 0 ? "−" : (v > 0 ? "+" : "")
         // Show whole numbers without a trailing .0 for the small Charge magnitudes.
-        let body = rounded == rounded.rounded() ? "\(Int(rounded))" : String(format: "%.1f", rounded)
+        let body = rounded == rounded.rounded() ? "\(Int(rounded))" : DisplayNumber.decimal(rounded)
         return "\(sign)\(body)\(suffix)"
     }
 

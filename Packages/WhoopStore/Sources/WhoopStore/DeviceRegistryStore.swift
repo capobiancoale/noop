@@ -78,7 +78,7 @@ public struct DeviceRegistryStore: Sendable {
     /// empties the device's recordings; archiving/removing the registry entry is a separate op).
     static let deviceScopedTables = [
         "hrSample", "rrInterval", "spo2Sample", "skinTempSample", "respSample", "gravitySample",
-        "stepSample", "ppgHrSample", "event", "battery", "dailyMetric", "sleepSession",
+        "stepSample", "ppgHrSample", "strapSpo2Sample", "event", "battery", "dailyMetric", "sleepSession",
         "journal", "workout", "appleDaily", "metricSeries", "dayOwnership",
     ]
 

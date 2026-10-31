@@ -48,16 +48,21 @@ final class HRVAnalyzerTests: XCTestCase {
         XCTAssertEqual(result.meanNN!, nn.reduce(0,+)/22, accuracy: 1e-9)
     }
 
-    func testEctopicRejectionDropsSpike() {
-        // A steady 800 ms series with one impossible 1400 ms beat in the middle.
-        // The spike deviates ~75% from local median → rejected. Remaining beats
-        // are all 800 → RMSSD 0.
-        var nn = Array(repeating: 800.0, count: 30)
-        nn[15] = 1400
-        let clean = HRVAnalyzer.cleanRR(nn)
-        XCTAssertEqual(clean.count, 29)               // exactly one beat dropped
-        XCTAssertFalse(clean.contains(1400))
-        XCTAssertEqual(HRVAnalyzer.rmssdRaw(clean)!, 0.0, accuracy: 1e-9)
+    func testArtefactCorrectionReplacesSpikeWithoutLosingBeats() {
+        // A realistic resting series with one impossible 1400 ms interval. Lipponen–Tarvainen re-estimates
+        // it from its neighbours instead of deleting it: no beat is lost, so every successive difference is
+        // still taken between truly adjacent beats.
+        let truth = RRFixtures.resting(count: 120, seed: 11)
+        var rr = truth
+        rr[60] = 1400
+        let cleaned = HRVAnalyzer.clean(rr)
+        XCTAssertEqual(cleaned.nn.count, rr.count)
+        XCTAssertEqual(cleaned.corrected, 1)
+        XCTAssertEqual(cleaned.nDropped, 0)
+        XCTAssertEqual(cleaned.nn[60], truth[60], accuracy: 40)
+        let truthRmssd = HRVAnalyzer.rmssdRaw(truth)!
+        XCTAssertGreaterThan(HRVAnalyzer.rmssdRaw(rr)!, 2 * truthRmssd, "uncorrected, the spike dominates RMSSD")
+        XCTAssertEqual(HRVAnalyzer.analyze(rawRR: rr).rmssd!, truthRmssd, accuracy: 0.05 * truthRmssd)
     }
 
     func testEctopicKeepsModerateVariation() {
@@ -145,15 +150,22 @@ final class HRVAnalyzerTests: XCTestCase {
     }
 
     func testRollingRmssdCleansArtifactWindows() {
-        // A steady 800 ms stream with one impossible 1400 ms spike. The Malik ectopic filter drops the
-        // spike inside whatever window holds it, so no point spikes , every emitted rMSSD is 0 (all-800
-        // survivors have no successive difference).
-        var rr: [RRInterval] = []
-        for t in 0..<40 { rr.append(RRInterval(ts: 2000 + t, rrMs: 800)) }
-        rr[20] = RRInterval(ts: 2020, rrMs: 1400)   // the artifact beat
-        let pts = HRVAnalyzer.rollingRmssd(rr: rr, windowSec: 20, stepSec: 0, minBeatsPerWindow: 8)
+        // A realistic resting stream with one impossible 1400 ms value reported at the right time. Every
+        // window holding it has it re-estimated, so no point spikes: each stays close to the same window of
+        // the artefact-free stream, while the raw window would more than double.
+        let truth = RRFixtures.timed(RRFixtures.resting(count: 90, seed: 12))
+        var bad = truth
+        bad[45] = RRInterval(ts: truth[45].ts, rrMs: 1400)
+        let ref = HRVAnalyzer.rollingRmssd(rr: truth, windowSec: 30, stepSec: 0, minBeatsPerWindow: 8)
+        let pts = HRVAnalyzer.rollingRmssd(rr: bad, windowSec: 30, stepSec: 0, minBeatsPerWindow: 8)
         XCTAssertFalse(pts.isEmpty)
-        for p in pts { XCTAssertEqual(p.rmssd, 0.0, accuracy: 1e-9, "the 1400 ms artifact must be filtered, never spiking a window") }
+        XCTAssertEqual(pts.map(\.ts), ref.map(\.ts))
+        for (p, r) in zip(pts, ref) {
+            XCTAssertEqual(p.rmssd, r.rmssd, accuracy: 0.15 * r.rmssd, "the 1400 ms artefact must never spike a window")
+        }
+        let spiked = bad.filter { $0.ts > truth[45].ts - 30 && $0.ts <= truth[45].ts }.map { Double($0.rrMs) }
+        let spikedRef = truth.filter { $0.ts > truth[45].ts - 30 && $0.ts <= truth[45].ts }.map { Double($0.rrMs) }
+        XCTAssertGreaterThan(HRVAnalyzer.rmssdRaw(spiked)!, 2 * HRVAnalyzer.rmssdRaw(spikedRef)!)
     }
 
     func testRollingRmssdSparseSeriesEmitsNothing() {
@@ -185,5 +197,70 @@ final class HRVAnalyzerTests: XCTestCase {
         XCTAssertEqual(result.nInput, 31)
         XCTAssertEqual(result.nClean, 31)
         XCTAssertEqual(result.rmssd!, 0.0, accuracy: 1e-9)  // all 800 → no successive diffs
+    }
+
+    // MARK: - Timestamps, gaps and nightly window quality
+
+    func testCleanTimedCarriesTimestampsThroughCorrections() {
+        // One missed beat (the detection at k = 100 removed): the merged interval is split back in two and the
+        // inserted beat is stamped half an interval before the beat that ends it.
+        let truth = RRFixtures.resting(count: 200, seed: 13)
+        let bad = RRFixtures.withMissedBeats(truth)
+        let timed = RRFixtures.timed(bad)
+        let c = HRVAnalyzer.cleanTimed(timed)
+        XCTAssertEqual(c.missed, 1)
+        XCTAssertEqual(c.beats.count, truth.count)
+        XCTAssertEqual(c.beats[100].ts, timed[99].ts)
+        XCTAssertEqual(c.beats[99].ts, timed[99].ts - Int((bad[99] / 2 / 1000).rounded()))
+        XCTAssertEqual(c.beats.map(\.ts), c.beats.map(\.ts).sorted())
+    }
+
+    func testTimeGapSplitsSuccessiveDifferences() {
+        // Two clean stretches a minute apart: the beats either side of the gap are not adjacent, so no
+        // successive difference is taken across it.
+        let a = RRFixtures.timed(RRFixtures.resting(count: 40, seed: 14), start: 1_000_000)
+        let b = RRFixtures.timed(RRFixtures.resting(count: 40, seed: 15), start: 1_000_100)
+        let c = HRVAnalyzer.cleanTimed(a + b)
+        XCTAssertEqual(c.segments.count, 2)
+        let pooled = HRVAnalyzer.rmssd(segments: [a.map { Double($0.rrMs) }, b.map { Double($0.rrMs) }])!
+        XCTAssertEqual(HRVAnalyzer.analyze(a + b).rmssd!, pooled, accuracy: 1e-9)
+    }
+
+    func testWindowQualityAcceptsCleanFiveMinutes() {
+        let w = HRVAnalyzer.windowQuality(RRFixtures.timed(RRFixtures.resting(count: 330, seed: 16)))
+        XCTAssertTrue(w.accepted)
+        XCTAssertGreaterThan(w.coverageSeconds, 290)
+        XCTAssertEqual(w.nCorrected, 0)
+        XCTAssertEqual(w.nDropped, 0)
+    }
+
+    func testWindowQualityRejectsShortCoverage() {
+        // ~90 s of clean beats: below the 120 s that still tracks a 5-min RMSSD (Munoz 2015).
+        let w = HRVAnalyzer.windowQuality(RRFixtures.timed(RRFixtures.resting(count: 100, seed: 17)))
+        XCTAssertNotNil(w.rmssd)
+        XCTAssertLessThan(w.coverageSeconds, HRVAnalyzer.minWindowCoverageSeconds)
+        XCTAssertFalse(w.accepted)
+    }
+
+    func testWindowQualityRejectsTooManyCorrections() {
+        // A displaced detection every 10 beats: far above Kubios' 5% corrected-beat acceptance threshold.
+        var b = RRFixtures.beats(RRFixtures.resting(count: 330, seed: 18))
+        let dt = 8 * HRVAnalyzer.rmssdRaw(RRFixtures.resting(count: 330, seed: 18))!
+        for (n, k) in stride(from: 10, to: b.count - 3, by: 10).enumerated() { b[k] += n.isMultiple(of: 2) ? dt : -dt }
+        let w = HRVAnalyzer.windowQuality(RRFixtures.timed(RRFixtures.intervals(b)))
+        XCTAssertGreaterThan(Double(w.nCorrected) / Double(w.nInput), HRVAnalyzer.maxCorrectedFraction)
+        XCTAssertGreaterThan(w.coverageSeconds, HRVAnalyzer.minWindowCoverageSeconds)
+        XCTAssertFalse(w.accepted)
+    }
+
+    func testWindowQualityRejectsHeavyDropout() {
+        // Two of every five intervals are dropouts (100 ms, not heartbeats): 40% lost, above the 36% at which
+        // RMSSD stays within 5% (Sheridan 2020), even though the rest still covers more than 120 s.
+        var rr = RRFixtures.timed(RRFixtures.resting(count: 330, seed: 19))
+        for i in rr.indices where i % 5 < 2 { rr[i] = RRInterval(ts: rr[i].ts, rrMs: 100) }
+        let w = HRVAnalyzer.windowQuality(rr)
+        XCTAssertGreaterThan(Double(w.nDropped) / Double(w.nInput), HRVAnalyzer.maxDroppedFraction)
+        XCTAssertGreaterThan(w.coverageSeconds, HRVAnalyzer.minWindowCoverageSeconds)
+        XCTAssertFalse(w.accepted)
     }
 }

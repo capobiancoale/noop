@@ -33,7 +33,7 @@ struct TestCentreView: View {
 
     // Section 4: the experimental toggles, on the SAME @AppStorage keys as SettingsView (preserved per
     // spec section 10), so toggling here and there is one and the same setting.
-    @AppStorage(PuffinExperiment.experimentalSleepV2Key) private var experimentalSleepV2Enabled = false
+    @AppStorage(PuffinExperiment.experimentalSleepV2Key) private var experimentalSleepV2Enabled = true
     @AppStorage(PuffinExperiment.keepRealtimeForDataKey) private var continuousHrvEnabled = false
     @AppStorage(PuffinExperiment.defaultsKey) private var puffinExperiments = false
     @AppStorage(PuffinExperiment.deepDataKey) private var deepDataEnabled = false
@@ -234,7 +234,7 @@ struct TestCentreView: View {
 
                 // Model-agnostic advanced toggles (shown on every strap), same @AppStorage keys as Settings.
                 Toggle(isOn: $experimentalSleepV2Enabled) {
-                    Text("Experimental sleep staging (V2)")
+                    Text("Sleep staging V2 (lab-checked)")
                         .font(StrandFont.subhead).foregroundStyle(StrandPalette.textPrimary)
                 }
                 .toggleStyle(.switch).tint(StrandPalette.accent)
@@ -468,7 +468,7 @@ private struct SleepReadoutPanel: View {
         let lastGate = SleepReadout.lastGateFired(taggedTail: live.taggedTail(domain: .sleep))
         VStack(alignment: .leading, spacing: 4) {
             ReadoutRow(label: String(localized: "HR density (per min)"),
-                       value: live.recentHrSamples.isEmpty ? String(localized: "no live HR yet") : String(format: "%.1f", hrDensity))
+                       value: live.recentHrSamples.isEmpty ? String(localized: "no live HR yet") : DisplayNumber.decimal(hrDensity))
             ReadoutRow(label: String(localized: "Gravity coverage"),
                        value: live.recentGravitySamples.isEmpty ? String(localized: "no live gravity yet") : String(format: "%.0f%%", gravCoverage * 100))
             ReadoutRow(label: String(localized: "Last gate fired"), value: lastGate ?? String(localized: "no night yet"))

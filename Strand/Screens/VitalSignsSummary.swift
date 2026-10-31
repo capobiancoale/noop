@@ -191,7 +191,7 @@ enum BodyVitalSigns {
                 label: String(localized: "Resp Rate"),
                 unit: "rpm",
                 value: respRow?.value,
-                format: { String(format: "%.1f", $0) },
+                format: { DisplayNumber.decimal($0) },
                 banding: VitalBands.band(
                     value: respRow?.value,
                     history: history(before: respRow?.day, respPoints),
@@ -221,7 +221,7 @@ enum BodyVitalSigns {
                 metricColor: StrandPalette.metricCyan,
                 day: spo2Row?.day,
                 source: spo2Row?.source,
-                missingCaption: String(localized: "No SpO₂ import or Health value"),
+                missingCaption: String(localized: "No SpO₂ from the strap, an import or Health"),
                 sparkline: trail(spo2Points)
             ),
             BodyVitalReading(
@@ -306,8 +306,8 @@ enum BodyVitalSigns {
 
     static let dayFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "d MMM"
+        f.locale = Locale.autoupdatingCurrent
+        f.setLocalizedDateFormatFromTemplate("dMMM")
         return f
     }()
 }

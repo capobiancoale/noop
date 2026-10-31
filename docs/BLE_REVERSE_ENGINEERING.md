@@ -441,7 +441,7 @@ garbage (HR `0`, gravity overflow). The fields below were read off real frames a
 | 77 | `status_word_1` (u16 LE) | raw; a near-static sibling of `status_word@75` (low nibble = channel index `1`). |
 | 79 | `status_word_2` (u16 LE) | raw; sibling of `@75`/`@77` (low nibble = `2`). |
 | 81 | `sleep_state` = `(byte >> 4) & 3` (+ low-nibble sub-flags) | bits 4-5 = the band sleep state: `0` wake / `1` still / `2` asleep / `3` up (deep/REM/light are off-band). Low-nibble sub-flags, observation-framed: **b0-1 `onwrist`** (on-wrist/validity flag) and **b2-3 `wake_quality`** (a 2-bit code observed nonzero **only in wake**); **b6-7 reserved** (`0` across all records). (Hypothesised from captures + a scored night on #132.) |
-| 82 | `aux_byte_82` (u8) | raw; observed **nonzero only while `sleep_state` = asleep** (meaning not pinned from observation). |
+| 82 | `aux_byte_82` (u8) + `spo2_candidate_82` | **the strap's own SpO₂.** `0` nearly always; while the band scores the wearer asleep (`sleep_state` = 2) the strap takes a **30 s reading about every 1200 s** (the first one 1173-1175 s after the band's sleep bout starts; the firmware console logs "SIGPROC: generated a valid SPO2 during sleep"), and during it the byte holds either a **percentage (70-100)** or a **status code** (1, 2, 8, 16, 32, 128, 160 and sums; bit-7 values are sentinels). `aux_byte_82` keeps the raw byte; `spo2_candidate_82` is set only for 70-100. A night's value is the mean of the per-window medians over at least 8 windows (`StrapSpo2`, docs/ANALYTICS.md); the recipe tracked the WHOOP app's nightly SpO₂ in two community validations (ryanbr/noop PR 709, reinmaker/noop PR 73) but not on every night of the original capture device. Bytes **106-109 are not SpO₂** (they follow heart rate and motion). |
 | 83–103 | reserved | observed **constant `0`** on two straps (zero-filled). |
 | 104 | (const) | observed **constant `1`** on two straps; carried raw, no metric. |
 | 113 | `unknown_f32_113` (f32 LE) | a float32 (observed range ~ −5.3…0, `0` = unset); **purpose unknown**, carried raw. |
@@ -456,9 +456,10 @@ overlapping 1 Hz samples, with a **rest-only mean absolute error of 0.7 bpm** (t
 exercise, as two independent PPG sensors do). That is a large-sample, cross-generation check on HR@22
 on top of the live-vs-historical match above.
 
-Skin temperature @73 **is** decoded (above); PPG / SpO₂ still live further in the 124-byte record but
-lack on-device ground truth, so that region is left raw rather than guessed (project rule: real
-captures, never invented offsets). The decoded fields feed the existing `extractHistoricalStreams`
+Skin temperature @73 **is** decoded (above), and so is the strap's own SpO₂ byte @82 (community-validated
+against the WHOOP app, see the table); the PPG and the rest of the optical region still lack on-device
+ground truth, so that region is left raw rather than guessed (project rule: real captures, never invented
+offsets). The decoded fields feed the existing `extractHistoricalStreams`
 path unchanged, so WHOOP 5 historical HR / HRV / gravity / skin-temp land in the datastore like 4.0.
 
 ### The WHOOP 5.0 type-47 record (version 26) — high-rate optical PPG
@@ -487,8 +488,9 @@ index is surfaced (`ppg_channel`, gated to 1…26) with no colour claim. *(An ea
 — the "two channels `0x41`/`0x46`" — was a high-entropy counter byte mistaken for the channel during a
 short 2-burst capture; verified against a 22 h overnight corpus, `frame[12]` takes 67 distinct values
 while `frame[21]` takes exactly 26. The PPG **sample** decode (LE i16 @[27:75]) is unaffected and
-correct.) This 26-way time-multiplex is also why **SpO₂ is not recoverable offline** — it needs
-*simultaneous* red+IR, and no two channels are ever co-sampled.
+correct.) This 26-way time-multiplex is also why **SpO₂ is not recoverable offline from the light** — it
+needs *simultaneous* red+IR, and no two channels are ever co-sampled. (The strap's own computed percentage in
+v18 byte 82 is a separate route and is what NOOP uses.)
 
 The full v26 byte map (88 bytes; CRC32 @84):
 
@@ -546,10 +548,12 @@ capture and needs a **labelled (e.g. deliberately moving) window**, so no per-ch
 Tests: `Whoop5HistoricalV2021Tests.swift`.
 
 > The v18 per-second record's own optical region (bytes [57:120]) carries **no simple summary of this
-> PPG** (no field tracks its DC or AC amplitude), and its SpO₂ / skin-temp channels have no internal
-> proxy — HR, R-R, gravity and PPG morphology don't determine blood-oxygen or temperature. Those remain
-> a raw region; positively mapping them needs an external reference (a worn pulse-oximeter / thermometer,
-> or the official app's readout for matching timestamps), so they are intentionally left undecoded.
+> PPG** (no field tracks its DC or AC amplitude), and its red/IR light channels have no internal proxy —
+> HR, R-R, gravity and PPG morphology don't determine blood-oxygen or temperature. Those remain a raw
+> region; positively mapping them needs an external reference (a worn pulse-oximeter / thermometer, or the
+> official app's readout for matching timestamps), so they are intentionally left undecoded. The one
+> exception is the strap's own SpO₂ percentage at byte 82, which tracked the official app's nightly readout in
+> community checks.
 
 > **Firmware-version caveat.** The 4.0 `v24` layout in `whoop_protocol.json` reflects one firmware
 > revision (the `my-whoop` reference device); a given strap may run older or newer firmware with a

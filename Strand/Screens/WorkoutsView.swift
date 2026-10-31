@@ -75,6 +75,10 @@ struct WorkoutsView: View {
     /// solid/building ActivityCost entry — "Sessions like this usually …" (#439). Auto-clears.
     @State private var postLogNote: String?
 
+    /// This week's training load against the usual (see `TrainingLoad`), computed from the daily Effort
+    /// history once per data refresh in `.task`, never in `body`. nil until the first refresh.
+    @State private var trainingLoad: TrainingLoad.Summary?
+
     // MARK: - Filters + selection (#64)
 
     /// Filter beyond the time range: a displayed-sport key (nil = all), an origin class (nil = all), and
@@ -154,19 +158,27 @@ struct WorkoutsView: View {
                 let groups = sportGroups(from: windowRows)
                 let zonesSummary = WorkoutZones.summary(from: windowRows)
 
-                HStack { startLiveWorkoutButton; Spacer() }
-                rangeBar(rows: windowRows, effectiveRange: resolved)
-                if let postLogNote { postLogBanner(postLogNote) }
-                effortHero(rows: windowRows, effectiveRange: resolved, groups: groups)
-                summarySection(rows: windowRows, effectiveRange: resolved, groups: groups)
-                breakdownSection(groups: groups, rows: windowRows)
-                if let z = zonesSummary {
-                    zonesSection(z, totalSessions: windowRows.count)
+                // Sections type-erased: in the optimised build a column of `some View` sections becomes one deeply nested type whose
+                // metadata lookup overflowed the main thread's stack at launch (see LiquidTodayView). AnyView keeps types shallow.
+                AnyView(HStack { startLiveWorkoutButton; Spacer() })
+                // Above the range control on purpose: it always reads the last 7 days against the four
+                // weeks before them, whatever range or filter the list below is showing.
+                if let load = trainingLoad, load.weeks.contains(where: { $0.daysWithData > 0 }) {
+                    AnyView(TrainingLoadCard(summary: load))
                 }
-                sessionsSection(rows: windowRows)
+                AnyView(rangeBar(rows: windowRows, effectiveRange: resolved))
+                if let postLogNote { AnyView(postLogBanner(postLogNote)) }
+                AnyView(effortHero(rows: windowRows, effectiveRange: resolved, groups: groups))
+                AnyView(summarySection(rows: windowRows, effectiveRange: resolved, groups: groups))
+                AnyView(breakdownSection(groups: groups, rows: windowRows))
+                if let z = zonesSummary {
+                    AnyView(zonesSection(z, totalSessions: windowRows.count))
+                }
+                AnyView(sessionsSection(rows: windowRows))
             }
         }
         .task(id: repo.refreshSeq) {
+            refreshTrainingLoad()
             guard !usesPreviewRows else { return }
             // #797: read only the currently-loaded window (bounded on first paint), not the whole history.
             let r = await repo.workoutRows(days: loadedWindowDays ?? 4000)
@@ -253,6 +265,13 @@ struct WorkoutsView: View {
     /// secondary path for edit/relabel/delete.
     private func openDetail(_ row: WorkoutRow) { detail = WorkoutDetailTarget(row: row) }
 
+    /// Recompute the training-load comparison from the daily Effort history. The day key is the same
+    /// logical day Today uses (it rolls at 04:00), so the small hours still count as the day before.
+    private func refreshTrainingLoad() {
+        let efforts: [(day: String, effort: Double?)] = repo.days.map { (day: $0.day, effort: $0.strain) }
+        trainingLoad = TrainingLoad.summary(days: efforts, today: Repository.logicalDayKey(Date()))
+    }
+
     /// Re-read every source after a mutation so the screen reflects the new state immediately.
     /// Keeps the user's current range — only the initial load picks a default — and the auto-widen
     /// (`effectiveRange`) still covers a now-empty window.
@@ -284,7 +303,7 @@ struct WorkoutsView: View {
             await MainActor.run { postLogNote = nil }
             return
         }
-        let sentence = match.sentence()
+        let sentence = InsightsCopy.activityCostSentence(match)
         await MainActor.run { withAnimation(.easeOut(duration: 0.2)) { postLogNote = sentence } }
         // Auto-dismiss after a few seconds (transient caption, not a permanent card).
         try? await Task.sleep(nanoseconds: 7_000_000_000)
@@ -340,8 +359,8 @@ struct WorkoutsView: View {
     }
 
     /// Common sports offered when re-labelling a detected bout (keeps the menu short and honest —
-    /// the user can fine-tune via Edit afterwards).
-    private static let relabelSports = ["Running", "Walking", "Cycling", "Strength Training",
+    /// the user can fine-tune via Edit afterwards). Today's workout block offers the same list.
+    static let relabelSports = ["Running", "Walking", "Cycling", "Strength Training",
                                         "Swimming", "Rowing", "Yoga", "HIIT",
                                         "CrossFit", "Hiking", "Tennis"]
 
@@ -384,14 +403,14 @@ struct WorkoutsView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 filterMenu(
-                    title: sportFilter ?? String(localized: "All sports"),
+                    title: sportFilter.map(WorkoutSource.localizedSport) ?? String(localized: "All sports"),
                     active: sportFilter != nil,
                     a11y: String(localized: "Filter by sport")
                 ) {
                     Button(String(localized: "All sports")) { sportFilter = nil }
                     Divider()
                     ForEach(availableSports, id: \.self) { s in
-                        Button(s) { sportFilter = s }
+                        Button(WorkoutSource.localizedSport(s)) { sportFilter = s }
                     }
                 }
                 filterMenu(
@@ -637,7 +656,7 @@ struct WorkoutsView: View {
                         // interpolates it straight to one decimal — no re-scaling in the format closure.
                         CountUpText(
                             value: displayValue,
-                            format: { String(format: "%.1f", $0) },
+                            format: { DisplayNumber.decimal($0) },
                             font: StrandFont.rounded(46),
                             color: StrandPalette.textPrimary
                         )
@@ -675,7 +694,7 @@ struct WorkoutsView: View {
                                  groups: [SportGroup], totalTimeH: Double) -> some View {
         let modal = modalSport(from: groups)
         VStack(alignment: .leading, spacing: 12) {
-            Text("Effort this \(effectiveRange.heroWord)")
+            Text(effectiveRange.heroTitle)
                 .font(StrandFont.headline)
                 .foregroundStyle(StrandPalette.textPrimary)
             HStack(spacing: NoopMetrics.gap) {
@@ -686,7 +705,7 @@ struct WorkoutsView: View {
                          tint: StrandPalette.effortBright)
             }
             Text(modal.count > 0
-                 ? "Mostly \(WorkoutSource.displaySport(modal.sport)) (\(effectiveRange.caption))."
+                 ? "Mostly \(WorkoutSource.localizedSport(modal.sport)) (\(effectiveRange.caption))."
                  : "Logged sessions across \(effectiveRange.caption).")
                 .font(StrandFont.footnote)
                 .foregroundStyle(StrandPalette.textTertiary)
@@ -746,7 +765,7 @@ struct WorkoutsView: View {
                      caption: String(localized: "covered"),
                      accent: StrandPalette.metricCyan)
             StatTile(label: "Most Active",
-                     value: modal.sport,
+                     value: modal.count > 0 ? WorkoutSource.localizedSport(modal.sport) : modal.sport,
                      caption: modal.count > 0
                          ? (modal.count == 1 ? String(localized: "1 session") : String(localized: "\(modal.count) sessions"))
                          : nil,
@@ -783,7 +802,7 @@ struct WorkoutsView: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(StrandPalette.effortColor)
                         .frame(width: 22, alignment: .center)
-                    Text(WorkoutSource.displaySport(g.sport))
+                    Text(WorkoutSource.localizedSport(g.sport))
                         .font(StrandFont.headline)
                         .foregroundStyle(StrandPalette.textPrimary)
                         .lineLimit(1)
@@ -1143,7 +1162,7 @@ struct WorkoutsView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(StrandPalette.textSecondary)
                     .frame(width: 16)
-                Text(WorkoutSource.displaySport(row.sport))
+                Text(WorkoutSource.localizedSport(row.sport))
                     .font(StrandFont.subhead)
                     .foregroundStyle(StrandPalette.textPrimary)
                     .lineLimit(1)
@@ -1225,7 +1244,7 @@ struct WorkoutsView: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 8) {
-                        Text(WorkoutSource.displaySport(row.sport))
+                        Text(WorkoutSource.localizedSport(row.sport))
                             .font(StrandFont.subhead)
                             .foregroundStyle(StrandPalette.textPrimary)
                             .lineLimit(1)
@@ -1308,7 +1327,7 @@ struct WorkoutsView: View {
         let effort = row.strain != nil
             ? String(localized: "Effort \(Self.effortCellLabel(strain: row.strain, scale: effortScale))")
             : String(localized: "no Effort recorded")
-        let base = String(localized: "\(WorkoutSource.displaySport(row.sport)), \(compactRowSubtitle(row)), \(effort)")
+        let base = String(localized: "\(WorkoutSource.localizedSport(row.sport)), \(compactRowSubtitle(row)), \(effort)")
         guard selectionMode else { return base }
         if !selectable { return String(localized: "\(base). Imported, can't be merged.") }
         return isSelected ? String(localized: "\(base). Selected.") : String(localized: "\(base). Not selected.")
@@ -1465,14 +1484,15 @@ struct WorkoutsView: View {
             case .all:     return String(localized: "all time")
             }
         }
-        /// A short noun for the effort hero's "Effort this …" headline.
-        var heroWord: String {
+        /// The effort hero's headline, one whole phrase per range: a noun dropped into "Effort this %@"
+        /// can't agree in gender with "this" in Italian ("questa settimana", "questo mese", "quest'anno").
+        var heroTitle: String {
             switch self {
-            case .week:    return String(localized: "week")
-            case .month:   return String(localized: "month")
-            case .quarter: return String(localized: "quarter")
-            case .year:    return String(localized: "year")
-            case .all:     return String(localized: "log")
+            case .week:    return String(localized: "Effort this week")
+            case .month:   return String(localized: "Effort this month")
+            case .quarter: return String(localized: "Effort this quarter")
+            case .year:    return String(localized: "Effort this year")
+            case .all:     return String(localized: "Effort this log")
             }
         }
         /// Trailing-window length in days, or nil for "all".
@@ -1496,10 +1516,11 @@ struct WorkoutsView: View {
 
     // MARK: - Formatting
 
+    // Shown to the user: in their language and its order ("27 Sep 2026", "27 set 2026").
     private static let dateFmt: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "d MMM yyyy"
+        f.locale = Locale.autoupdatingCurrent
+        f.setLocalizedDateFormatFromTemplate("dMMMyyyy")
         return f
     }()
 
@@ -1545,7 +1566,7 @@ struct WorkoutsView: View {
         return UnitFormatter.distanceFromMeters(m, system: unitSystem)
     }
 
-    private func oneDecimal(_ v: Double) -> String { String(format: "%.1f", v) }
+    private func oneDecimal(_ v: Double) -> String { DisplayNumber.decimal(v) }
 
     private func grouped(_ v: Double) -> String {
         Self.intFmt.string(from: NSNumber(value: Int(v.rounded()))) ?? "\(Int(v.rounded()))"

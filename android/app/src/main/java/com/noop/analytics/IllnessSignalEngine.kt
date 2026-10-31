@@ -22,6 +22,8 @@ object IllnessSignalEngine {
     const val kZToScore: Double = 22.0
     const val perSignalCap: Double = 40.0
     const val confounderDampen: Double = 0.45
+    /** A night counts as having had a low below this CGM glucose (mg/dL): level 1 hypoglycaemia (Battelino 2019). */
+    const val nocturnalLowMgdl: Double = 70.0
 
     /** Standing not-a-diagnosis tail reused verbatim from the shipped IllnessNotifier copy. */
     const val disclaimerTail = "On-device estimate - not a diagnosis."
@@ -47,7 +49,10 @@ object IllnessSignalEngine {
     /**
      * Same-day behaviour context that can explain an anomaly away. [travelPhaseJump] is the cross-feature
      * hook — CircadianEngine can flag a detected body-clock jump (jet lag). [baselineTrusted] = false →
-     * the engine stays silent (don't warn off a cold-start baseline).
+     * the engine stays silent (don't warn off a cold-start baseline). [nocturnalLow] = a CGM glucose below
+     * [nocturnalLowMgdl] between 00:00 and 06:00 on a recent night (a plainer explanation for the night's
+     * heart rate / HRV). [personalRaiseThreshold] = the user's own calibrated raise threshold, or null; the
+     * raise check uses max(raiseThreshold, personalRaiseThreshold ?: raiseThreshold).
      */
     data class Context(
         val alcohol: Boolean = false,
@@ -57,6 +62,8 @@ object IllnessSignalEngine {
         val travelPhaseJump: Boolean = false,
         val alreadyUnwell: Boolean = false,
         val baselineTrusted: Boolean = true,
+        val nocturnalLow: Boolean = false,
+        val personalRaiseThreshold: Double? = null,
     )
 
     // ── Output ──
@@ -136,6 +143,7 @@ object IllnessSignalEngine {
         if (context.sauna) suppressedBy.add("sauna")
         if (context.hardOrLateWorkout) suppressedBy.add("a hard or late workout")
         if (context.travelPhaseJump) suppressedBy.add("travel")
+        if (context.nocturnalLow) suppressedBy.add("a low glucose at night")
 
         val signalsPhrase = if (firedSignals.isEmpty()) "Some signals are up" else firedSignals.joinToString(", ")
 
@@ -148,7 +156,7 @@ object IllnessSignalEngine {
         }
 
         // No confounder. Mild stays in the detail view; a strong composite raises.
-        if (score < raiseThreshold) {
+        if (score < maxOf(raiseThreshold, context.personalRaiseThreshold ?: raiseThreshold)) {
             val copy = "A few signals are mildly up ($signalsPhrase). Nothing alarming - worth a calmer " +
                 "day. $disclaimerTail"
             return Result(score, Level.MILD, firedSignals, emptyList(), signalCount, copy)
