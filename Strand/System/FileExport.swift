@@ -163,7 +163,10 @@ enum FileExport {
         try? FileManager.default.removeItem(at: url)
         guard let archive = try? Archive(url: url, accessMode: .create) else { return nil }
         for entry in entries {
-            try? archive.addEntry(with: entry.name, type: .file, uncompressedSize: Int64(entry.data.count)) { position, size in
+            // Deflated: an uncompressed bundle of a night's raw captures runs past 30 MB, more than a chat or
+            // mail attachment takes; the JSON captures shrink about 13x and the history-record logs about 3x.
+            try? archive.addEntry(with: entry.name, type: .file, uncompressedSize: Int64(entry.data.count),
+                                  compressionMethod: .deflate) { position, size in
                 let start = Int(position)
                 let end = min(start + size, entry.data.count)
                 return entry.data.subdata(in: start..<end)
