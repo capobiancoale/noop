@@ -1535,7 +1535,8 @@ struct SettingsView: View {
         // Several launches in the last day and a half (a night the app was relaunched through): bundle every
         // file, so the night's capture is not left behind with only this launch's shared.
         // The day logs of full history records (SpO2 mapping) ride along too.
-        let recent = PuffinFrameRecorder.recentCaptureFiles() + PuffinFrameRecorder.recentHistoryLogs()
+        let recent = PuffinFrameRecorder.recentCaptureFiles()
+            + PuffinFrameRecorder.recentHistoryLogs(within: Self.historyLogExportWindow)
         if recent.count > 1 {
             FileExport.exportBundle(entries: Self.captureEntries(recent),
                                     suggestedName: FileExport.timestampedName("noop-raw-captures", ext: "zip"))
@@ -1572,7 +1573,7 @@ struct SettingsView: View {
     private func exportRawAndLog() {
         model.ble.flushPuffinCaptures()
         let captures = PuffinFrameRecorder.recentCaptureFiles()
-        let recent = captures + PuffinFrameRecorder.recentHistoryLogs()
+        let recent = captures + PuffinFrameRecorder.recentHistoryLogs(within: Self.historyLogExportWindow)
         guard let capture = live.puffinCaptureURL ?? captures.last ?? recent.last else {
             backupAlertTitle = String(localized: "Nothing to export")
             backupAlertMessage = String(localized: "No raw capture has been recorded yet this session.")
@@ -1592,6 +1593,10 @@ struct SettingsView: View {
         FileExport.exportBundle(entries: Self.captureEntries(recent) + [log],
                                 suggestedName: FileExport.timestampedName("noop-export", ext: "zip"))
     }
+
+    /// How far back the raw exports reach for the day logs of history records: the last four days, so a
+    /// night reported a couple of days later still ships (the capture files keep their 36 h window).
+    private static let historyLogExportWindow: TimeInterval = 4 * 86_400
 
     /// Zip entries for capture files and history logs, each under its own timestamped name
     /// (`puffin-yyyyMMdd-HHmmss.json`, `history-yyyyMMdd.bin`).
