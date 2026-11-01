@@ -427,7 +427,8 @@ public enum SleepStager {
         return periods
     }
 
-    /// Absorb runs shorter than mergeMin minutes into their neighbours.
+    /// Absorb runs shorter than mergeMin minutes into their neighbours, except a short ACTIVE run at the
+    /// very end, which is never folded into the SLEEP run before it (it is where the data stops).
     static func mergePeriods(_ periods: [Period], mergeMinutes: Int = mergeMin) -> [Period] {
         if periods.isEmpty { return [] }
         var pending = periods
@@ -450,6 +451,16 @@ public enum SleepStager {
             } else if hasNext {
                 pending[i + 1] = Period(stage: pending[i + 1].stage,
                                         start: current.start, end: pending[i + 1].end)
+                i += 1
+            } else if hasPrev, current.stage == "active", merged[merged.count - 1].stage == "sleep" {
+                // The LAST run is where the data stops, not a finished fleck: movement that began a few
+                // minutes before the latest sync is the start of being up, and folding it into the still
+                // run before it stretched that run to the edge of the data. A morning hour of sitting
+                // still then read 66 min (over minSleepMin) at a 10:24 sync, was kept as part of the
+                // night and showed as a 10:24 wake, though the stillness ended at 10:10 and the same
+                // stretch reads 52 min (dropped) once the next minutes arrive. Keep it as its own active
+                // run; once more data comes it is either interior (bridged as before) or long enough.
+                merged.append(current)
                 i += 1
             } else if hasPrev {
                 let prev = merged.removeLast()

@@ -1285,6 +1285,25 @@ final class IntelligenceEngine: ObservableObject {
         } else {
             healRearmedThisCycle = false
         }
+        // ── Banked sessions no pass detects any more ──────────────────────────────────────────────────
+        // Sleep has no delete-reinsert pass, so a session banked by one pass stayed for good once later
+        // passes stopped finding it. A pass that runs while the data stops in the middle of a still
+        // stretch can see a "sleep" there: an hour of sitting still after waking read as 66 min at a
+        // 10:24 sync, was banked, joined the night and showed a 10:24 wake, although every later pass,
+        // with the rest of the morning in, reads it as 52 min and drops it. Delete a stored session that
+        // is not hand-edited, whose wake day this pass re-scored, and that nothing detected in this pass
+        // overlaps. An overlapping one is the #899 heal's case above; an edited night is never touched.
+        let undetected = SleepSessionReconcile.undetected(
+            stored: storedSessions, fresh: cachedSleep,
+            scoredDays: Set(scoredNights.map { $0.daily.day }),
+            alreadyDropped: Set(healDropped.map { $0.startTs }), offsetSec: tzOffset)
+        for stale in undetected {
+            _ = try? await store.deleteSleepSession(deviceId: computedId, startTs: stale.startTs)
+        }
+        if !undetected.isEmpty {
+            diagnosticSink?("Sleep: removed \(undetected.count) stored session(s) that no pass detects any "
+                + "more (banked while a sync had only part of the data).", nil)
+        }
         // Make re-detection idempotent across runs: clear the prior computed detected workouts in the
         // scored window (a bout's startTs can drift as more HR arrives, which would otherwise orphan
         // stale rows under the (deviceId,startTs,sport) key), then re-insert.
