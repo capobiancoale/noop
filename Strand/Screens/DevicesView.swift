@@ -333,7 +333,7 @@ private struct DeviceCard: View {
                 }
 
                 // What this device CAPTURES — honest, per-model (not the generic stored set, which would
-                // mislabel e.g. a "Blood oxygen" chip when no SpO₂ % ever comes off the strap).
+                // mislabel e.g. a "Blood oxygen" chip on a WHOOP 4.0, which sends no SpO₂ percentage).
                 capabilityRow(symbol: "waveform.path.ecg", text: profile.captures,
                               tint: StrandPalette.textSecondary)
                 // What NOOP USES it for — the scores/screens this device drives.
@@ -578,8 +578,9 @@ private struct DeviceCard: View {
 ///
 /// Derived from brand/model/sourceKind, NOT from the stored capability `Set`. The stored set is generic
 /// across WHOOP models (it would render an identical "Heart rate · HRV · Blood oxygen · Skin temp · …"
-/// line for a 4.0 and a 5/MG alike) and it mislabels: no SpO₂ **percentage** ever comes off any WHOOP
-/// strap (raw red/IR only — a real % exists only from a WHOOP CSV / Apple Health import), skin temp is a
+/// line for a 4.0 and a 5/MG alike) and it mislabels: a WHOOP 4.0 sends no SpO₂ **percentage** (raw
+/// red/IR only; a real % there exists only from a WHOOP CSV / Apple Health import) while a 5.0/MG sends its
+/// own readings during sleep, which NOOP averages over the night (a WHOOP CSV value wins), skin temp is a
 /// nightly ±°C sleep deviation rather than a live reading, steps are 5/MG-only and a raw motion count,
 /// and Charge/Effort/Rest are NOOP-derived scores. Verdicts are source-verified against the decode +
 /// scoring paths (the device-capability audit). `*` in a label = an on-device estimate, not a raw sensor.
@@ -663,9 +664,9 @@ struct DeviceCapabilityProfile {
         if model.contains("5") || model.contains("mg") {
             return DeviceCapabilityProfile(
                 displayModel: "WHOOP 5.0 / MG",
-                captures: String(localized: "Heart rate · HRV · Skin temp* · Resp rate* · Steps* · Sleep · Strain · Battery"),
+                captures: String(localized: "Heart rate · HRV · Skin temp* · Resp rate* · SpO₂* · Steps* · Sleep · Strain · Battery"),
                 powers: whoopPowers,
-                footnote: String(localized: "* on-device estimate: skin temp is a nightly ±°C deviation, steps are a raw motion count (#78). No SpO₂ % off the strap; import a WHOOP CSV for a real %."))
+                footnote: String(localized: "* on-device estimate: skin temp is a nightly ±°C deviation, steps are a raw motion count (#78), SpO₂ is the strap's own readings while you sleep, averaged over the night. A WHOOP CSV value you import wins."))
         }
         // WHOOP 4.0 — NOOP's primary band; no steps over BLE.
         if model.contains("4") {

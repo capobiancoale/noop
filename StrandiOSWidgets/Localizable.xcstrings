@@ -1,0 +1,66 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ bpm" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ bpm"
+          }
+        }
+      }
+    },
+    "Charge" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charge"
+          }
+        }
+      }
+    },
+    "Charge %@%%" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charge %@%%"
+          }
+        }
+      }
+    },
+    "Charge, Effort, Rest, HRV, resting and live heart rate, and strap battery at a glance." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charge, Effort, Rest, HRV, battito a riposo e in tempo reale e batteria della fascia a colpo d'occhio."
+          }
+        }
+      }
+    },
+    "HR %@ · Effort %@" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FC %1$@ · Effort %2$@"
+          }
+        }
+      }
+    },
+    "NOOP Charge" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charge NOOP"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

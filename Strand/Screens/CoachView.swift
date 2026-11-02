@@ -227,7 +227,7 @@ struct CoachView: View {
                     Text("Provider").strandOverline()
                     Picker("Provider", selection: $coach.provider) {
                         ForEach(AIProvider.allCases) { p in
-                            Text(p.displayName).tag(p)
+                            Text(p.shortName).tag(p)
                         }
                     }
                     .labelsHidden()

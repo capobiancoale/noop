@@ -15,7 +15,9 @@ enum IllnessNotifier {
             .requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
-    /// Post the early-warning, at most once per local calendar day.
+    /// Post the early-warning, at most once per local calendar day. `message` is the already-localized
+    /// sentence from `IllnessCopy`; the title and subtitle below are localized here, so the whole
+    /// notification follows the UI language.
     static func post(_ message: String) {
         let day = dayKey(Date())
         let d = UserDefaults.standard

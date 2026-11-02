@@ -133,15 +133,17 @@ struct SleepView: View {
             Group {
                 if let resolved {
                     // Each top-level section fades + rises in sequence on first appear (Reduce-Motion safe).
+                    // Sections are type-erased so the optimised build never spells this column as one deeply
+                    // nested type (see LiquidTodayView: resolving such a type overflowed the main thread's stack).
                     VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
-                        if let sleepUndo { sleepUndoBanner(sleepUndo) }
-                        restHero(resolved).staggeredAppear(index: 0)
+                        if let sleepUndo { AnyView(sleepUndoBanner(sleepUndo)) }
+                        AnyView(restHero(resolved).staggeredAppear(index: 0))
                         SleepMarkCard().staggeredAppear(index: 1)
-                        hero(resolved).staggeredAppear(index: 2)
-                        metricGrid(resolved).staggeredAppear(index: 3)
-                        sleepDebtLedger(resolved).staggeredAppear(index: 4)
-                        stagesVsTypical(resolved).staggeredAppear(index: 5)
-                        durationTrend(resolved).staggeredAppear(index: 6)
+                        AnyView(hero(resolved).staggeredAppear(index: 2))
+                        AnyView(metricGrid(resolved).staggeredAppear(index: 3))
+                        AnyView(sleepDebtLedger(resolved).staggeredAppear(index: 4))
+                        AnyView(stagesVsTypical(resolved).staggeredAppear(index: 5))
+                        AnyView(durationTrend(resolved).staggeredAppear(index: 6))
                     }
                 } else {
                     emptyState
@@ -701,7 +703,7 @@ struct SleepView: View {
         // Label above the trace, plot inset 10pt to line up with the stage-timeline rows' strips
         // (the old 44+12 gutter matched the removed Hypnogram's y-axis column). (ryanAtriumAi #988)
         VStack(alignment: .leading, spacing: 2) {
-            Text("Move")
+            Text("Movement")
                 .font(StrandFont.footnote)
                 .foregroundStyle(StrandPalette.textTertiary)
             if night.motionEpochs.count >= 2 {
@@ -1601,8 +1603,10 @@ struct SleepView: View {
         let deltaText: String = {
             guard let typical, typical > 0 else { return "" }
             let diff = last - typical
-            let sign = diff >= 0 ? "+" : "−"
-            return String(localized: "\(sign)\(durationText(abs(diff))) vs typ")
+            let span = durationText(abs(diff))
+            // Within a minute of the usual: no direction to claim ("−0m vs typ" read as a shortfall).
+            let sign = span == durationText(0) ? "±" : (diff >= 0 ? "+" : "−")
+            return String(localized: "\(sign)\(span) vs typ")
         }()
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -1677,7 +1681,7 @@ struct SleepView: View {
             ChartCard(
                 title: "Hours asleep",
                 subtitle: String(localized: "Per night, trailing 30 days"),
-                trailing: avg.map { String(localized: "\(String(format: "%.1f", $0)) h avg") },
+                trailing: avg.map { String(localized: "\(DisplayNumber.decimal($0)) h avg") },
                 height: NoopMetrics.chartHeight,
                 tint: StrandPalette.restColor,
                 chart: {
@@ -1687,7 +1691,7 @@ struct SleepView: View {
                                    valueRange: trendRange(pts),
                                    showsArea: true,
                                    height: NoopMetrics.chartHeight,
-                                   valueFormat: { String(format: "%.1f h", $0) },
+                                   valueFormat: { "\(DisplayNumber.decimal($0)) h" },
                                    accessibilityLabel: String(localized: "Hours asleep trend"))
                     } else {
                         sparsePlaceholder
@@ -1695,9 +1699,9 @@ struct SleepView: View {
                 },
                 footer: {
                     ChartFooter([
-                        ("Avg",    avg.map { String(format: "%.1f h", $0) } ?? "—"),
-                        ("Min",    pts.map(\.value).min().map { String(format: "%.1f h", $0) } ?? "—"),
-                        ("Max",    pts.map(\.value).max().map { String(format: "%.1f h", $0) } ?? "—"),
+                        ("Avg",    avg.map { "\(DisplayNumber.decimal($0)) h" } ?? "—"),
+                        ("Min",    pts.map(\.value).min().map { "\(DisplayNumber.decimal($0)) h" } ?? "—"),
+                        ("Max",    pts.map(\.value).max().map { "\(DisplayNumber.decimal($0)) h" } ?? "—"),
                         ("Nights", "\(pts.count)"),
                     ])
                 }
@@ -2258,16 +2262,19 @@ struct SleepView: View {
     }
 
     private func rrValue(_ v: Double?) -> String {
-        v.map { String(format: "%.1f", $0) } ?? "—"
+        v.map { DisplayNumber.decimal($0) } ?? "—"
     }
 
     /// "+12% vs typical" / "−0.4 rpm vs typical" — the latest-vs-mean caption every tile carries.
     private func vsTypical(_ latest: Double?, _ typical: Double?, suffix: String, decimals: Int = 0) -> String {
         guard let latest, let typical, typical != 0 else { return String(localized: "vs typical - ") }
         let diff = latest - typical
-        let sign = diff >= 0 ? "+" : "−"
         let mag = abs(diff)
-        let num = decimals == 0 ? "\(Int(mag.rounded()))" : String(format: "%.\(decimals)f", mag)
+        let num = decimals == 0 ? "\(Int(mag.rounded()))" : DisplayNumber.decimal(mag, digits: decimals)
+        // A difference that rounds to nothing carries no sign: "−0% vs typical" read as a drop when the
+        // night was within rounding of the usual. "±" says "no difference" without claiming a direction.
+        let zero = decimals == 0 ? "0" : DisplayNumber.decimal(0.0, digits: decimals)
+        let sign = num == zero ? "±" : (diff >= 0 ? "+" : "−")
         return String(localized: "\(sign)\(num)\(suffix) vs typical")
     }
 
@@ -2464,16 +2471,17 @@ private struct SleepMarkCard: View {
                         .font(StrandFont.footnote)
                         .foregroundStyle(StrandPalette.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
-                    HStack(spacing: NoopMetrics.gap) {
-                        // Routed through the unified NoopButton system so the two marks sit identically
-                        // (sentence-case label, leading icon at 8pt, controlHeight=48, no glow).
-                        NoopButton("Going to sleep", systemImage: "moon.zzz.fill",
-                                   kind: .secondary, fullWidth: true) { logMark(.bedtime) }
-                            .accessibilityLabel("Log going to sleep")
-
-                        NoopButton("I'm awake", systemImage: "sun.max.fill",
-                                   kind: .secondary, fullWidth: true) { logMark(.wake) }
-                            .accessibilityLabel("Log waking up")
+                    // Side by side when both labels fit at full size, stacked when they don't: a longer
+                    // translation ("Vado a dormire") was truncated to "Vado a dor…" in the half-width slot.
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: NoopMetrics.gap) {
+                            bedtimeButton
+                            wakeButton
+                        }
+                        VStack(spacing: NoopMetrics.gap) {
+                            bedtimeButton
+                            wakeButton
+                        }
                     }
                     if let lastMark {
                         Text(lastMark.confirmation)
@@ -2488,6 +2496,20 @@ private struct SleepMarkCard: View {
         // A success haptic lands when a new mark is captured (value-driven, not per-tap), matching the
         // app's sparse tactile vocabulary. No-op on macOS.
         .strandHaptic(.success, trigger: lastMark?.tsMs ?? 0)
+    }
+
+    // Routed through the unified NoopButton system so the two marks sit identically
+    // (sentence-case label, leading icon at 8pt, controlHeight=48, no glow).
+    private var bedtimeButton: some View {
+        NoopButton("Going to sleep", systemImage: "moon.zzz.fill",
+                   kind: .secondary, fullWidth: true) { logMark(.bedtime) }
+            .accessibilityLabel("Log going to sleep")
+    }
+
+    private var wakeButton: some View {
+        NoopButton("I'm awake", systemImage: "sun.max.fill",
+                   kind: .secondary, fullWidth: true) { logMark(.wake) }
+            .accessibilityLabel("Log waking up")
     }
 
     /// Persist + log a tapped mark. Optimistically shows the confirmation immediately, fires the

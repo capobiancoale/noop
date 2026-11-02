@@ -302,13 +302,18 @@ struct IntervalTimerView: View {
 
                 HStack(spacing: 0) {
                     overviewStat(String(localized: "Work"), "\(workSeconds)s", StrandPalette.effortColor)
-                    overviewStat(String(localized: "Rest"), "\(restSeconds)s", StrandPalette.restColor)
+                    overviewStat(restWord, "\(restSeconds)s", StrandPalette.restColor)
                     overviewStat(String(localized: "Rounds"), "\(rounds)", StrandPalette.textPrimary)
                     overviewStat(String(localized: "Remaining"), timeString(max(0, totalPlanned - elapsed)), StrandPalette.textSecondary)
                 }
             }
         }
     }
+
+    /// The pause between intervals, in the user's language. It reads the phase pill's "REST" key rather than
+    /// the shared "Rest": Rest is also the name of the sleep score and stays "Rest" in every language, while
+    /// this one is an ordinary word (Italian "Riposo") that has to keep translating.
+    private var restWord: String { String(localized: "REST").localizedCapitalized }
 
     private var sessionProgress: Double {
         guard totalPlanned > 0 else { return 0 }
@@ -332,7 +337,7 @@ struct IntervalTimerView: View {
                 configStepper(title: String(localized: "Work"), unit: String(localized: "sec"), value: $workSeconds,
                               range: 5...600, step: 5, tint: StrandPalette.effortColor)
                 Divider().overlay(StrandPalette.hairline)
-                configStepper(title: String(localized: "Rest"), unit: String(localized: "sec"), value: $restSeconds,
+                configStepper(title: restWord, unit: String(localized: "sec"), value: $restSeconds,
                               range: 5...600, step: 5, tint: StrandPalette.restColor)
                 Divider().overlay(StrandPalette.hairline)
                 configStepper(title: String(localized: "Rounds"), unit: nil, value: $rounds,

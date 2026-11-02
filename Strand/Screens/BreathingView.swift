@@ -111,7 +111,7 @@ private struct BreathingContent: View {
             case .coherence: return String(localized: "Equal breath · ~5.5 br/min coherence")
             case .box:       return String(localized: "Square breath · steady focus")
             case .resonance:
-                return String(localized: "Your locked pace · \(String(format: "%.1f", lockedBpm ?? ResonanceEngine.fallbackBpm)) br/min")
+                return String(localized: "Your locked pace · \(DisplayNumber.decimal(lockedBpm ?? ResonanceEngine.fallbackBpm)) br/min")
             }
         }
     }
@@ -271,7 +271,7 @@ private struct BreathingContent: View {
                 HStack {
                     Text(pace.label.uppercased()).strandOverline()
                     Spacer()
-                    Text(String(format: "%.1f br/min", pace.bpm(lockedBpm: lockedBpm)))
+                    Text(verbatim: "\(DisplayNumber.decimal(pace.bpm(lockedBpm: lockedBpm))) br/min")
                         .font(StrandFont.captionNumber)
                         .foregroundStyle(StrandPalette.textSecondary)
                 }
@@ -467,7 +467,7 @@ private struct BreathingContent: View {
                         caption: rrBuffer.isEmpty ? String(localized: "Waiting for R-R") : String(localized: "Last \(rrBuffer.count) beats"))
 
             readoutTile(label: String(localized: "Pace"),
-                        value: String(format: "%.1f", pace.bpm(lockedBpm: lockedBpm)),
+                        value: DisplayNumber.decimal(pace.bpm(lockedBpm: lockedBpm)),
                         unit: "br/min",
                         accent: StrandPalette.restBright,
                         caption: String(format: "%.0f / %.0fs",
@@ -937,7 +937,7 @@ private struct ResonanceModeView: View {
 
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     CountUpText(value: result.lockedBpm,
-                                format: { String(format: "%.1f", $0) },
+                                format: { DisplayNumber.decimal($0) },
                                 font: StrandFont.number(40),
                                 color: StrandPalette.restBright)
                     Text("br/min")
@@ -973,7 +973,7 @@ private struct ResonanceModeView: View {
                 }
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     CountUpText(value: bpm,
-                                format: { String(format: "%.1f", $0) },
+                                format: { DisplayNumber.decimal($0) },
                                 font: StrandFont.number(34),
                                 color: StrandPalette.restBright)
                     Text("br/min")
@@ -998,7 +998,7 @@ private struct ResonanceModeView: View {
             Text("RSA RESPONSE BY PACE").strandOverline()
             ForEach(scores, id: \.bpm) { s in
                 HStack(spacing: 8) {
-                    Text(String(format: "%.1f", s.bpm))
+                    Text(DisplayNumber.decimal(s.bpm))
                         .font(StrandFont.captionNumber)
                         .foregroundStyle(StrandPalette.textSecondary)
                         .frame(width: 34, alignment: .leading)
@@ -1007,7 +1007,7 @@ private struct ResonanceModeView: View {
                     LiquidTube(frac: (s.rsaAmplitude ?? 0) / max(maxRsa, 0.0001),
                                tint: StrandPalette.restBright.opacity(s.scored ? 1 : 0.35),
                                height: 8, animated: false)
-                    Text(s.rsaAmplitude.map { String(format: "%.1f", $0) } ?? "—")
+                    Text(s.rsaAmplitude.map { DisplayNumber.decimal($0) } ?? "—")
                         .font(StrandFont.captionNumber)
                         .foregroundStyle(s.scored ? StrandPalette.textSecondary : StrandPalette.textTertiary)
                         .frame(width: 34, alignment: .trailing)
@@ -1021,8 +1021,8 @@ private struct ResonanceModeView: View {
 
     private func rsaTextSummary(_ scores: [ResonanceEngine.PaceScore]) -> String {
         scores.map { s in
-            let v = s.rsaAmplitude.map { String(format: "%.1f", $0) } ?? String(localized: "unscored")
-            return String(localized: "\(String(format: "%.1f", s.bpm)) breaths per minute: \(v)")
+            let v = s.rsaAmplitude.map { DisplayNumber.decimal($0) } ?? String(localized: "unscored")
+            return String(localized: "\(DisplayNumber.decimal(s.bpm)) breaths per minute: \(v)")
         }.joined(separator: ", ")
     }
 

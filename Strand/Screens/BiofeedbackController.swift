@@ -226,7 +226,7 @@ final class BiofeedbackController: ObservableObject {
             }
             let bpm = paces[index]
             session = .resonanceSweep(bpm: bpm, paceIndex: index, paceCount: paces.count)
-            sweepLabel = String(localized: "Testing \(String(format: "%.1f", bpm)) br/min…")
+            sweepLabel = String(localized: "Testing \(DisplayNumber.decimal(bpm)) br/min…")
 
             // Collect this pace's R-R from the live feed for the pace's duration.
             let startTs = Int(Date().timeIntervalSince1970)

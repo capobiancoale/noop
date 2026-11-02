@@ -414,7 +414,7 @@ enum FusionFormat {
         case .spo2:
             return "\(Int(v.rounded()))%"
         case .skinTemp:
-            return String(format: "%.1f°C", v)
+            return "\(DisplayNumber.decimal(v))°C"
         case .steps:
             return integerGrouped(v)
         case .sleep:
@@ -423,7 +423,7 @@ enum FusionFormat {
             return "\(integerGrouped(v)) kcal"
         case .other:
             // Unknown unit: a trimmed number, no fake unit.
-            return v == v.rounded() ? "\(Int(v))" : String(format: "%.1f", v)
+            return v == v.rounded() ? "\(Int(v))" : DisplayNumber.decimal(v)
         }
     }
 

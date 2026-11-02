@@ -23,9 +23,14 @@ struct MetricDescriptor: Identifiable, Hashable {
         case "xiaomi-band":  return "Mi Band"
         case "nutrition-csv": return String(localized: "Nutrition")
         case "noop-mood":    return String(localized: "Mood")
+        case "manual-vo2max": return String(localized: "Your entries")
         default:             return "Whoop"   // "my-whoop" + on-device computed sources
         }
     }
+
+    /// The stored unit as shown. "yrs" is the one stored unit that is a word rather than a symbol, so it is
+    /// localized ("anni"); bpm, ms, %, kg and the rest read the same in every language.
+    var localizedUnit: String { unit == "yrs" ? String(localized: "yrs") : unit }
 
     /// True for the Effort metric (#268). Its stored value is 0–100; the effort-scale toggle converts
     /// the DISPLAYED number + unit onto WHOOP's 0–21 axis. Mirrors the Android `MetricSpec.whoopEffort`
@@ -33,8 +38,8 @@ struct MetricDescriptor: Identifiable, Hashable {
     private var isEffort: Bool { key == "strain" }
 
     func format(_ v: Double) -> String {
-        let n = decimals == 0 ? String(Int(v.rounded())) : String(format: "%.\(decimals)f", v)
-        return unit.isEmpty ? n : "\(n) \(unit)"
+        let n = decimals == 0 ? String(Int(v.rounded())) : DisplayNumber.decimal(v, digits: decimals)
+        return unit.isEmpty ? n : "\(n) \(localizedUnit)"
     }
 
     /// Effort-aware plain format (#268): the Effort metric's stored 0–100 value is shown on the selected
@@ -84,14 +89,14 @@ struct MetricDescriptor: Identifiable, Hashable {
         switch unit {
         case "kg":  return UnitFormatter.massUnit(system)
         case "°C":  return UnitFormatter.temperatureUnit(temperature)
-        default:    return isEffort ? displayUnit(effortScale: effortScale) : unit
+        default:    return isEffort ? displayUnit(effortScale: effortScale) : localizedUnit
         }
     }
 
     /// The Effort metric's unit LABEL on the selected scale — "/100" or "/21" (#268). Non-Effort metrics
     /// return their stored label unchanged. Mirrors the Android `MetricSpec.displayUnit` swap.
     func displayUnit(effortScale: EffortScale) -> String {
-        guard isEffort else { return unit }
+        guard isEffort else { return localizedUnit }
         return "/" + UnitFormatter.effortScaleMax(effortScale)
     }
 }
@@ -99,7 +104,7 @@ struct MetricDescriptor: Identifiable, Hashable {
 /// Canonical catalog — mirrors the WHOOP "Trend View" plus Apple Health body metrics.
 /// Keys match exactly what the importers write into metricSeries.
 enum MetricCatalog {
-    static let categories = ["Heart", "Charge", "Rest", "Effort", "Health", "Nutrition", "Mind"]
+    static let categories = ["Heart", "Charge", "Rest", "Effort", "Health", "Nutrition", "Glucose", "Mind"]
 
     static let all: [MetricDescriptor] = [
         // ── Heart
@@ -108,9 +113,17 @@ enum MetricCatalog {
         d("energy_kcal", String(localized: "Calories"), "Heart", "kcal", "my-whoop", "flame", 0, nil),
         d("vo2max", String(localized: "VO₂ Max"), "Heart", "", "apple-health", "lungs.fill", 1, true),
         d("fitness_age", String(localized: "Fitness Age"), "Heart", "yrs", "my-whoop", "figure.run", 0, false),
-        d("vo2max_est", String(localized: "VO₂ Max (estimated)"), "Heart", "", "my-whoop", "lungs", 1, true),
+        d("vo2max_est", String(localized: "VO₂ Max (daily estimate)"), "Heart", "", "my-whoop", "lungs", 1, true),
+        d("vo2max_exercise", String(localized: "VO₂ Max (from runs and walks)"), "Heart", "", "my-whoop",
+          "figure.run", 1, true),
+        d("vo2max_manual", String(localized: "VO₂ Max (your entries)"), "Heart", "", "manual-vo2max",
+          "square.and.pencil", 1, true),
         d("vitality", String(localized: "Vitality"), "Heart", "", "my-whoop", "sparkles", 0, true),
         d("body_age", String(localized: "Body Age"), "Heart", "yrs", "my-whoop", "figure.stand", 0, false),
+        // Share of the night's analysed beats that formed an irregular rhythm (a screen for a pattern like atrial
+        // fibrillation, StrandAnalytics.IrregularRhythm). Empty on a night without enough clean beats, never zero.
+        d("irregular_rhythm_pct", String(localized: "Irregular rhythm (night)"), "Heart", "%", "my-whoop",
+          "waveform.path.ecg", 1, false),
 
         // ── Charge (was Recovery)
         d("recovery", String(localized: "Charge"), "Charge", "%", "my-whoop", "heart.circle", 0, true,
@@ -159,12 +172,44 @@ enum MetricCatalog {
         d("lean_mass", String(localized: "Lean Body Mass"), "Health", "kg", "apple-health", "figure.arms.open", 1, true),
         d("bmi", "BMI", "Health", "", "apple-health", "figure", 1, nil),
         d("stress", String(localized: "Day Stress"), "Health", "/3", "my-whoop", "gauge.with.dots.needle.50percent", 1, false),
+        // Vitals/body extras read from Apple Health (read-only), useful alongside glucose for a
+        // diabetic athlete. Blood pressure in mmHg, hydration in litres/day, waist in cm.
+        d("bp_systolic", String(localized: "Blood Pressure (sys)"), "Health", "mmHg", "apple-health", "heart.circle", 0, false),
+        d("bp_diastolic", String(localized: "Blood Pressure (dia)"), "Health", "mmHg", "apple-health", "heart.circle.fill", 0, false),
+        d("water", String(localized: "Hydration"), "Health", "L", "apple-health", "drop", 1, nil),
+        d("waist", String(localized: "Waist"), "Health", "cm", "apple-health", "ruler", 1, false),
 
         // ── Nutrition (imported from a food-tracker CSV: calories-in alongside calories-out)
         d("calories_in", String(localized: "Calories In"), "Nutrition", "kcal", "nutrition-csv", "fork.knife", 0, nil),
         d("protein_g", String(localized: "Protein"), "Nutrition", "g", "nutrition-csv", "p.circle", 0, nil),
         d("carbs_g", String(localized: "Carbs"), "Nutrition", "g", "nutrition-csv", "c.circle", 0, nil),
         d("fat_g", String(localized: "Fat"), "Nutrition", "g", "nutrition-csv", "f.circle", 0, nil),
+
+        // ── Glucose (read-only, from an automated-insulin-delivery app like Loop via Apple Health).
+        // Informational trends only — Apple Health lags the CGM/pump, so these are NOT for treatment
+        // decisions. Glucose in mg/dL, insulin in units, carbs in grams; Time-in-Range family in %.
+        // `carbs_g` also exists under nutrition-csv; the (key, source) id keeps the two distinct.
+        d("glucose_avg", String(localized: "Glucose (avg)"), "Glucose", "mg/dL", "apple-health", "drop.fill", 0, nil),
+        d("glucose_min", String(localized: "Glucose (low)"), "Glucose", "mg/dL", "apple-health", "arrow.down.circle", 0, nil),
+        d("glucose_max", String(localized: "Glucose (high)"), "Glucose", "mg/dL", "apple-health", "arrow.up.circle", 0, nil),
+        d("glucose_tir", String(localized: "Time in Range"), "Glucose", "%", "apple-health", "scope", 0, true,
+          String(localized: "Share of readings in target (70–180 mg/dL). Higher is better.")),
+        d("glucose_tbr", String(localized: "Time Below Range"), "Glucose", "%", "apple-health", "arrow.down.circle", 0, false),
+        d("glucose_tbr_severe", String(localized: "Time Below (severe)"), "Glucose", "%", "apple-health", "exclamationmark.triangle", 1, false),
+        d("glucose_tar", String(localized: "Time Above Range"), "Glucose", "%", "apple-health", "arrow.up.circle", 0, false),
+        d("glucose_tar_high", String(localized: "Time Above (high)"), "Glucose", "%", "apple-health", "arrow.up.forward.circle", 1, false),
+        d("glucose_cv", String(localized: "Glucose Variability"), "Glucose", "%", "apple-health", "waveform.path.ecg", 0, false,
+          String(localized: "Coefficient of variation. Below 36% is considered stable.")),
+        d("glucose_hypos", String(localized: "Hypo Events"), "Glucose", "", "apple-health", "arrow.down.heart", 0, false),
+        d("glucose_overnight_avg", String(localized: "Overnight Glucose"), "Glucose", "mg/dL", "apple-health", "moon", 0, nil),
+        d("glucose_overnight_min", String(localized: "Overnight Low"), "Glucose", "mg/dL", "apple-health", "moon.stars", 0, nil),
+        d("insulin_total", String(localized: "Insulin (total)"), "Glucose", "U", "apple-health", "syringe", 1, nil),
+        d("insulin_basal", String(localized: "Insulin (basal)"), "Glucose", "U", "apple-health", "chart.bar", 1, nil),
+        d("insulin_bolus", String(localized: "Insulin (bolus)"), "Glucose", "U", "apple-health", "syringe.fill", 1, nil),
+        d("carbs_g", String(localized: "Carbs"), "Glucose", "g", "apple-health", "fork.knife", 0, nil),
+        d("glucose_postex_min", String(localized: "Post-exercise Low"), "Glucose", "mg/dL", "apple-health", "figure.run", 0, nil,
+          String(localized: "Lowest glucose during and shortly after workouts.")),
+        d("glucose_postex_lows", String(localized: "Post-exercise Hypos"), "Glucose", "", "apple-health", "figure.run.circle", 0, false),
 
         // ── Mind (daily mood check-in, 1–5; non-clinical self-tracking)
         d("mood", String(localized: "Mood"), "Mind", "/5", "noop-mood", "face.smiling", 0, true),
@@ -202,6 +247,7 @@ enum MetricCatalog {
         case "Effort":    return String(localized: "Effort")
         case "Health":    return String(localized: "Health")
         case "Nutrition": return String(localized: "Nutrition")
+        case "Glucose":   return String(localized: "Glucose")
         case "Mind":      return String(localized: "Mind")
         default:          return category
         }

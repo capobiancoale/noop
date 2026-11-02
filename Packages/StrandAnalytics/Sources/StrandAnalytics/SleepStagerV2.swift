@@ -1,8 +1,8 @@
 import Foundation
 import WhoopProtocol
 
-// SleepStagerV2.swift — an OPT-IN, EXPERIMENTAL alternative sleep-staging recipe, offered ALONGSIDE the
-// shipped `SleepStager` (V1) rather than replacing it. V1 stays the default and is UNTOUCHED.
+// SleepStagerV2.swift — the default sleep-staging recipe since its PSG calibration (below); the original
+// `SleepStager` (V1) recipe stays available behind the Settings switch and is UNTOUCHED.
 //
 // Reimplemented clean from the contributor recipe in NoopApp/noop PR #600 (sunny-noop). We took only the
 // per-session STAGING engine, not the CLI runner the PR shipped with it. Session DETECTION (the in-bed
@@ -25,7 +25,17 @@ import WhoopProtocol
 //      it self-calibrates to the strap's gravity-decode scale and the wearer's fit, not a fixed g;
 //   5. an RR-RSA respiration-regularity term (regular breathing → deep, irregular → REM);
 //   6. Viterbi/HMM transition smoothing with a sticky transition matrix.
-// All coefficients are fixed a-priori from sleep physiology + population base rates (NOT fit to labels).
+// The coefficients are fixed a-priori from sleep physiology + population base rates, except two that were
+// calibrated against polysomnography: the deep gate and the deep/light base rates.
+//
+// PSG CHECK + CALIBRATION (PhysioNet sleep-accel, Walch et al., Sleep 2019: 31 adults, wrist heart rate +
+// accelerometer, one lab night each with PSG scored in 30 s epochs; run on the same wrist streams NOOP stages
+// from, without R-R or respiration — Tools/sleep-staging-validation). 4-class (wake/light/deep/REM),
+// leave-one-subject-out: V1 kappa 0.10 (deep 11 % / REM 10 % vs PSG 15 % / 24 %); this recipe as first
+// shipped kappa 0.32 but deep 25 % (≈ +10 points) and REM 28 %; calibrated (deep gate 0.20 → 0.15, deep base
+// rate 0.18 → 0.14) kappa 0.34, accuracy 60 %, deep 14.9 % and REM 24.1 % against PSG 15.1 % / 24.2 %. The
+// held-out folds picked the same setting 31 times out of 31. Consumer-wearable 4-class kappa of ~0.3–0.5 is
+// the expected range without EEG; the stages stay estimates.
 
 public enum SleepStagerV2 {
 
@@ -133,17 +143,18 @@ public enum SleepStagerV2 {
         return segments
     }
 
-    // MARK: - Recipe constants (all fixed a-priori — NOT fit to labels)
+    // MARK: - Recipe constants (a-priori, except the PSG-calibrated deep gate and base rates)
 
     static let stageNames = ["deep", "rem", "light", "awake"]
 
-    /// Population sleep-architecture base rates as log-priors (adult TST ≈ light 50 / deep 18 / rem 22 /
-    /// waso 10 %). Calibrates the boundary so light wins weak-evidence epochs.
+    /// Sleep-architecture base rates as log-priors (light 54 / deep 14 / rem 22 / waso 10 %). Calibrates the
+    /// boundary so light wins weak-evidence epochs. Deep 0.14 (first shipped 0.18, light 0.50) is the PSG
+    /// calibration above: with 0.18 the recipe scored ~25 % deep against 15 % in the lab.
     static let baseLogPrior: [String: Double] = [
-        "light": log(0.50), "deep": log(0.18), "rem": log(0.22), "awake": log(0.10)]
+        "light": log(0.54), "deep": log(0.14), "rem": log(0.22), "awake": log(0.10)]
 
-    /// Deep is eligible only in the night's lowest ~20 % HR-flatness epochs (≈ deep base rate + margin).
-    static let deepGateThresh = 0.20
+    /// Deep is eligible only in the night's lowest ~15 % HR-flatness epochs (PSG-calibrated; first shipped 0.20).
+    static let deepGateThresh = 0.15
     static let deepGateSlope = 5.0
 
     /// Motion thresholds are RELATIVE to each night's own quiescent jerk floor (the median per-second

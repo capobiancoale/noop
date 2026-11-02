@@ -69,10 +69,20 @@ final class BackfillerSessionTallyTests: XCTestCase {
         XCTAssertFalse(line.contains("fully charge"))
     }
 
-    // No em-dash leaks into either branch (project hard rule).
+    // An auto-continuation or the next periodic sync starts a NEW session (0 rows so far); right after a pass
+    // that banked records, trim=0xFFFFFFFF still means caught up, not "fully charge it".
+    func testNoCursorLineAfterARecentPassGivesCaughtUpLine() {
+        let line = Backfiller.noCursorLine(rowsPersisted: 0, recentlyBanked: true)
+        XCTAssertTrue(line.contains("reached the end of available history"))
+        XCTAssertFalse(line.contains("no banked history"))
+        XCTAssertFalse(line.contains("fully charge"))
+    }
+
+    // No em-dash leaks into any branch (project hard rule).
     func testNoCursorLineHasNoEmDash() {
         XCTAssertFalse(Backfiller.noCursorLine(rowsPersisted: 0).contains("\u{2014}"))
         XCTAssertFalse(Backfiller.noCursorLine(rowsPersisted: 5).contains("\u{2014}"))
+        XCTAssertFalse(Backfiller.noCursorLine(rowsPersisted: 0, recentlyBanked: true).contains("\u{2014}"))
     }
 
     // MARK: - #773 corrupt future-RTC detection

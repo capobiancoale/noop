@@ -201,7 +201,7 @@ struct WatchBreatheView: View {
                 Text("Breathe")
                     .font(StrandFont.rounded(16, weight: .semibold))
                     .foregroundStyle(StrandPalette.textPrimary)
-                Text("\(String(format: "%.1f", pace.bpm)) br/min")
+                Text("\(pace.bpm.formatted(.number.precision(.fractionLength(1)))) br/min")
                     .font(StrandFont.caption)
                     .foregroundStyle(StrandPalette.textTertiary)
             }
