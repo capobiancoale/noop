@@ -8,13 +8,16 @@ NOOP non è un dispositivo medico: i numeri sono stime a scopo informativo, non 
 
 Come funziona, in breve:
 
-1. Ogni mattina un'**automazione dei Comandi rapidi** dell'iPhone chiede a NOOP di scrivere sei piccoli file CSV.
-2. Lo stesso comando rapido **carica** i file su Databricks (con un token che conosci solo tu).
+1. Ogni mattina un'**automazione dei Comandi rapidi** dell'iPhone esegue l'azione di NOOP **Carica su Databricks**.
+2. NOOP scrive sei piccoli file CSV e li **carica** nel tuo volume Databricks, con il token che metti nel comando
+   rapido.
 3. Ogni giorno un **job** di Databricks rilegge tutti i file e ricostruisce le tabelle.
 4. Una **dashboard** e uno spazio **Genie** leggono le tabelle.
 
-NOOP non si collega mai a internet per questo e non vede mai il tuo token: è il comando rapido a parlare con
-Databricks.
+NOOP si collega a internet solo durante quell'azione, solo verso l'indirizzo Databricks che scrivi tu (accetta solo
+indirizzi `….databricks.com` o `….azuredatabricks.net`), e **non salva il token**: resta nel comando rapido, che
+lo passa a NOOP a ogni esecuzione. Se preferisci che NOOP non tocchi mai la rete, in fondo al punto 4 c'è la
+variante in cui è il comando rapido stesso a caricare i file.
 
 ## Cosa viene esportato, e cosa mai
 
@@ -73,32 +76,36 @@ Se il tuo catalogo ha un altro nome, prima di tutto: nel notebook usa **Edit** >
 
 ## 4. Il comando rapido sull'iPhone
 
-Apri l'app **Comandi** e crea un nuovo comando rapido, per esempio `NOOP per Databricks`.
+Apri l'app **Comandi**, tocca **+** e chiama il comando `NOOP per Databricks`.
 
-1. **Aggiungi azione** > cerca `NOOP` > scegli **Esporta dati per Databricks**.
-   Imposta **Giorni** a `14` (gli ultimi 14 giorni, oggi compreso; `0` vuol dire tutta la storia).
-2. Aggiungi l'azione **Ripeti con ogni elemento**. Deve prendere in ingresso il risultato dell'azione precedente
-   (i sei file). Se non lo fa da sola, tocca "Elemento" e scegli il risultato di "Esporta dati per Databricks".
-3. **Dentro** la ripetizione aggiungi **Ottieni contenuti dell'URL** e toccala per aprire "Mostra altro".
-   - **URL**: scrivi, tutto di seguito,
-     `https://<host>/api/2.0/fs/files/Volumes/noop_uploads/noop/raw/`
-     poi inserisci la variabile **Elemento ripetizione** con la proprietà **Nome**, poi scrivi `?overwrite=true`.
-     Come si inserisce la variabile: dopo aver scritto la prima parte dell'indirizzo, tocca la riga delle
-     variabili sopra la tastiera (oppure tieni premuto nel campo e scegli **Seleziona variabile**) e scegli
-     **Elemento ripetizione**. Tocca poi la "pillola" blu appena inserita: nel menu scegli **Nome**, così la
-     pillola diventa "Nome" e al suo posto va il nome del file (`days__20261102-100000.csv`, ...).
-   - **Metodo**: `PUT`.
-   - **Intestazioni**: **Aggiungi nuova intestazione**, Chiave `Authorization`, Testo `Bearer <token>` (la parola
-     `Bearer`, uno spazio, poi il token del punto 2).
-   - **Corpo della richiesta**: `File`. Nel campo **File** che compare, inserisci la variabile
-     **Elemento ripetizione** (stavolta senza proprietà: è il file intero).
-4. Salva. Tocca ▶ per fare una **prima prova a mano**. Alla prima esecuzione iOS ti chiede di consentire a Comandi
-   di inviare dati a Databricks: scegli **Consenti sempre**.
-5. Per caricare **tutta la storia** una volta, nell'azione NOOP cambia **Giorni** da `14` a `0`, esegui, poi
-   rimettilo a `14`. (Non fa male caricare due volte: ogni caricamento è un file nuovo e per ogni giorno, sonno o
-   WOD vince il più recente.)
-6. Controlla in Databricks: **Catalog** > `noop_uploads` > `noop` > `raw`: devi vedere i file `days__...csv`,
+1. **Aggiungi azione** > cerca `NOOP` > scegli **Carica su Databricks**.
+2. Tocca **Mostra altro** nell'azione e compila:
+   - **Indirizzo area di lavoro**: l'indirizzo che vedi nel browser quando sei su Databricks, per esempio
+     `https://dbc-xxxxxxxx-xxxx.cloud.databricks.com` (va bene anche incollato con il resto, `?o=...`: NOOP tiene
+     solo la parte giusta).
+   - **Catalogo**: `noop_uploads`.
+   - **Token di accesso**: il token del punto 2 (`dapi…`), così com'è, senza scrivere `Bearer`.
+   - **Giorni**: `14` (gli ultimi 14 giorni, oggi compreso; `0` vuol dire tutta la storia).
+3. Tocca ▶ per una **prima prova a mano**. Alla fine compare "Caricati 6 file su Databricks". Se qualcosa non va,
+   compare invece un messaggio che dice cosa correggere (vedi il punto 9).
+4. Per caricare **tutta la storia** una volta, metti **Giorni** a `0`, esegui con NOOP aperto (con anni di dati può
+   servire più di qualche secondo), poi rimettilo a `14`. Non fa male caricare due volte: ogni caricamento è un file
+   nuovo e per ogni giorno, sonno o WOD vince il più recente.
+5. Controlla in Databricks: **Catalog** > `noop_uploads` > `noop` > `raw`: devi vedere i file `days__...csv`,
    `sleeps__...csv`, ecc.
+
+**Variante senza rete in NOOP.** Se non vuoi che NOOP si colleghi a internet, usa al posto di "Carica su Databricks"
+l'azione **Esporta dati per Databricks**, che restituisce i sei file al comando rapido, e fai caricare i file al
+comando rapido stesso:
+
+1. **Esporta dati per Databricks** con **Giorni** `14`.
+2. **Ripeti con ogni elemento**, che prende in ingresso i sei file.
+3. **Dentro** la ripetizione, **Ottieni contenuti dell'URL**, poi tocca "Mostra altro":
+   - **URL**: `https://<host>/api/2.0/fs/files/Volumes/noop_uploads/noop/raw/`, poi la variabile **Elemento
+     ripetizione** con la proprietà **Nome** (tocca la pillola blu e scegli **Nome**), poi `?overwrite=true`.
+   - **Metodo**: `PUT`.
+   - **Intestazioni**: Chiave `Authorization`, Testo `Bearer <token>` (la parola `Bearer`, uno spazio, il token).
+   - **Corpo della richiesta**: `File`, con la variabile **Elemento ripetizione** (senza proprietà).
 
 In alternativa per la storia completa, senza iPhone: nell'app NOOP vai in **Impostazioni** > **Diagnostica** >
 **Esporta per Databricks (CSV)** (su iPhone si apre il foglio di condivisione, su Mac scegli una cartella) e poi
@@ -164,8 +171,8 @@ Da leggere prima di mandare lì i tuoi dati. Fonti:
 
 | Sintomo | Causa probabile e rimedio |
 |---|---|
-| Il comando rapido dà **401** o **403** | Token scaduto, sbagliato o incollato con uno spazio in più; oppure l'host nell'indirizzo è sbagliato. Controlla che sia `Bearer`, uno spazio, il token, e che l'host sia quello della barra del browser. |
-| **404** | Il percorso non esiste: il volume non è stato creato (rifai il punto 3), oppure il nome del catalogo, dello schema o del volume nell'indirizzo non coincide (`noop_uploads` / `noop` / `raw`, tutto minuscolo). |
+| NOOP dice che Databricks ha rifiutato il token, oppure il comando rapido dà **401** o **403** | Token scaduto, sbagliato o incollato con uno spazio in più; oppure l'host nell'indirizzo è sbagliato. Controlla che sia `Bearer`, uno spazio, il token, e che l'host sia quello della barra del browser. |
+| NOOP dice che non c'è un volume a quel percorso, oppure **404** | Il percorso non esiste: il volume non è stato creato (rifai il punto 3), oppure il nome del catalogo, dello schema o del volume nell'indirizzo non coincide (`noop_uploads` / `noop` / `raw`, tutto minuscolo). |
 | Le tabelle sono **vuote** o il job dice che non trova file | Non è ancora stato caricato niente: guarda in **Catalog** > `raw`. Fai la prova a mano del punto 4. |
 | Il job gira **prima** del caricamento | I dati arrivano il giorno dopo. Controlla gli orari (comando rapido 10:00, job 10:30) e, se serve, premi **Run now** sul job dopo il caricamento. |
 | Un'alzata compare con **due nomi** (per esempio `Bs` e `Back Squat`) | Aggiungi una riga alla tabella degli alias, vedi sotto. |
@@ -190,9 +197,10 @@ apri la dashboard le righe sono già unite: `lifts` è una vista, non serve rifa
 
 In questo ambiente di lavoro non c'era né un'area di lavoro Databricks né un iPhone. Quindi:
 
-- Di NOOP sono provati con test automatici solo i **formati dei file CSV** (colonne, virgolette, numeri, elenco delle
-  misure ammesse). L'azione dei Comandi rapidi e il pulsante nelle Impostazioni non sono stati compilati né eseguiti
-  su un dispositivo.
+- Di NOOP sono provati con test automatici i **formati dei file CSV** (colonne, virgolette, numeri, elenco delle
+  misure ammesse) e le regole del caricamento (indirizzi accettati, percorso nel volume, intestazione, significato
+  dei codici di risposta). Le azioni dei Comandi rapidi e il pulsante nelle Impostazioni sono compilati dalla
+  CI ma non sono stati eseguiti su un iPhone.
 - Il **codice SQL** è scritto dalla documentazione di Databricks. È stato eseguito su un Spark locale con file di
   prova (le stesse istruzioni, sostituendo solo `read_files` e le tabelle Delta con equivalenti locali), ma non su
   Databricks vero.
