@@ -139469,6 +139469,96 @@
           }
         }
       }
+    },
+    "Export data for Databricks": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esporta dati per Databricks"
+          }
+        }
+      }
+    },
+    "Writes your sleep, recovery, workout, WOD and heart-rate zone summaries as CSV files and hands them to the Shortcut. Glucose, insulin, nutrition, blood pressure, weight, mood and raw sensor data are never included.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scrive i tuoi riepiloghi di sonno, recupero, allenamenti, WOD e zone di frequenza cardiaca come file CSV e li passa al comando rapido. Glicemia, insulina, alimentazione, pressione, peso, umore e dati grezzi del sensore non sono mai inclusi."
+          }
+        }
+      }
+    },
+    "Export for Databricks": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esporta per Databricks"
+          }
+        }
+      }
+    },
+    "Export for Databricks (CSV)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esporta per Databricks (CSV)"
+          }
+        }
+      }
+    },
+    "Writes your sport and sleep summaries as CSV files for Databricks. Glucose, insulin and raw sensor data are never included.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scrive i tuoi riepiloghi di sport e sonno come file CSV per Databricks. Glicemia, insulina e dati grezzi del sensore non sono mai inclusi."
+          }
+        }
+      }
+    },
+    "Databricks files saved": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File per Databricks salvati"
+          }
+        }
+      }
+    },
+    "Saved %lld CSV files to %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld file CSV salvati in %2$@."
+          }
+        }
+      }
+    },
+    "Choose a folder for the files.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli una cartella per i file."
+          }
+        }
+      }
+    },
+    "Save Here": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva qui"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
