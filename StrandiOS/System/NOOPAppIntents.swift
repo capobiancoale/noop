@@ -128,9 +128,9 @@ enum UploadToDatabricksError: Error, CustomLocalizedStringResourceConvertible {
     case invalidAddress
     case invalidCatalog
     case missingToken
-    case unauthorized(Int)
-    case notFound
-    case http(Int)
+    case unauthorized(Int, String)
+    case notFound(String)
+    case http(Int, String)
     case network(String)
 
     var localizedStringResource: LocalizedStringResource {
@@ -141,12 +141,21 @@ enum UploadToDatabricksError: Error, CustomLocalizedStringResourceConvertible {
             return "The catalog name can only contain letters, digits and underscores."
         case .missingToken:
             return "Paste your Databricks access token."
-        case .unauthorized(let code):
-            return "Databricks refused the token (HTTP \(code)). Check that it was pasted whole and has not expired."
-        case .notFound:
-            return "Databricks has no volume at that path (HTTP 404). Check the catalog name and that the noop schema and raw volume exist."
-        case .http(let code):
-            return "Databricks answered with an error (HTTP \(code)). Try again later."
+        // With Databricks' own reason when it gave one: a 403 is a bad token OR a missing permission / volume,
+        // and only its message tells them apart.
+        case .unauthorized(let code, let detail):
+            if detail.isEmpty {
+                return "Databricks refused the token (HTTP \(code)). Check that it was pasted whole and has not expired."
+            }
+            return "Databricks refused the request (HTTP \(code)): \(detail)"
+        case .notFound(let detail):
+            if detail.isEmpty {
+                return "Databricks has no volume at that path (HTTP 404). Check the catalog name and that the noop schema and raw volume exist."
+            }
+            return "Databricks has no volume at that path (HTTP 404): \(detail)"
+        case .http(let code, let detail):
+            if detail.isEmpty { return "Databricks answered with an error (HTTP \(code)). Try again later." }
+            return "Databricks answered with an error (HTTP \(code)): \(detail)"
         case .network(let message):
             return "Couldn't reach Databricks: \(message)"
         }
@@ -205,19 +214,20 @@ struct UploadToDatabricksIntent: AppIntent {
                 throw UploadToDatabricksError.invalidCatalog
             }
             let body = try Data(contentsOf: file)
-            let response: URLResponse
+            let reply: (Data, URLResponse)
             do {
-                response = try await URLSession.shared.data(for: DatabricksUpload.request(url: target, token: bearer,
-                                                                                          body: body)).1
+                reply = try await URLSession.shared.data(for: DatabricksUpload.request(url: target, token: bearer,
+                                                                                       body: body))
             } catch {
                 throw UploadToDatabricksError.network(error.localizedDescription)
             }
-            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let status = (reply.1 as? HTTPURLResponse)?.statusCode ?? 0
+            let detail = DatabricksUpload.errorDetail(from: reply.0)
             switch DatabricksUpload.failure(forStatus: status) {
             case nil: continue
-            case .unauthorized(let code)?: throw UploadToDatabricksError.unauthorized(code)
-            case .notFound?: throw UploadToDatabricksError.notFound
-            case .http(let code)?: throw UploadToDatabricksError.http(code)
+            case .unauthorized(let code)?: throw UploadToDatabricksError.unauthorized(code, detail)
+            case .notFound?: throw UploadToDatabricksError.notFound(detail)
+            case .http(let code)?: throw UploadToDatabricksError.http(code, detail)
             }
         }
         return .result(dialog: "Uploaded \(files.count) files to Databricks.")

@@ -92,6 +92,24 @@ public enum DatabricksUpload {
         case http(Int)
     }
 
+    /// The reason Databricks gives in an error body, for the message the user sees: `ERROR_CODE: message`
+    /// from its JSON error (`{"error_code": …, "message": …}`), else the start of a plain-text body, else "".
+    /// One line, at most 300 characters, and anything shaped like an access token (`dapi` + hex) masked, so
+    /// the message can be screenshotted safely. A 403 says whether the token or a permission is the problem.
+    public static func errorDetail(from body: Data) -> String {
+        var text = ""
+        if let object = try? JSONSerialization.jsonObject(with: body) as? [String: Any] {
+            let code = (object["error_code"] as? String) ?? ""
+            let message = (object["message"] as? String) ?? ""
+            text = [code, message].filter { !$0.isEmpty }.joined(separator: ": ")
+        } else if let plain = String(data: body.prefix(2_000), encoding: .utf8) {
+            text = plain
+        }
+        text = text.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+        text = text.replacingOccurrences(of: #"dapi[0-9A-Fa-f-]{6,}"#, with: "dapi…", options: .regularExpression)
+        return text.count > 300 ? String(text.prefix(300)) + "…" : text
+    }
+
     public static func failure(forStatus code: Int) -> Failure? {
         switch code {
         case 200..<300: return nil
