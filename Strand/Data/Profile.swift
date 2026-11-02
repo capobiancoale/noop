@@ -123,7 +123,20 @@ final class ProfileStore: ObservableObject {
     var stepsManualOverride: Double? { stepsManualCoefficient > 0 ? stepsManualCoefficient : nil }
 
     /// Tanaka estimate unless overridden.
-    var hrMax: Int { hrMaxOverride > 0 ? hrMaxOverride : Int((208 - 0.7 * Double(age)).rounded()) }
+    var hrMax: Int { Self.hrMaxValue(age: age, manual: hrMaxOverride) }
+
+    /// The HRmax rule in one place: the user's own value when set (> 0), else Tanaka from age.
+    nonisolated static func hrMaxValue(age: Int, manual: Int) -> Int {
+        manual > 0 ? manual : Int((208 - 0.7 * Double(age)).rounded())
+    }
+
+    /// HRmax from the persisted profile keys, for code that runs without a live `ProfileStore` (the
+    /// Shortcuts export intent has no view models). Same defaults as `init()`.
+    nonisolated static func storedHRMax(defaults: UserDefaults = .standard) -> Int {
+        let age = defaults.object(forKey: K.age) as? Int ?? 30
+        let manual = defaults.object(forKey: K.hrMax) as? Int ?? 0
+        return hrMaxValue(age: age, manual: manual)
+    }
 
     /// Whether the cycle-awareness opt-in applies to this profile (#801). Cycle phase is read from the
     /// MENSTRUAL skin-temperature shift, so the opt-in (the Health card + the Automations toggle) is only
