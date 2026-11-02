@@ -139689,6 +139689,36 @@
           }
         }
       }
+    },
+    "Databricks refused the request (HTTP %lld): %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Databricks ha rifiutato la richiesta (HTTP %1$lld): %2$@"
+          }
+        }
+      }
+    },
+    "Databricks has no volume at that path (HTTP 404): %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su Databricks non c'è un volume a quel percorso (HTTP 404): %@"
+          }
+        }
+      }
+    },
+    "Databricks answered with an error (HTTP %lld): %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Databricks ha risposto con un errore (HTTP %1$lld): %2$@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

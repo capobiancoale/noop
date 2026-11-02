@@ -65,6 +65,17 @@ final class DatabricksUploadTests: XCTestCase {
         XCTAssertEqual(request.httpBody, body)
     }
 
+    func testErrorDetailReadsDatabricksJsonAndMasksTokens() {
+        let json = Data(#"{"error_code":"PERMISSION_DENIED","message":"User does not have WRITE VOLUME on Volume 'noop_uploads.noop.raw'."}"#.utf8)
+        XCTAssertEqual(DatabricksUpload.errorDetail(from: json),
+                       "PERMISSION_DENIED: User does not have WRITE VOLUME on Volume 'noop_uploads.noop.raw'.")
+        XCTAssertEqual(DatabricksUpload.errorDetail(from: Data("Invalid access token\n  dapi0123abcd4567 ".utf8)),
+                       "Invalid access token dapi…")
+        XCTAssertEqual(DatabricksUpload.errorDetail(from: Data()), "")
+        let long = Data(String(repeating: "x", count: 500).utf8)
+        XCTAssertEqual(DatabricksUpload.errorDetail(from: long).count, 301)
+    }
+
     func testStatusCodesMapToWhatTheUserHasToFix() {
         XCTAssertNil(DatabricksUpload.failure(forStatus: 204))
         XCTAssertNil(DatabricksUpload.failure(forStatus: 200))
