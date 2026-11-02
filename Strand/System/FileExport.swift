@@ -87,6 +87,37 @@ enum FileExport {
         #endif
     }
 
+    /// Let the user save / share several staged files at once (the Databricks CSV set). macOS asks for a
+    /// destination FOLDER and copies the files into it (replacing same-named ones), returning that folder,
+    /// nil on cancel; a copy failure throws. iOS offers all the files in one share sheet (the user saves
+    /// them to Files together) and returns the first file's URL. Every staged file, and the folders in
+    /// `cleanup`, is removed once the files have been handed over: they are copies made for this export.
+    @MainActor @discardableResult
+    static func exportFiles(_ urls: [URL], cleanup: [URL] = []) throws -> URL? {
+        guard !urls.isEmpty else { return nil }
+        #if os(macOS)
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.message = String(localized: "Choose a folder for the files.")
+        panel.prompt = String(localized: "Save Here")
+        let fm = FileManager.default
+        defer { for url in urls + cleanup { try? fm.removeItem(at: url) } }
+        guard panel.runModal() == .OK, let folder = panel.url else { return nil }
+        for src in urls {
+            let dest = folder.appendingPathComponent(src.lastPathComponent)
+            if fm.fileExists(atPath: dest.path) { try fm.removeItem(at: dest) }
+            try fm.copyItem(at: src, to: dest)
+        }
+        return folder
+        #else
+        present(activityItems: urls, cleanup: urls + cleanup)
+        return urls.first
+        #endif
+    }
+
     /// Export an existing file AND a block of text together as a matched pair (#510, raw capture plus the
     /// strap log that produced it). Now a 2-entry case of `exportBundle`: both ride in one `.zip` so a
     /// reporter saves them in a single gesture on every platform (the old macOS path opened two save

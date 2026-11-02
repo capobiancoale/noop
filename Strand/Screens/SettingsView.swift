@@ -120,6 +120,8 @@ struct SettingsView: View {
     /// macOS can "Reveal in Finder" after a share, mirroring the puffin-capture export.
     @State private var rawCsvBusy = false
     @State private var lastRawCsvURL: URL?
+    /// The Databricks CSV export (sport + sleep summaries) is running.
+    @State private var databricksBusy = false
 
     /// Scheduled daily debug auto-export (#510, parity with Android). Seeded from the persisted store;
     /// the toggle + time picker write back through `ScheduledDebugExport`. Opt-in, default OFF.
@@ -1387,6 +1389,30 @@ struct SettingsView: View {
 
                 Divider().overlay(StrandPalette.hairline)
 
+                // Sport + sleep summaries as CSV for Databricks: a fixed allowlist of tables (never glucose,
+                // insulin, nutrition or raw streams). The Shortcuts action does the same thing every morning.
+                Button {
+                    exportForDatabricks()
+                } label: {
+                    if databricksBusy {
+                        HStack(spacing: NoopMetrics.space1 + 2) {
+                            ProgressView().controlSize(.small)
+                            Text("Exporting…")
+                        }
+                    } else {
+                        Label("Export for Databricks (CSV)", systemImage: "square.and.arrow.up.on.square")
+                    }
+                }
+                .buttonStyle(NoopButtonStyle(.secondary))
+                .disabled(databricksBusy)
+
+                Text("Writes your sport and sleep summaries as CSV files for Databricks. Glucose, insulin and raw sensor data are never included.")
+                    .font(StrandFont.caption)
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider().overlay(StrandPalette.hairline)
+
                 scheduledExportControls
             }
         }
@@ -1524,6 +1550,45 @@ struct SettingsView: View {
                     backupAlertMessage = error.localizedDescription
                     showBackupAlert = true
                 }
+            }
+        }
+    }
+
+    /// Write the whole sport + sleep history as the six Databricks CSVs, then let the user save them (a
+    /// folder on macOS, the share sheet on iOS). The first upload to Databricks takes the whole history; the
+    /// Shortcut's daily run sends the last fortnight. Same store handle and canonical "my-whoop" id as the raw
+    /// sensor export above.
+    @MainActor
+    private func exportForDatabricks() {
+        databricksBusy = true
+        let maxHR = profile.hrMax
+        Task {
+            guard let store = await model.repo.storeHandle() else {
+                databricksBusy = false
+                backupAlertTitle = String(localized: "Export failed")
+                backupAlertMessage = String(localized: "Couldn't open the local store.")
+                showBackupAlert = true
+                return
+            }
+            do {
+                let files = try await DatabricksExport.writeFiles(store: store, deviceId: model.deviceId,
+                                                                  maxHR: maxHR, days: 0)
+                databricksBusy = false
+                let staging = files.first.map { [$0.deletingLastPathComponent()] } ?? []
+                #if os(macOS)
+                if let folder = try FileExport.exportFiles(files, cleanup: staging) {
+                    backupAlertTitle = String(localized: "Databricks files saved")
+                    backupAlertMessage = String(localized: "Saved \(files.count) CSV files to \(folder.lastPathComponent).")
+                    showBackupAlert = true
+                }
+                #else
+                try FileExport.exportFiles(files, cleanup: staging)
+                #endif
+            } catch {
+                databricksBusy = false
+                backupAlertTitle = String(localized: "Export failed")
+                backupAlertMessage = error.localizedDescription
+                showBackupAlert = true
             }
         }
     }

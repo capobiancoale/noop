@@ -11,6 +11,16 @@
         }
       }
     },
+    "Export my ${applicationName} data for Databricks" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esporta i miei dati di ${applicationName} per Databricks"
+          }
+        }
+      }
+    },
     "Mark a moment in ${applicationName}" : {
       "localizations" : {
         "it" : {
