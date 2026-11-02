@@ -139559,6 +139559,136 @@
           }
         }
       }
+    },
+    "Upload to Databricks": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carica su Databricks"
+          }
+        }
+      }
+    },
+    "Exports your sleep, recovery, workout, WOD and heart-rate zone summaries and uploads them to your own Databricks workspace. NOOP sends them only to the Databricks address you enter and does not keep the token. Glucose, insulin, nutrition, blood pressure, weight, mood and raw sensor data are never included.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esporta i riepiloghi di sonno, recupero, allenamenti, WOD e zone di frequenza cardiaca e li carica nella tua area di lavoro Databricks. NOOP li invia solo all'indirizzo Databricks che inserisci e non conserva il token. Glicemia, insulina, alimentazione, pressione, peso, umore e dati grezzi del sensore non sono mai inclusi."
+          }
+        }
+      }
+    },
+    "Workspace address": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indirizzo area di lavoro"
+          }
+        }
+      }
+    },
+    "Catalog": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Catalogo"
+          }
+        }
+      }
+    },
+    "Access token": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token di accesso"
+          }
+        }
+      }
+    },
+    "The workspace address must be your Databricks address, like https://dbc-….cloud.databricks.com.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'indirizzo dell'area di lavoro deve essere quello di Databricks, ad esempio https://dbc-….cloud.databricks.com."
+          }
+        }
+      }
+    },
+    "The catalog name can only contain letters, digits and underscores.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il nome del catalogo può contenere solo lettere, cifre e trattini bassi."
+          }
+        }
+      }
+    },
+    "Paste your Databricks access token.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incolla il tuo token di accesso di Databricks."
+          }
+        }
+      }
+    },
+    "Databricks refused the token (HTTP %lld). Check that it was pasted whole and has not expired.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Databricks ha rifiutato il token (HTTP %lld). Controlla di averlo incollato per intero e che non sia scaduto."
+          }
+        }
+      }
+    },
+    "Databricks has no volume at that path (HTTP 404). Check the catalog name and that the noop schema and raw volume exist.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su Databricks non c'è un volume a quel percorso (HTTP 404). Controlla il nome del catalogo e che lo schema noop e il volume raw esistano."
+          }
+        }
+      }
+    },
+    "Databricks answered with an error (HTTP %lld). Try again later.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Databricks ha risposto con un errore (HTTP %lld). Riprova più tardi."
+          }
+        }
+      }
+    },
+    "Couldn't reach Databricks: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile raggiungere Databricks: %@"
+          }
+        }
+      }
+    },
+    "Uploaded %lld files to Databricks.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caricati %lld file su Databricks."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
