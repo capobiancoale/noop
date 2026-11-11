@@ -80,23 +80,30 @@ enum ExportForDatabricksError: Error, CustomLocalizedStringResourceConvertible {
 /// Writes the user's sport and sleep summaries as CSV files and returns them to the Shortcut, which uploads
 /// them to Databricks itself: NOOP never talks to the network here and never sees the access token. Meant for
 /// a daily personal automation (the last 14 days, so a corrected night or WOD is re-sent) plus one manual run
-/// with `days = 0` for the whole history. The files are the fixed allowlist in `DatabricksCsv`: glucose,
-/// insulin, nutrition, blood pressure, weight, mood and raw sensor streams are never part of them.
+/// with `days = 0` for the whole history. The files are the fixed allowlist in `DatabricksCsv`: the daily
+/// glucose, insulin and carbohydrate summaries are added only when the user turns on `includeGlucose`;
+/// nutrition, blood pressure, weight, mood and raw sensor streams are never part of them.
 struct ExportForDatabricksIntent: AppIntent {
     static var title: LocalizedStringResource = "Export data for Databricks"
-    static var description = IntentDescription("Writes your sleep, recovery, workout, WOD and heart-rate zone summaries as CSV files and hands them to the Shortcut. Glucose, insulin, nutrition, blood pressure, weight, mood and raw sensor data are never included.")
+    static var description = IntentDescription("Writes your sleep, recovery, workout, WOD and heart-rate zone summaries as CSV files and hands them to the Shortcut. Daily glucose, insulin and carbohydrate summaries are added only when you turn on Include glucose and insulin. Other nutrition, blood pressure, weight, mood and raw sensor data are never included.")
     static var openAppWhenRun = false
 
     /// How many days back to export, today included. 0 exports the whole history.
     @Parameter(title: "Days", default: 14)
     var days: Int
 
+    /// Opt-in: also write the daily glucose, insulin and carbohydrate summaries (from Apple Health, where Loop
+    /// writes them) as a seventh file. Off unless the user turns it on in the Shortcut.
+    @Parameter(title: "Include glucose and insulin", default: false)
+    var includeGlucose: Bool
+
     func perform() async throws -> some IntentResult & ReturnsValue<[IntentFile]> {
         let window = max(0, min(days, 36_500))
         let store = try await Self.openStore()
         let deviceId = await Self.canonicalDeviceId()
         let urls = try await DatabricksExport.writeFiles(store: store, deviceId: deviceId,
-                                                         maxHR: ProfileStore.storedHRMax(), days: window)
+                                                         maxHR: ProfileStore.storedHRMax(), days: window,
+                                                         includeGlucose: includeGlucose)
         let files = urls.map { IntentFile(fileURL: $0, filename: $0.lastPathComponent, type: .commaSeparatedText) }
         return .result(value: files)
     }
@@ -166,10 +173,11 @@ enum UploadToDatabricksError: Error, CustomLocalizedStringResourceConvertible {
 /// own Unity Catalog volume (`<catalog>/noop/raw`) with the Files API, so the Shortcut is this one action plus
 /// a daily automation. Only a Databricks workspace address is accepted (`DatabricksUpload.workspaceOrigin`),
 /// the token is used for this run's requests only (kept by the Shortcut, never stored or logged by NOOP), and
-/// the files are the fixed allowlist in `DatabricksCsv`: no glucose, insulin or raw sensor data.
+/// the files are the fixed allowlist in `DatabricksCsv`: glucose, insulin and carbohydrate daily summaries only
+/// with the `includeGlucose` opt-in, never raw sensor data.
 struct UploadToDatabricksIntent: AppIntent {
     static var title: LocalizedStringResource = "Upload to Databricks"
-    static var description = IntentDescription("Exports your sleep, recovery, workout, WOD and heart-rate zone summaries and uploads them to your own Databricks workspace. NOOP sends them only to the Databricks address you enter and does not keep the token. Glucose, insulin, nutrition, blood pressure, weight, mood and raw sensor data are never included.")
+    static var description = IntentDescription("Exports your sleep, recovery, workout, WOD and heart-rate zone summaries and uploads them to your own Databricks workspace. NOOP sends them only to the Databricks address you enter and does not keep the token. Daily glucose, insulin and carbohydrate summaries are added only when you turn on Include glucose and insulin. Other nutrition, blood pressure, weight, mood and raw sensor data are never included.")
     static var openAppWhenRun = false
 
     @Parameter(title: "Workspace address",
@@ -194,6 +202,11 @@ struct UploadToDatabricksIntent: AppIntent {
     @Parameter(title: "Days", default: 14)
     var days: Int
 
+    /// Opt-in: also upload the daily glucose, insulin and carbohydrate summaries (from Apple Health, where Loop
+    /// writes them) as a seventh file. Off unless the user turns it on in the Shortcut.
+    @Parameter(title: "Include glucose and insulin", default: false)
+    var includeGlucose: Bool
+
     func perform() async throws -> some IntentResult & ProvidesDialog {
         guard let origin = DatabricksUpload.workspaceOrigin(workspace) else { throw UploadToDatabricksError.invalidAddress }
         let catalogName = catalog.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -204,7 +217,8 @@ struct UploadToDatabricksIntent: AppIntent {
         let store = try await ExportForDatabricksIntent.openStore()
         let deviceId = await ExportForDatabricksIntent.canonicalDeviceId()
         let files = try await DatabricksExport.writeFiles(store: store, deviceId: deviceId,
-                                                          maxHR: ProfileStore.storedHRMax(), days: window)
+                                                          maxHR: ProfileStore.storedHRMax(), days: window,
+                                                          includeGlucose: includeGlucose)
         // The CSVs are copies made for this upload; drop their folder whatever happens below.
         defer { if let folder = files.first?.deletingLastPathComponent() { try? FileManager.default.removeItem(at: folder) } }
 

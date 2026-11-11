@@ -31,10 +31,15 @@ Viene esportato solo un elenco fisso (non "tutto tranne qualcosa"):
 | `wods` | i WOD che hai registrato: titolo, tipo, risultato, RPE, RX, minuti per zona |
 | `wod_movements` | i movimenti di ogni WOD con ripetizioni e carichi |
 | `metrics` | valori giornalieri di un elenco fisso di misure di sport e sonno (VO2max, dettagli del Rest, zone, ...) |
+| `glucose` | **solo se attivi "Includi glicemia e insulina"** (punto 4): i riepiloghi giornalieri di glicemia, insulina e carboidrati che NOOP legge da Salute, dove li scrive Loop (tempo in range, sotto e sopra, CV, ipoglicemie, valori notturni, basale e boli, carboidrati) |
 
-**Non vengono mai esportati**: glicemia, insulina, carboidrati e alimentazione, pressione, peso e composizione
-corporea, umore, ritmo irregolare, diario, note dei WOD e dei movimenti, e nessun dato grezzo del sensore (battito
-secondo per secondo, ecc.). Titoli dei WOD e nomi dei movimenti invece sì, perché servono per i grafici sui pesi.
+**Non vengono mai esportati**: le singole letture della glicemia (nemmeno con l'opzione attiva vanno oltre i
+riepiloghi del giorno), il resto dell'alimentazione, pressione, peso e composizione corporea, umore, ritmo
+irregolare, diario, note dei WOD e dei movimenti, e nessun dato grezzo del sensore (battito secondo per secondo,
+ecc.). Titoli dei WOD e nomi dei movimenti invece sì, perché servono per i grafici sui pesi.
+
+Glicemia e insulina sono dati sanitari: prima di attivare l'opzione leggi il punto 8 su cosa garantisce (e cosa no)
+Databricks Free Edition. Senza l'opzione la tabella `glucose` resta vuota.
 
 ## 1. Iscriversi a Databricks Free Edition e trovare l'indirizzo
 
@@ -86,7 +91,11 @@ Apri l'app **Comandi**, tocca **+** e chiama il comando `NOOP per Databricks`.
    - **Catalogo**: `noop_uploads`.
    - **Token di accesso**: il token del punto 2 (`dapi…`), così com'è, senza scrivere `Bearer`.
    - **Giorni**: `14` (gli ultimi 14 giorni, oggi compreso; `0` vuol dire tutta la storia).
-3. Tocca ▶ per una **prima prova a mano**. Alla fine compare "Caricati 6 file su Databricks". Se qualcosa non va,
+   - **Includi glicemia e insulina**: spento di default. Acceso, carica anche il settimo file `glucose` con i
+     riepiloghi giornalieri di glicemia, insulina e carboidrati. NOOP li prende da Salute, quindi in NOOP deve
+     essere attiva l'importazione da Salute con il permesso di leggere glicemia, insulina e carboidrati (e Loop
+     deve scriverli in Salute, come fa di default).
+3. Tocca ▶ per una **prima prova a mano**. Alla fine compare "Caricati 6 file su Databricks" (7 con la glicemia). Se qualcosa non va,
    compare invece un messaggio che dice cosa correggere (vedi il punto 9).
 4. Per caricare **tutta la storia** una volta, metti **Giorni** a `0`, esegui con NOOP aperto (con anni di dati può
    servire più di qualche secondo), poi rimettilo a `14`. Non fa male caricare due volte: ogni caricamento è un file
@@ -131,8 +140,9 @@ tanto guarda che in `raw` ci siano file recenti.
 3. In **Schedules & Triggers** > **Add trigger** > **Scheduled**: ogni giorno alle **10:30** (fuso orario
    `Europe/Rome`).
 4. Premi **Run now** per provare (serve che il punto 4 abbia già caricato i file). Alla fine nel catalogo
-   `noop_uploads.noop` trovi le tabelle `days`, `sleeps`, `workouts`, `wods`, `wod_movements`, `metrics`, e le
-   viste `lifts`, `lift_progress`, `zones_weekly`, `sleep_weekly`, `recovery_daily`, `vo2max`.
+   `noop_uploads.noop` trovi le tabelle `days`, `sleeps`, `workouts`, `wods`, `wod_movements`, `metrics`, `glucose`
+   (vuota senza l'opzione della glicemia), e le viste `lifts`, `lift_progress`, `zones_weekly`, `sleep_weekly`,
+   `recovery_daily`, `vo2max`, `glucose_daily`.
 
 Il job gira mezz'ora dopo il comando rapido proprio perché i file devono essere già arrivati.
 

@@ -1,17 +1,20 @@
 import Foundation
 import WhoopStore
 
-/// Flat CSV tables for the "NOOP to Databricks" export: sport and sleep summaries ONLY.
+/// Flat CSV tables for the "NOOP to Databricks" export: sport and sleep summaries, plus the daily glucose,
+/// insulin and carbohydrate summaries ONLY when the user opts in.
 ///
 /// The builders are pure. They take rows the app already gathered and return CSV text, so the whole
-/// contract (headers, quoting, number and date formats, the metric allowlist) is pinned by
+/// contract (headers, quoting, number and date formats, the metric allowlists) is pinned by
 /// DatabricksCsvTests rather than by hoping the app code stays tidy.
 ///
-/// What is exported is an explicit ALLOWLIST, never a denylist: the six tables below carry only the
-/// columns listed here, and `metricAllowlist` names the one set of metric-series keys that may leave
-/// the device. Glucose, insulin, carbs and other nutrition, blood pressure, weight and body
-/// composition, mood, irregular-rhythm screening, journal answers, workout/WOD/movement notes and every
-/// per-second raw stream are not representable in these tables, whatever the store holds.
+/// What is exported is an explicit ALLOWLIST, never a denylist: the six default tables below carry only the
+/// columns listed here, and `metricAllowlist` names the one set of metric-series keys they may carry.
+/// The seventh table, `glucose`, is written only when the user turns on "Include glucose and insulin" in
+/// the Shortcuts action, and carries only the keys of its own `glucoseAllowlist`. Nutrition other than
+/// carbohydrates, blood pressure, weight and body composition, mood, irregular-rhythm screening, journal
+/// answers, workout/WOD/movement notes and every per-second raw stream (single glucose readings included)
+/// are not representable in any table, whatever the store holds or the user opts into.
 ///
 /// Format rules shared by every table:
 ///  - first line is the header (snake_case); fields use WhoopCsvExporter's RFC 4180 quoting;
@@ -369,5 +372,54 @@ public enum DatabricksCsv {
             rows.append([text(p.point.day), text(p.point.key), stamp, p.source, fmt(p.point.value)])
         }
         return csv(metricsColumns, rows)
+    }
+
+    // MARK: - glucose (opt-in)
+
+    /// The opt-in seventh table: the day's glucose, insulin and carbohydrate summaries NOOP computes from
+    /// Apple Health (where Loop, a CGM app or a pump app writes them). Written only when the user turns on
+    /// "Include glucose and insulin"; never part of the default export. `glucose__*.csv` matches no other table.
+    public static let glucoseTable = "glucose"
+
+    /// The tables of one export, in the order they are written: the six default ones, plus `glucose` when the
+    /// user opted in.
+    public static func tables(includeGlucose: Bool) -> [String] {
+        includeGlucose ? tables + [glucoseTable] : tables
+    }
+
+    /// `source` of every glucose row: a daily value NOOP derived from Apple Health samples.
+    public static let sourceAppleHealth = "apple_health"
+
+    /// The keys the glucose table may carry: its own ALLOWLIST, separate from `metricAllowlist`, so the opt-in
+    /// can never widen the default export. Glucose in mg/dL; the bands are the international consensus on time
+    /// in range (Battelino et al., Diabetes Care 2019): in range 70-180, below 70 and below 54, above 180 and
+    /// above 250, as percentages of the day's readings; CV in percent; hypos = level 1-2 events of at least
+    /// 15 minutes below 70; overnight = 00:00-06:00 local; post-exercise = during a workout and the 2 hours
+    /// after it; insulin in units; carbohydrates in grams. Daily summaries only: single readings, weight,
+    /// blood pressure, other nutrition and mood stay out even with the opt-in.
+    public static let glucoseAllowlist: Set<String> = [
+        "glucose_avg", "glucose_min", "glucose_max",
+        "glucose_tir", "glucose_tbr", "glucose_tbr_severe", "glucose_tar", "glucose_tar_high",
+        "glucose_cv", "glucose_hypos", "glucose_overnight_avg", "glucose_overnight_min",
+        "glucose_postex_min", "glucose_postex_lows",
+        "insulin_total", "insulin_basal", "insulin_bolus", "carbs_g",
+    ]
+
+    static let glucoseColumns: [String] = ["day", "key", "export_ts", "source", "value"]
+
+    /// One row per (day, key) of the allowlisted glucose, insulin and carbohydrate series, sorted by day then
+    /// key. Keys outside `glucoseAllowlist` and non-finite values are dropped; a repeated (day, key) keeps the
+    /// last point given.
+    public static func glucoseCSV(points: [MetricPoint], exportedAt: Date) -> String {
+        var byDayKey: [String: MetricPoint] = [:]
+        for p in points where glucoseAllowlist.contains(p.key) && p.value.isFinite {
+            byDayKey["\(p.day)|\(p.key)"] = p
+        }
+        let stamp = exportStamp(exportedAt)
+        var rows: [[String]] = []
+        for p in byDayKey.values.sorted(by: { ($0.day, $0.key) < ($1.day, $1.key) }) {
+            rows.append([text(p.day), text(p.key), stamp, sourceAppleHealth, fmt(p.value)])
+        }
+        return csv(glucoseColumns, rows)
     }
 }
