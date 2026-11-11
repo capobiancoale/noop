@@ -788,7 +788,7 @@ struct SleepView: View {
         NoopCard(padding: NoopMetrics.cardInnerPadding, tint: StrandPalette.restColor) {
             VStack(alignment: .leading, spacing: NoopMetrics.rowSpacing) {
                 HStack(spacing: 0) {
-                    sleepTime(icon: "moon.zzz.fill", label: "Asleep", value: night.onsetText)
+                    sleepTime(icon: "moon.zzz.fill", label: "Asleep", value: night.asleepText)
                     Spacer(minLength: 12)
                     Rectangle().fill(StrandPalette.hairline).frame(width: 1, height: 30)
                     Spacer(minLength: 12)
@@ -797,6 +797,14 @@ struct SleepView: View {
                     wakeEditButton(night)
                 }
                 .frame(maxWidth: .infinity)
+                // Time awake in bed before sleep: "Asleep" is where sleep began, so name the bed time too
+                // (it's what the pencil corrects) instead of silently hiding it.
+                if let latency = night.onsetLatencyMin {
+                    Text("In bed at \(night.onsetText) · \(durationText(Double(latency))) to fall asleep")
+                        .font(StrandFont.footnote)
+                        .foregroundStyle(StrandPalette.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 // Provenance (C4) + the "why this is your main sleep" explainer (C1). The badge names the
                 // REAL per-day merge winner; the info button reveals the foundation reason for the pick.
                 Divider().overlay(StrandPalette.hairline)
@@ -1990,8 +1998,9 @@ struct SleepView: View {
         let synth = CachedSleepSession(startTs: onset, endTs: wake, efficiency: eff,
                                        restingHr: nil, avgHrv: nil, stagesJSON: nil)
         let realSegs = segs.count >= 2 ? segs.sorted { $0.start < $1.start } : nil
+        let asleepTs = SleepOnsetReadout.firstAsleepTs(stagesJSONs: group.map { $0.stagesJSON }, notBefore: onset)
         return Night(session: synth, stages: stages, realSegments: realSegs, sourceBlocks: sessions,
-                     motionEpochs: motion, habitualMidsleepSec: habitualMidsleepSec)
+                     motionEpochs: motion, habitualMidsleepSec: habitualMidsleepSec, asleepTs: asleepTs)
     }
 
     /// The real stored blocks composing the day at `offset` (for the stage-less stub Night, so its edit
@@ -2653,6 +2662,12 @@ private struct Night {
     /// the hero and the analytics rollup did, for a shift/late sleeper too. nil = cold-start band. (#547)
     var habitualMidsleepSec: Int? = nil
 
+    /// Where real sleep began: the first non-wake stage at/after the displayed bed time, read from the
+    /// group's stored timelines (`SleepOnsetReadout`). The stager labels time awake in bed before sustained
+    /// stillness as wake (SleepOnsetLatency.swift), so this can sit well after `session.effectiveStartTs`.
+    /// nil for an imported night with minute totals only — "Asleep" then falls back to the bed time.
+    var asleepTs: Int? = nil
+
     /// The real stored block a sleep-time edit writes against — the day's MAIN block, resolved by the
     /// SAME shared selector (`SleepView.mainNightSession` → `SleepStageTotals.mainNightIndex`) the hero,
     /// the naps card, and `AnalyticsEngine.analyzeDay` use, so all of them and the edit affordance agree
@@ -2701,7 +2716,18 @@ private struct Night {
         return out
     }
 
+    /// Bed time: the start of the in-bed span (what the pencil editor corrects).
     var onsetText: String { Night.timeFmt.string(from: Date(timeIntervalSince1970: TimeInterval(session.effectiveStartTs))) }
+    /// "Asleep" time: the first non-wake stage, or the bed time when the night has no timeline.
+    var asleepText: String {
+        Night.timeFmt.string(from: Date(timeIntervalSince1970: TimeInterval(asleepTs ?? session.effectiveStartTs)))
+    }
+    /// Minutes awake in bed before sleep, shown only when it's at least 5 (a few minutes is noise).
+    var onsetLatencyMin: Int? {
+        guard let asleepTs else { return nil }
+        let m = (asleepTs - session.effectiveStartTs) / 60
+        return m >= 5 ? m : nil
+    }
     var wakeText: String { Night.timeFmt.string(from: Date(timeIntervalSince1970: TimeInterval(session.endTs))) }
     var dateLabel: String { Night.dateFmt.string(from: Date(timeIntervalSince1970: TimeInterval(session.effectiveStartTs))) }
 

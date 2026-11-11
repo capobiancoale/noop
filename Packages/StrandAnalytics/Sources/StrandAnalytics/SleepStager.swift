@@ -877,11 +877,15 @@ public enum SleepStager {
                     detail: "daytime=true restingHR=\(resting ?? -1) baseline=\(baseline.map { Int($0) } ?? -1) nightTail=false"))
                 continue
             }
-            let stages = useSleepStagerV2
+            let staged = useSleepStagerV2
                 ? SleepStagerV2.stageSession(start: p.start, end: p.end, grav: grav,
                                              hr: hrS, rr: rrS, resp: respS)
                 : stageSession(start: p.start, end: p.end, grav: grav,
                                hr: hrS, rr: rrS, resp: respS)
+            // Time awake in bed before real sleep (SleepOnsetLatency.swift): the still-but-awake stretch
+            // before the first sustained-stillness window is wake, not light sleep. No such window → unchanged.
+            let stages = sustainedStillOnset(grav: grav, deltas: deltas, start: p.start, end: p.end)
+                .map { applyOnsetLatency(staged, onset: $0) } ?? staged
             let eff = efficiency(start: p.start, end: p.end, stages: stages)
             let avgHrv = sessionAvgHRV(start: p.start, end: p.end, rr: rrS)
             sessions.append(SleepSession(start: p.start, end: p.end, efficiency: eff,
