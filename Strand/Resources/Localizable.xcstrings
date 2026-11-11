@@ -55110,6 +55110,64 @@
         }
       }
     },
+    "In bed at %@ · %@ to fall asleep": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Im Bett um %@ · %@ bis zum Einschlafen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In bed at %@ · %@ to fall asleep"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "En la cama a las %@ · %@ hasta dormirte"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Au lit à %@ · %@ pour t’endormir"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A letto alle %@ · %@ per addormentarti"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Na cama às %@ · %@ até adormecer"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "В кровати в %@ · %@ до засыпания"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 上床 · %@ 后入睡"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 上床 · %@ 後入睡"
+          }
+        }
+      }
+    },
     "In your data so far, this doesn’t move your %@ the way it typically does.": {
       "localizations": {
         "de": {
