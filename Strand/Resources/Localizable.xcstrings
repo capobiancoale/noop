@@ -139538,12 +139538,12 @@
         }
       }
     },
-    "Writes your sleep, recovery, workout, WOD and heart-rate zone summaries as CSV files and hands them to the Shortcut. Glucose, insulin, nutrition, blood pressure, weight, mood and raw sensor data are never included.": {
+    "Writes your sleep, recovery, workout, WOD and heart-rate zone summaries as CSV files and hands them to the Shortcut. Daily glucose, insulin and carbohydrate summaries are added only when you turn on Include glucose and insulin. Other nutrition, blood pressure, weight, mood and raw sensor data are never included.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scrive i tuoi riepiloghi di sonno, recupero, allenamenti, WOD e zone di frequenza cardiaca come file CSV e li passa al comando rapido. Glicemia, insulina, alimentazione, pressione, peso, umore e dati grezzi del sensore non sono mai inclusi."
+            "value": "Scrive i tuoi riepiloghi di sonno, recupero, allenamenti, WOD e zone di frequenza cardiaca come file CSV e li passa al comando rapido. I riepiloghi giornalieri di glicemia, insulina e carboidrati si aggiungono solo se attivi Includi glicemia e insulina. Il resto dell'alimentazione, pressione, peso, umore e dati grezzi del sensore non sono mai inclusi."
           }
         }
       }
@@ -139628,12 +139628,12 @@
         }
       }
     },
-    "Exports your sleep, recovery, workout, WOD and heart-rate zone summaries and uploads them to your own Databricks workspace. NOOP sends them only to the Databricks address you enter and does not keep the token. Glucose, insulin, nutrition, blood pressure, weight, mood and raw sensor data are never included.": {
+    "Exports your sleep, recovery, workout, WOD and heart-rate zone summaries and uploads them to your own Databricks workspace. NOOP sends them only to the Databricks address you enter and does not keep the token. Daily glucose, insulin and carbohydrate summaries are added only when you turn on Include glucose and insulin. Other nutrition, blood pressure, weight, mood and raw sensor data are never included.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Esporta i riepiloghi di sonno, recupero, allenamenti, WOD e zone di frequenza cardiaca e li carica nella tua area di lavoro Databricks. NOOP li invia solo all'indirizzo Databricks che inserisci e non conserva il token. Glicemia, insulina, alimentazione, pressione, peso, umore e dati grezzi del sensore non sono mai inclusi."
+            "value": "Esporta i riepiloghi di sonno, recupero, allenamenti, WOD e zone di frequenza cardiaca e li carica nella tua area di lavoro Databricks. NOOP li invia solo all'indirizzo Databricks che inserisci e non conserva il token. I riepiloghi giornalieri di glicemia, insulina e carboidrati si aggiungono solo se attivi Includi glicemia e insulina. Il resto dell'alimentazione, pressione, peso, umore e dati grezzi del sensore non sono mai inclusi."
           }
         }
       }
@@ -139664,6 +139664,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Token di accesso"
+          }
+        }
+      }
+    },
+    "Include glucose and insulin": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Includi glicemia e insulina"
           }
         }
       }

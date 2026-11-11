@@ -371,3 +371,70 @@ SELECT
 FROM metrics
 WHERE key IN ('vo2max_est', 'vo2max_exercise')
 GROUP BY day;
+
+-- COMMAND ----------
+
+-- glucose: daily glucose, insulin and carbohydrate summaries (from Apple Health, where Loop writes them). NOOP
+-- uploads these files ONLY when "Include glucose and insulin" is on in the Shortcut; without them this table is
+-- simply empty (read_files returns no rows when no file matches). Key: day + key.
+CREATE OR REPLACE TABLE glucose AS
+SELECT
+  CAST(day AS DATE) AS day,
+  key,
+  CAST(export_ts AS TIMESTAMP) AS export_ts,
+  source, value
+FROM (
+  SELECT *
+  FROM read_files(
+    '/Volumes/noop_uploads/noop/raw/glucose__*.csv',
+    format => 'csv',
+    header => true,
+    escape => '"',
+    schema => 'day STRING, key STRING, export_ts STRING, source STRING, value DOUBLE'
+  )
+  QUALIFY row_number() OVER (PARTITION BY day, key ORDER BY export_ts DESC) = 1
+) latest;
+
+-- COMMAND ----------
+
+-- glucose_daily: one row per day. Glucose in mg/dL; the bands are the international consensus on time in range
+-- (Battelino et al., Diabetes Care 2019), as % of the day's readings, with its targets in the comments:
+--   tbr_severe_pct  < 54        (target under 1 %)     tbr_pct  < 70, severe included  (target under 4 %)
+--   tir_pct         70-180      (target over 70 %)
+--   tar_pct         > 180, very high included (target under 25 %)    tar_high_pct  > 250  (target under 5 %)
+--   cv_pct          coefficient of variation (stable at or under 36 %)
+-- The *_band columns split the day into five parts that add up to 100 % (for a stacked chart). Hypos are level 1-2
+-- events of at least 15 minutes below 70; overnight = 00:00-06:00; post-exercise = a workout and the 2 h after it.
+CREATE OR REPLACE VIEW glucose_daily AS
+WITH w AS (
+  SELECT
+    day,
+    max(CASE WHEN key = 'glucose_avg' THEN value END) AS avg_mgdl,
+    max(CASE WHEN key = 'glucose_min' THEN value END) AS min_mgdl,
+    max(CASE WHEN key = 'glucose_max' THEN value END) AS max_mgdl,
+    max(CASE WHEN key = 'glucose_tir' THEN value END) AS tir_pct,
+    max(CASE WHEN key = 'glucose_tbr' THEN value END) AS tbr_pct,
+    max(CASE WHEN key = 'glucose_tbr_severe' THEN value END) AS tbr_severe_pct,
+    max(CASE WHEN key = 'glucose_tar' THEN value END) AS tar_pct,
+    max(CASE WHEN key = 'glucose_tar_high' THEN value END) AS tar_high_pct,
+    max(CASE WHEN key = 'glucose_cv' THEN value END) AS cv_pct,
+    max(CASE WHEN key = 'glucose_hypos' THEN value END) AS hypos,
+    max(CASE WHEN key = 'glucose_overnight_avg' THEN value END) AS overnight_avg_mgdl,
+    max(CASE WHEN key = 'glucose_overnight_min' THEN value END) AS overnight_min_mgdl,
+    max(CASE WHEN key = 'glucose_postex_min' THEN value END) AS postex_min_mgdl,
+    max(CASE WHEN key = 'glucose_postex_lows' THEN value END) AS postex_lows,
+    max(CASE WHEN key = 'insulin_total' THEN value END) AS insulin_total_u,
+    max(CASE WHEN key = 'insulin_basal' THEN value END) AS insulin_basal_u,
+    max(CASE WHEN key = 'insulin_bolus' THEN value END) AS insulin_bolus_u,
+    max(CASE WHEN key = 'carbs_g' THEN value END) AS carbs_g
+  FROM glucose
+  GROUP BY day
+)
+SELECT
+  *,
+  tbr_severe_pct AS very_low_band,
+  tbr_pct - tbr_severe_pct AS low_band,
+  tir_pct AS in_range_band,
+  tar_pct - tar_high_pct AS high_band,
+  tar_high_pct AS very_high_band
+FROM w;

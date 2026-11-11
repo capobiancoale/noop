@@ -16,8 +16,16 @@ import StrandImport
 ///
 /// Only an allowlist is read. The metric series are fetched key by key from `DatabricksCsv.metricAllowlist`
 /// (a glucose, insulin, nutrition, blood-pressure, weight, mood or irregular-rhythm series is never even
-/// queried), and the CSV builders have no column for notes, journal answers or raw streams.
+/// queried), and the CSV builders have no column for notes, journal answers or raw streams. With
+/// `includeGlucose` (the user's opt-in in the Shortcuts action) the daily glucose, insulin and carbohydrate
+/// series of the Apple Health source are also read, key by key from `DatabricksCsv.glucoseAllowlist`, into a
+/// seventh file; without it they are never queried.
 enum DatabricksExport {
+
+    /// The store id of the Apple Health import, where Loop's (or a CGM / pump app's) daily glucose, insulin and
+    /// carbohydrate summaries are kept. The same value as `Repository.appleHealthSource`, repeated here because
+    /// that constant is main-actor isolated and this export runs off the main actor.
+    private static let appleHealthId = "apple-health"
 
     /// A heart-rate window longer than this gets no zone minutes (an all-day import, a hike logged as one
     /// workout): the read would be large and a zone split of it says little about a training session.
@@ -27,8 +35,9 @@ enum DatabricksExport {
     private static let rowLimit = 100_000
     private static let folderPrefix = "noop-databricks-"
 
-    /// Writes the six CSVs (all of them, a table with no rows gets just its header) into a fresh temporary
-    /// folder and returns their URLs in `DatabricksCsv.tables` order.
+    /// Writes the six CSVs (all of them, a table with no rows gets just its header), plus the glucose CSV when
+    /// `includeGlucose` is on, into a fresh temporary folder and returns their URLs in
+    /// `DatabricksCsv.tables(includeGlucose:)` order.
     ///
     /// - Parameters:
     ///   - deviceId: the canonical imported id (`"my-whoop"`); its computed twin is `deviceId + "-noop"`.
@@ -36,17 +45,18 @@ enum DatabricksExport {
     ///   - days: 0 (or less) exports the whole history; otherwise only the last `days` local days, today
     ///     included. Late corrections (an edited night, a WOD saved the next morning) are why a daily run
     ///     re-sends a fortnight rather than only yesterday.
-    static func writeFiles(store: WhoopStore, deviceId: String, maxHR: Int, days: Int,
+    ///   - includeGlucose: the user's opt-in for the daily glucose, insulin and carbohydrate summaries.
+    static func writeFiles(store: WhoopStore, deviceId: String, maxHR: Int, days: Int, includeGlucose: Bool = false,
                            now: Date = Date(), timeZone: TimeZone = .current) async throws -> [URL] {
         // The reads hop onto the store's own executor already; the detached task also keeps the zone
         // maths and the CSV building off the main actor when a view calls this.
         try await Task.detached(priority: .utility) {
             try await DatabricksExport.build(store: store, deviceId: deviceId, maxHR: maxHR, days: days,
-                                             now: now, timeZone: timeZone)
+                                             includeGlucose: includeGlucose, now: now, timeZone: timeZone)
         }.value
     }
 
-    private static func build(store: WhoopStore, deviceId: String, maxHR: Int, days: Int,
+    private static func build(store: WhoopStore, deviceId: String, maxHR: Int, days: Int, includeGlucose: Bool,
                               now: Date, timeZone: TimeZone) async throws -> [URL] {
         let computedId = deviceId + "-noop"
         let clock = DatabricksCsv.LocalClock(timeZone: timeZone)
@@ -103,8 +113,8 @@ enum DatabricksExport {
             if let minutes { wodZones[w.id] = minutes }
         }
 
-        // One CSV per table, in `DatabricksCsv.tables` order.
-        let texts: [String: String] = [
+        // One CSV per table, in `DatabricksCsv.tables(includeGlucose:)` order.
+        var texts: [String: String] = [
             "days": DatabricksCsv.daysCSV(imported: importedDays, computed: computedDays,
                                           series: series, exportedAt: now),
             "sleeps": DatabricksCsv.sleepsCSV(imported: importedSleep, computed: computedSleep, sinceDay: sinceDay,
@@ -115,7 +125,18 @@ enum DatabricksExport {
             "wod_movements": DatabricksCsv.wodMovementsCSV(wods, exportedAt: now),
             "metrics": DatabricksCsv.metricsCSV(series: series, exportedAt: now),
         ]
-        return try write(texts, exportedAt: now, timeZone: timeZone)
+
+        // The opt-in glucose table: Apple Health's daily summaries, allowlisted keys only, same day window.
+        if includeGlucose {
+            var glucosePoints: [MetricPoint] = []
+            for key in DatabricksCsv.glucoseAllowlist.sorted() {
+                try Task.checkCancellation()
+                glucosePoints += try await store.metricSeries(deviceId: appleHealthId, key: key, from: fromDay, to: toDay)
+            }
+            texts[DatabricksCsv.glucoseTable] = DatabricksCsv.glucoseCSV(points: glucosePoints, exportedAt: now)
+        }
+        return try write(texts, tables: DatabricksCsv.tables(includeGlucose: includeGlucose),
+                         exportedAt: now, timeZone: timeZone)
     }
 
     // MARK: - Zones
@@ -150,9 +171,10 @@ enum DatabricksExport {
 
     // MARK: - Files
 
-    /// Writes each table into a new temporary folder, named `<table>__<local timestamp>.csv`. A failure
+    /// Writes each of `tables` into a new temporary folder, named `<table>__<local timestamp>.csv`. A failure
     /// part-way removes the folder so no half export is left behind.
-    private static func write(_ texts: [String: String], exportedAt: Date, timeZone: TimeZone) throws -> [URL] {
+    private static func write(_ texts: [String: String], tables: [String], exportedAt: Date,
+                              timeZone: TimeZone) throws -> [URL] {
         let fm = FileManager.default
         let tmp = fm.temporaryDirectory
         pruneOldFolders(in: tmp)
@@ -160,7 +182,7 @@ enum DatabricksExport {
         try fm.createDirectory(at: folder, withIntermediateDirectories: true)
         do {
             var urls: [URL] = []
-            for table in DatabricksCsv.tables {
+            for table in tables {
                 let name = DatabricksCsv.fileName(table: table, exportedAt: exportedAt, timeZone: timeZone)
                 let url = folder.appendingPathComponent(name)
                 try (texts[table] ?? "").write(to: url, atomically: true, encoding: .utf8)

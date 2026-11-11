@@ -89,7 +89,8 @@ domande di esempio, da adattare:
 1. Nel menu a sinistra apri **Genie** e premi **New**.
 2. Quando chiede i dati, scegli il catalogo `noop_uploads`, lo schema `noop` e seleziona queste tabelle e viste:
    `days`, `sleeps`, `workouts`, `wods`, `wod_movements`, `metrics`, `lifts`, `lift_progress`, `zones_weekly`,
-   `sleep_weekly`, `recovery_daily`, `vo2max`. Non selezionare `lift_alias`.
+   `sleep_weekly`, `recovery_daily`, `vo2max` (e `glucose_daily` se carichi la glicemia). Non selezionare
+   `lift_alias`.
 3. Scegli il magazzino SQL (è l'unico che Free Edition ti dà) e salva con un nome, per esempio `NOOP`.
 4. Apri **Instructions** e incolla delle istruzioni generali, che aiutano molto Genie a non sbagliare:
 

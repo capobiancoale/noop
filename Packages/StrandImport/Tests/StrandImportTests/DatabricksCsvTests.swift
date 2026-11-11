@@ -360,6 +360,59 @@ final class DatabricksCsvTests: XCTestCase {
         XCTAssertTrue(DatabricksCsv.mergeSeries(imported: pts, computed: []).isEmpty)
     }
 
+    // MARK: - glucose (opt-in)
+
+    func testGlucoseTableIsOnlyAddedOnOptIn() {
+        XCTAssertEqual(DatabricksCsv.tables(includeGlucose: false), DatabricksCsv.tables)
+        XCTAssertEqual(DatabricksCsv.tables(includeGlucose: true),
+                       ["days", "sleeps", "workouts", "wods", "wod_movements", "metrics", "glucose"])
+        XCTAssertEqual(lines(DatabricksCsv.glucoseCSV(points: [], exportedAt: exportedAt)),
+                       ["day,key,export_ts,source,value"])
+        XCTAssertEqual(DatabricksCsv.fileName(table: DatabricksCsv.glucoseTable, exportedAt: exportedAt, timeZone: rome),
+                       "glucose__20261102-100000.csv")
+    }
+
+    func testGlucoseGoldenRowsSortedByDayThenKey() {
+        let pts = [MetricPoint(day: "2026-11-02", key: "glucose_tir", value: 81),
+                   MetricPoint(day: "2026-11-01", key: "insulin_bolus", value: 12.3),
+                   MetricPoint(day: "2026-11-01", key: "glucose_tir", value: 72.5),
+                   MetricPoint(day: "2026-11-01", key: "carbs_g", value: 180)]
+        XCTAssertEqual(Array(lines(DatabricksCsv.glucoseCSV(points: pts, exportedAt: exportedAt)).dropFirst()), [
+            "2026-11-01,carbs_g,\(stamp),apple_health,180",
+            "2026-11-01,glucose_tir,\(stamp),apple_health,72.5",
+            "2026-11-01,insulin_bolus,\(stamp),apple_health,12.3",
+            "2026-11-02,glucose_tir,\(stamp),apple_health,81",
+        ])
+    }
+
+    func testGlucoseTableDropsEverythingOutsideItsAllowlist() {
+        let forbidden = ["weight", "bp_systolic", "protein_g", "mood", "recovery", "irregular_rhythm_pct", "glucose_reading"]
+        let bad = forbidden.map { MetricPoint(day: "2026-11-01", key: $0, value: 123.456) }
+        let nonFinite = [MetricPoint(day: "2026-11-01", key: "glucose_cv", value: .nan),
+                         MetricPoint(day: "2026-11-01", key: "glucose_avg", value: .infinity)]
+        let good = MetricPoint(day: "2026-11-01", key: "glucose_hypos", value: 2)
+        let csv = DatabricksCsv.glucoseCSV(points: bad + nonFinite + [good], exportedAt: exportedAt)
+        XCTAssertEqual(Array(lines(csv).dropFirst()), ["2026-11-01,glucose_hypos,\(stamp),apple_health,2"])
+        for key in forbidden { XCTAssertFalse(csv.contains(key), key) }
+        XCTAssertFalse(csv.contains("123.456"))
+    }
+
+    func testGlucoseAllowlistNeverWidensTheDefaultExport() {
+        XCTAssertTrue(DatabricksCsv.glucoseAllowlist.isDisjoint(with: DatabricksCsv.metricAllowlist))
+        XCTAssertEqual(DatabricksCsv.glucoseAllowlist.count, 18)
+        // A glucose key handed to the default metrics table is still dropped there.
+        let raw = [DatabricksCsv.SourcedPoint(point: MetricPoint(day: "2026-11-01", key: "glucose_tir", value: 70),
+                                              source: "import")]
+        XCTAssertEqual(parse(DatabricksCsv.metricsCSV(series: raw, exportedAt: exportedAt)).count, 1)
+    }
+
+    func testGlucoseRepeatedDayAndKeyKeepsOneRow() {
+        let pts = [MetricPoint(day: "2026-11-01", key: "insulin_basal", value: 10),
+                   MetricPoint(day: "2026-11-01", key: "insulin_basal", value: 11.5)]
+        let rows = Array(lines(DatabricksCsv.glucoseCSV(points: pts, exportedAt: exportedAt)).dropFirst())
+        XCTAssertEqual(rows, ["2026-11-01,insulin_basal,\(stamp),apple_health,11.5"])
+    }
+
     // MARK: - Privacy: notes never appear
 
     func testNoNotesTextAppearsAnywhere() {
