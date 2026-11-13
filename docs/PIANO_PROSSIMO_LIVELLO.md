@@ -1,6 +1,6 @@
 # NOOP: dal "mostrare i dati" al "dirti cosa fare"
 
-Scaletta di lavoro per chi implementa. Stato: **niente di quanto segue è stato scritto**, è solo il piano.
+Scaletta di lavoro per chi implementa. Stato: in corso di sviluppo.
 Branch di partenza: `claude/blissful-mayer-0dvnwt` (commit `1ebb664e`).
 
 Obiettivo dell'utente: l'app oggi mostra soprattutto numeri. Deve dire **come passare la giornata**,
@@ -61,8 +61,8 @@ File: `Packages/StrandAnalytics/Sources/StrandAnalytics/DayPlan.swift` + `DayPla
    - Proteine in g/kg al giorno: salute 1,2–1,6; prestazione e resistenza 1,4–2,0; forza 1,6–2,2;
      dimagrire 1,6–2,4. Nota fissa: "se il tuo medico ti ha dato indicazioni diverse, valgono quelle".
    - Liquidi: 2,5 L uomo / 2,0 L donna, +0,5 L nei giorni maintain e push.
-   - **Carboidrati: nessuna quantità.** Se ci sono dati di glicemia (`hasGlucoseBlock` in Today) la
-     scheda dice che con il diabete di tipo 1 si decidono con il team diabetologico.
+   - Carboidrati in g/kg al giorno: giornata leggera 3–5; mantenimento e spinta 5–7; obiettivo
+     resistenza in giornata di spinta 6–10; obiettivo dimagrire 3–5. Mai dosi di insulina (vedi §6d).
    - Se età, peso o altezza mancano (0): niente numeri, invito a completare il profilo.
 4. **Su cosa lavorare** (al massimo 3, in quest'ordine di priorità):
    debito di sonno ≥ 60 min; media sonno 7 giorni sotto il fabbisogno di oltre 45 min;
@@ -228,9 +228,50 @@ Questi dati vanno anche nel blocco "Massimali" del contesto del Coach (§4, punt
 
 ### 6c. Oggi, Sonno, Salute
 
-La revisione di queste schermate è ancora in corso.
+Dalla seconda revisione automatica, **non ricontrollata riga per riga**. Attenzione: ha letto la Today
+classica (`TodayView.swift`); l'utente usa quella "liquid" (`Strand/Liquid/LiquidTodayView.swift`),
+quindi ogni punto su Today va prima cercato lì.
 
-_(da completare)_
+Testi in inglese:
+1. Scheda "Readiness" del Charge: `ReadinessEngine` restituisce frasi inglesi (`TodayView.swift:1590-1627`).
+   La Today liquid le ricostruisce già da chiavi (`signalRow`); fare lo stesso nella classica.
+2. Lista di controllo dell'Età fitness in inglese (`HealthView.swift:970, 973`).
+3. Suggerimento "Swipe" / "Tap" nella barra della data (`TodayView.swift:977`).
+4. Errore di sincronizzazione in inglese e con "this Mac" su iPhone (`BLEManager.swift:1684, 1740`).
+5. Etichetta "ON-DEVICE" sotto gli anelli (`TodayView.swift:745`).
+6. Nomi degli sport in inglese nelle tessere allenamento di Today (`TodayView.swift:3358, 139`).
+
+Valori che possono ingannare:
+7. Calorie: mostrano l'ultimo giorno disponibile anche se non è quello scelto (`TodayView.swift:3167, 3338`).
+8. Passi con didascalia "oggi" anche sui giorni passati (`TodayView.swift:3305`).
+9. Stress 0–3 arrotondato a intero: 0,4 diventa "0" (`TodayView.swift:2182`).
+10. Sonno: "Ieri notte" mostrato anche quando il dato è di una notte precedente
+    (`SleepView.swift:351, 396, 1583`, lettura con `series.last`).
+11. Efficienza del sonno: frazione 0–1 stampata come percentuale ("1 %") in un ramo raro (`TodayView.swift:4203`).
+12. Frequenza respiratoria ed Età fitness mostrate senza data anche se vecchie di giorni.
+13. Notti importate: ipnogramma disegnato con fasi inventate (`SleepView.swift` circa 2700). Va tolto o
+    dichiarato chiaramente.
+
+Impaginazione in italiano (stime):
+14. Etichette al centro degli anelli che escono dall'anello (`TodayView.swift:2751, 2826, 2841`).
+15. Didascalie troncate nelle tessere dei parametri vitali e delle metriche (`HealthView.swift:1259`).
+16. Righe delle fasi del sonno con colonne da 56 e 38 punti: "PROFONDO" non ci sta (`SleepView.swift:1007`).
+17. Riga dell'Età fitness troppo stretta (`HealthView.swift:803-835`).
+
+## 6d. Decisioni prese dopo la prima stesura
+
+- **Carboidrati: sì, come intervallo giornaliero** di nutrizione sportiva (g/kg secondo il tipo di
+  giornata e l'obiettivo). **Insulina: mai.** L'app non calcola boli e non propone modifiche a basale,
+  rapporto insulina/carboidrati o sensibilità: lo fa Loop.
+- Le impostazioni di terapia dell'utente **non vanno scritte nel repository** (è pubblico). Se servono
+  al Coach come contesto, le inserisce l'utente nell'app, restano sul telefono e si attivano con un
+  interruttore; il divieto di suggerire dosi resta.
+- **Widget iPhone**: oltre a Charge, Effort e Rest devono mostrare il consiglio del giorno, con una
+  grafica più curata. `WidgetSnapshot` (`StrandiOSShared/WidgetSnapshot.swift`) porta i campi del
+  piano come valori semplici (il widget non collega `StrandAnalytics`); testi nel catalogo del widget
+  (`StrandiOSWidgets/Localizable.xcstrings`).
+- **Tolto da Oggi il grafico "Cuore e glicemia"** (resta nella schermata del WOD).
+- Un solo punto calcola il piano per scheda, Coach e widget: `Strand/Data/DayPlanBuilder.swift`.
 
 ## 7. Ordine consigliato e rilascio
 
