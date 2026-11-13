@@ -140397,6 +140397,326 @@
           }
         }
       }
+    },
+    "Strength progress": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Progressi nella forza"
+          }
+        }
+      }
+    },
+    "est. 1RM": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1RM stimato"
+          }
+        }
+      }
+    },
+    "est. 1RM %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1RM stimato %@"
+          }
+        }
+      }
+    },
+    "PR": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PR"
+          }
+        }
+      }
+    },
+    "Records, last 30 days": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record negli ultimi 30 giorni"
+          }
+        }
+      }
+    },
+    "This week, partial": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa settimana, parziale"
+          }
+        }
+      }
+    },
+    "%lld movements, %lld records in the last 30 days.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld movimenti, %lld record negli ultimi 30 giorni."
+          }
+        }
+      }
+    },
+    "This week's volume %@, partial.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volume di questa settimana %@, parziale."
+          }
+        }
+      }
+    },
+    "This week's volume %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volume di questa settimana %@."
+          }
+        }
+      }
+    },
+    "Weekly volume": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volume settimanale"
+          }
+        }
+      }
+    },
+    "Weekly volume in kg, last 8 weeks": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volume settimanale in kg, ultime 8 settimane"
+          }
+        }
+      }
+    },
+    "Volume counts only movements where sets and reps are known.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il volume conta solo i movimenti con serie e ripetizioni note."
+          }
+        }
+      }
+    },
+    "%lld of %lld loaded entries left out.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld di %lld voci con carico escluse."
+          }
+        }
+      }
+    },
+    "Latest %@ · %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultimo %@ · %@"
+          }
+        }
+      }
+    },
+    "Best %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Migliore %@"
+          }
+        }
+      }
+    },
+    "%@, latest %@ on %@, best %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, ultimo %@ il %@, migliore %@."
+          }
+        }
+      }
+    },
+    "Latest lift is a personal record.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'ultimo carico è un record personale."
+          }
+        }
+      }
+    },
+    "Estimated 1RM %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1RM stimato %@."
+          }
+        }
+      }
+    },
+    "Show estimated 1RM": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra 1RM stimato"
+          }
+        }
+      }
+    },
+    "Load over time": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carico nel tempo"
+          }
+        }
+      }
+    },
+    "Load over time in kg": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carico nel tempo in kg"
+          }
+        }
+      }
+    },
+    "Entries": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voci"
+          }
+        }
+      }
+    },
+    "Log this movement at least twice to see a trend.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra questo movimento almeno due volte per vedere l'andamento."
+          }
+        }
+      }
+    },
+    "Dashed line: estimated 1RM": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linea tratteggiata: 1RM stimato"
+          }
+        }
+      }
+    },
+    "%lld entries from %@ to %@, best %@, %lld records.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld voci da %@ a %@, migliore %@, %lld record."
+          }
+        }
+      }
+    },
+    "%lld × %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld × %lld"
+          }
+        }
+      }
+    },
+    "%lld sets": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld serie"
+          }
+        }
+      }
+    },
+    "Volume %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volume %@"
+          }
+        }
+      }
+    },
+    "personal record": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "record personale"
+          }
+        }
+      }
+    },
+    "Search movements": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca movimenti"
+          }
+        }
+      }
+    },
+    "Loads you enter on a WOD's movements appear here. Log a WOD with a weight on a movement to start your strength history.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I carichi inseriti nei movimenti di un WOD compaiono qui. Registra un WOD con un peso su un movimento per iniziare la tua cronologia di forza."
+          }
+        }
+      }
+    },
+    "The estimated 1RM uses the Epley formula for sets of 1 to 10 reps. It is an estimate, not a tested max.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il 1RM stimato usa la formula di Epley per serie da 1 a 10 ripetizioni. È una stima, non un massimale testato."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
