@@ -56,6 +56,8 @@
 	<string>NOOP reads your own Apple Health data on-device to compute recovery, strain, and sleep. Nothing leaves your device.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>NOOP writes the metrics it computes from your strap back into Apple Health, on-device and only when you allow it.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>NOOP connects to the Ollama or other local AI server on your network that you choose for the Coach. Nothing is sent anywhere else.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>NOOP records your route during an outdoor workout to show distance, pace, and a map, and keeps recording while the screen is off. The route stays on your device. Nothing leaves it.</string>
 	<key>NSSupportsLiveActivities</key>
