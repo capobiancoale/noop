@@ -38959,7 +38959,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fatto"
+            "value": "Fine"
           }
         },
         "pt-PT": {
@@ -74401,7 +74401,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nutrizione"
+            "value": "Alimentazione"
           }
         },
         "pt-PT": {
@@ -140044,6 +140044,356 @@
           "stringUnit": {
             "state": "translated",
             "value": "Con caffeina %1$@, il valore di %3$@ di domani tende a salire di circa %2$@ per te, in base a %4$lld dei tuoi giorni di %5$@."
+          }
+        }
+      }
+    },
+    "Today's plan": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Piano di oggi"
+          }
+        }
+      }
+    },
+    "Goal": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obiettivo"
+          }
+        }
+      }
+    },
+    "Goal: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obiettivo: %@"
+          }
+        }
+      }
+    },
+    "Performance": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prestazione"
+          }
+        }
+      }
+    },
+    "Strength and muscle": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forza e muscoli"
+          }
+        }
+      }
+    },
+    "Lose fat": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perdere grasso"
+          }
+        }
+      }
+    },
+    "Endurance": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resistenza"
+          }
+        }
+      }
+    },
+    "General health": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salute generale"
+          }
+        }
+      }
+    },
+    "Training": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allenamento"
+          }
+        }
+      }
+    },
+    "Work on": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su cosa lavorare"
+          }
+        }
+      }
+    },
+    "Easy day": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giornata leggera"
+          }
+        }
+      }
+    },
+    "Training: %@. %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allenamento: %@. %@"
+          }
+        }
+      }
+    },
+    "Charge %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charge %lld"
+          }
+        }
+      }
+    },
+    "No Charge yet": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora nessun Charge"
+          }
+        }
+      }
+    },
+    "short night %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "notte corta %@"
+          }
+        }
+      }
+    },
+    "load %@× your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "carico %@× il tuo solito"
+          }
+        }
+      }
+    },
+    "%lld hard days in a row": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld giorni intensi di fila"
+          }
+        }
+      }
+    },
+    "Tonight: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stasera: %@"
+          }
+        }
+      }
+    },
+    "in bed by %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a letto entro le %@"
+          }
+        }
+      }
+    },
+    "Add your age, weight and height in the profile to see this.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi età, peso e altezza nel profilo per vederlo."
+          }
+        }
+      }
+    },
+    "%@–%@ kcal": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@–%@ kcal"
+          }
+        }
+      }
+    },
+    "%@–%@ g": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@–%@ g"
+          }
+        }
+      }
+    },
+    "%@ L": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ L"
+          }
+        }
+      }
+    },
+    "Energy": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Energia"
+          }
+        }
+      }
+    },
+    "Fluids": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liquidi"
+          }
+        }
+      }
+    },
+    "Estimates from your profile and today's plan. Not medical advice.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stime basate sul tuo profilo e sul piano di oggi. Non sono un consiglio medico."
+          }
+        }
+      }
+    },
+    "NOOP never calculates insulin: dosing stays with you, your care team and Loop.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOOP non calcola mai l'insulina: le dosi restano a te, al tuo team di cura e a Loop."
+          }
+        }
+      }
+    },
+    "Ask the Coach": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiedi al Coach"
+          }
+        }
+      }
+    },
+    "Sleep debt %@: tonight's target includes an extra hour": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Debito di sonno %@: l'obiettivo di stasera include un'ora in più"
+          }
+        }
+      }
+    },
+    "Sleep averages %@ a night against %@ needed": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dormi in media %@ a notte contro i %@ necessari"
+          }
+        }
+      }
+    },
+    "Wake time varies by about %lld min: keep it steady": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'orario di risveglio varia di circa %lld min: tienilo costante"
+          }
+        }
+      }
+    },
+    "Training load is %@× your usual: keep some days easy": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il carico di allenamento è %@× il tuo solito: tieni qualche giorno leggero"
+          }
+        }
+      }
+    },
+    "Training load is %@× your usual: there is room to do more": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il carico di allenamento è %@× il tuo solito: c'è spazio per fare di più"
+          }
+        }
+      }
+    },
+    "HRV is %lld%% below your usual (%@ against %@ ms)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'HRV è %lld%% sotto il tuo solito (%@ contro %@ ms)"
+          }
+        }
+      }
+    },
+    "Resting heart rate is %@ bpm above your usual (%@ against %@)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La frequenza cardiaca a riposo è %@ bpm sopra il tuo solito (%@ contro %@)"
           }
         }
       }

@@ -131,6 +131,9 @@ struct LiquidTodayView: View {
     /// Flips true once the first load() completes. Until then the hero gauges + sky render STATIC so the
     /// launch data-churn (refresh publish + BLE/HR notifies) isn't fighting 4 live canvases + CoreMotion.
     @State private var dataLoaded = false
+    /// "Today's plan" (training / sleep / nutrition / focus), built by `DayPlanBuilder` in load(); only at offset 0.
+    @State private var dayPlan: DayPlanBuilder.Snapshot?
+    @State private var showCoachSheet = false
 
     // Custom liquid pull-to-refresh: a vessel that FILLS as you drag, releases into a refresh (replaces
     // the system spinner). Driven by the scroll's top overscroll offset.
@@ -265,6 +268,7 @@ struct LiquidTodayView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     AnyView(scene)                                   // block 1: the scores and what they mean
                     if !nightLows.isEmpty { AnyView(nightLowSection) }  // qualifies Charge, so it sits right under it
+                    if selectedDayOffset == 0, let plan = dayPlan { AnyView(dayPlanSection(plan)) }  // right after the hero
                     if hasGlucoseBlock { AnyView(glucoseNowSection) }    // block 2
                     AnyView(todayWorkoutSection)                         // block 3
                     AnyView(detailsToggle)
@@ -370,6 +374,10 @@ struct LiquidTodayView: View {
                     .liquidSheetDoneChrome { showSupport = false }
             }
         }
+        // The plan card's "Ask the Coach" (NavRouter has no Coach destination, so a sheet).
+        .sheet(isPresented: $showCoachSheet) { DayPlanCoachSheet() }
+        // A new goal changes the energy, protein and carbohydrate ranges at once.
+        .onChangeCompat(of: profile.goal) { _ in Task { await refreshDayPlan() } }
         // The note under the scores while Charge is empty → what last night recorded and what to try.
         .sheet(isPresented: $showChargeWhy) {
             ChargeMissingSheet(onClose: { showChargeWhy = false })
@@ -1686,6 +1694,20 @@ struct LiquidTodayView: View {
             )
     }
 
+    private func dayPlanSection(_ snapshot: DayPlanBuilder.Snapshot) -> some View {
+        DayPlanCard(snapshot: snapshot, goal: $profile.goal, hasGlucose: hasGlucoseBlock,
+                    askCoach: { showCoachSheet = true })
+    }
+
+    /// Rebuilds the plan from the live profile (today only; a past day has no plan).
+    private func refreshDayPlan() async {
+        guard selectedDayOffset == 0 else { dayPlan = nil; return }
+        let values = DayPlanBuilder.ProfileValues(
+            age: profile.age, sex: profile.sex, weightKg: profile.weightKg, heightCm: profile.heightCm,
+            goal: DayPlanBuilder.goal(from: profile.goal))
+        dayPlan = await DayPlanBuilder.snapshot(repo: repo, profile: values)
+    }
+
     // MARK: - Data
 
     private func load() async {
@@ -1855,6 +1877,8 @@ struct LiquidTodayView: View {
         weekStrain = strain7.isEmpty ? nil : strain7.reduce(0, +) / Double(strain7.count)
         let sevenAgo = Int(Date().timeIntervalSince1970) - 7 * 86_400
         weekWods = allWods.filter { $0.ts >= sevenAgo }.count
+
+        await refreshDayPlan()
 
         // First load done — bring the hero gauges + sky to life now the launch churn has settled.
         if !dataLoaded { withAnimation(.easeIn(duration: 0.4)) { dataLoaded = true } }

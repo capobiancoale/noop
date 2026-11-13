@@ -332,6 +332,9 @@ struct TodayView: View {
     // iOS top-bar state: the date-jump popover and the profile/settings sheet.
     @State private var showDayPicker = false
     @State private var showSettings = false
+    /// "Today's plan" card (built by `DayPlanBuilder`; today only) and its "Ask the Coach" sheet.
+    @State private var dayPlan: DayPlanBuilder.Snapshot?
+    @State private var showCoachSheet = false
     /// The Updates inbox sheet (opened by the header bell). Shared across both platforms.
     @State private var showUpdatesInbox = false
 
@@ -1281,6 +1284,11 @@ struct TodayView: View {
                     )
                     .staggeredAppear(index: 0)
                 #endif
+                if selectedDayOffset == 0, let plan = dayPlan {
+                    DayPlanCard(snapshot: plan, goal: $profile.goal, hasGlucose: false,
+                                askCoach: { showCoachSheet = true })
+                        .staggeredAppear(index: 1)
+                }
                 heartRateTrendSection.staggeredAppear(index: 1)
                 // Design Reset: rings -> Heart rate -> Your cards (the flat mockup order); the greeting +
                 // Synthesis read-out + vitals now sit below the pinned cards instead of crowding the hero.
@@ -1330,6 +1338,11 @@ struct TodayView: View {
         // Reload when the data refreshes OR the selected day changes, the HR trend and Rest score are
         // day-scoped, so navigating must re-fetch them for the newly selected window.
         .task(id: TodayLoadKey(seq: repo.refreshSeq, offset: selectedDayOffset)) { await loadAll() }
+        // The plan follows the data, the selected day (today only) and the profile (goal, age, weight, height).
+        .task(id: "\(repo.refreshSeq)-\(selectedDayOffset)-\(profile.goal)-\(profile.age)-\(profile.sex)-\(profile.weightKg)-\(profile.heightCm)") {
+            await refreshDayPlan()
+        }
+        .sheet(isPresented: $showCoachSheet) { DayPlanCoachSheet() }
         // #989: hydration writes don't bump refreshSeq, so the card needs its own triggers, a logged /
         // edited / deleted drink (hydrationSeq) and the Settings feature toggle both re-read just the two
         // hydration fields. Cheap (one metricSeries row), never re-runs the heavy loads.
@@ -3778,6 +3791,15 @@ struct TodayView: View {
         vitalityToday = c.vitalityToday
         // Hydration is deliberately NOT part of the snapshot (#989): logging a drink never bumps
         // refreshSeq, so a restored total could be stale. It is re-read live instead (see loadAll).
+    }
+
+    /// Rebuilds "Today's plan" from the live profile (today only; a past day has no plan).
+    private func refreshDayPlan() async {
+        guard selectedDayOffset == 0 else { dayPlan = nil; return }
+        let values = DayPlanBuilder.ProfileValues(
+            age: profile.age, sex: profile.sex, weightKg: profile.weightKg, heightCm: profile.heightCm,
+            goal: DayPlanBuilder.goal(from: profile.goal))
+        dayPlan = await DayPlanBuilder.snapshot(repo: repo, profile: values)
     }
 
     /// #989: today's hydration total + goal, re-read wherever staleness could show: the history-wide load,
