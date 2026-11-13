@@ -1,6 +1,7 @@
 # NOOP: dal "mostrare i dati" al "dirti cosa fare"
 
-Scaletta di lavoro per chi implementa. Stato: in corso di sviluppo.
+Scaletta di lavoro per chi implementa. Stato: §1–§5, §6a e §6b sono scritti sulla branch di sviluppo (commit fino a `708b1905`), ancora da
+compilare in CI. Restano §6c e i test del widget (spenti dietro `WIDGET_SNAPSHOT_TESTS`).
 Branch di partenza: `claude/blissful-mayer-0dvnwt` (commit `1ebb664e`).
 
 Obiettivo dell'utente: l'app oggi mostra soprattutto numeri. Deve dire **come passare la giornata**,
