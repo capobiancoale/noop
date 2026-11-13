@@ -349,6 +349,19 @@ struct SettingsView: View {
                     }
                 }
                 rowDivider
+                FormRow(label: "Goal") {
+                    Picker("Goal", selection: $profile.goal) {
+                        Text("Performance").tag("performance")
+                        Text("Strength and muscle").tag("strength")
+                        Text("Lose fat").tag("fatLoss")
+                        Text("Endurance").tag("endurance")
+                        Text("General health").tag("health")
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .accessibilityLabel("Goal")
+                }
+                rowDivider
                 // Waist (optional). Unlike the rows above it, an empty waist is valid (0 = unset) —
                 // it's the ONE measurement that ADDS the VO₂max estimate alongside Fitness Age. It does
                 // NOT sharpen the Fitness Age itself (the body term cancels in the Nes model), so it sits

@@ -23,6 +23,9 @@ final class ProfileStore: ObservableObject {
     var waistSetAt: Date? {
         (d.object(forKey: K.waistSetAt) as? Double).map { Date(timeIntervalSince1970: $0) }
     }
+    /// Personal goal for "Today's plan": a `DayPlan.Goal` raw value ("performance", "strength", "fatLoss",
+    /// "endurance", "health"). Default "performance". Unknown values read back as performance.
+    @Published var goal: String { didSet { d.set(goal, forKey: K.goal) } }
     /// 0 = auto-estimate from age.
     @Published var hrMaxOverride: Int { didSet { d.set(hrMaxOverride, forKey: K.hrMax) } }
     /// Step-calibration divisor (#139/#132): counter ticks per real step for the @57 motion
@@ -73,7 +76,14 @@ final class ProfileStore: ObservableObject {
         static let stepsManualFlag = "profile.stepsCalibrationManual"
         static let stepsManualCoeff = "profile.stepsManualCoefficient"
         static let avatar = "profile.avatarImageData"
+        static let goal = DayPlanBuilder.goalKey
     }
+
+    // Key names for code that reads the persisted profile without a live store (`DayPlanBuilder.ProfileValues.stored`).
+    nonisolated static let ageKey = K.age
+    nonisolated static let sexKey = K.sex
+    nonisolated static let weightKey = K.weight
+    nonisolated static let heightKey = K.height
 
     init() {
         age = d.object(forKey: K.age) as? Int ?? 30
@@ -89,6 +99,7 @@ final class ProfileStore: ObservableObject {
         stepsCalibrationManual = d.object(forKey: K.stepsManualFlag) as? Bool ?? false
         stepsManualCoefficient = max(0, d.object(forKey: K.stepsManualCoeff) as? Double ?? 0)
         avatarImageData = d.data(forKey: K.avatar)
+        goal = d.string(forKey: K.goal) ?? "performance"
     }
 
     // MARK: - Profile picture
