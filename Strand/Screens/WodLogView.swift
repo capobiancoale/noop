@@ -39,6 +39,16 @@ struct WodLogView: View {
                 }
             }
 
+            if !wods.isEmpty {
+                Section {
+                    NavigationLink {
+                        StrengthProgressView()
+                    } label: {
+                        Label("Strength progress", systemImage: "chart.line.uptrend.xyaxis")
+                    }
+                }
+            }
+
             if !benchmarks.isEmpty {
                 Section("Bests") {
                     ForEach(benchmarks) { b in
