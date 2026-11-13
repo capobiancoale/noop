@@ -389,6 +389,9 @@ private struct DoseResponseCardView: View {
         }
         let magText = "\(Int(abs(delta).rounded()))\(card.outcomeSuffix)"
         let lower = delta <= 0
+        if card.behavior == .caffeine {
+            return caffeineForecastSentence(when: stepLabel, magText: magText, lower: lower)
+        }
         if card.response.priorDominated {
             return lower
                 ? String(localized: "A \(stepLabel) tonight tends to line up with about \(magText) lower on tomorrow\u{2019}s \(card.outcomeName) for you, based on typical patterns.")
@@ -397,6 +400,19 @@ private struct DoseResponseCardView: View {
         return lower
             ? String(localized: "A \(stepLabel) tonight tends to line up with about \(magText) lower on tomorrow\u{2019}s \(card.outcomeName) for you, based on \(card.response.nUser) of your \(card.unitLabel.lowercased()) days.")
             : String(localized: "A \(stepLabel) tonight tends to line up with about \(magText) higher on tomorrow\u{2019}s \(card.outcomeName) for you, based on \(card.response.nUser) of your \(card.unitLabel.lowercased()) days.")
+    }
+
+    /// The caffeine variants read "Caffeine after 2pm tends to line up with…": the stepper picks a time of
+    /// day, so `when` is a phrase like "after 2pm", not a count that would read "A 3 tonight".
+    private func caffeineForecastSentence(when: String, magText: String, lower: Bool) -> String {
+        if card.response.priorDominated {
+            return lower
+                ? String(localized: "Caffeine \(when) tends to line up with about \(magText) lower on tomorrow\u{2019}s \(card.outcomeName) for you, based on typical patterns.")
+                : String(localized: "Caffeine \(when) tends to line up with about \(magText) higher on tomorrow\u{2019}s \(card.outcomeName) for you, based on typical patterns.")
+        }
+        return lower
+            ? String(localized: "Caffeine \(when) tends to line up with about \(magText) lower on tomorrow\u{2019}s \(card.outcomeName) for you, based on \(card.response.nUser) of your \(card.unitLabel.lowercased()) days.")
+            : String(localized: "Caffeine \(when) tends to line up with about \(magText) higher on tomorrow\u{2019}s \(card.outcomeName) for you, based on \(card.response.nUser) of your \(card.unitLabel.lowercased()) days.")
     }
 
     // MARK: Bits
@@ -752,15 +768,20 @@ final class InsightsHubViewModel: ObservableObject {
                 }
             }
         }
-        /// The whole dose phrase for forecast copy (alcohol counts; caffeine keeps the bare bucket
-        /// number). Whole-string keys per variant, never a stitched "+ drinks" suffix.
+        /// The whole dose phrase for forecast copy (alcohol counts; caffeine names the time of day, the
+        /// same buckets the stepper shows). Whole-string keys per variant, never a stitched "+ drinks" suffix.
         func stepLabel(_ d: Int) -> String {
             switch behavior {
             case .alcohol:
                 return d >= DoseResponseEngine.maxCurveDose ? String(localized: "\(d)+ drinks")
                                                             : String(localized: "\(d) drinks")
             case .caffeine:
-                return "\(d)"
+                switch d {
+                case 0: return String(localized: "in the morning")
+                case 1: return String(localized: "around noon")
+                case 2: return String(localized: "after 2pm")
+                default: return String(localized: "in the evening")
+                }
             }
         }
     }

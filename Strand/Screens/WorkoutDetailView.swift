@@ -58,7 +58,7 @@ struct WorkoutDetailView: View {
     @State private var route: [RouteMath.LatLng] = []
 
     var body: some View {
-        ScreenScaffold(title: "\(WorkoutSource.displaySport(row.sport))",
+        ScreenScaffold(title: LocalizedStringKey(WorkoutSource.displaySport(row.sport)),
                        subtitle: "\(dateLabel(row.startTs))",
                        // PERF: chart/map-heavy column (a MapKit route map, the session HR curve, the
                        // zone-split chart and the effort card). The LazyVStack path builds the off-screen
@@ -153,7 +153,7 @@ struct WorkoutDetailView: View {
                                 in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(WorkoutSource.displaySport(row.sport))
+                    Text(WorkoutSource.localizedSport(row.sport))
                         .font(StrandFont.title2)
                         .foregroundStyle(StrandPalette.textPrimary)
                         .lineLimit(1)
@@ -259,7 +259,7 @@ struct WorkoutDetailView: View {
 
     private var routeAccessibilityLabel: String {
         let dist = distanceLabel(row.distanceM)
-        return String(localized: "Map of your \(WorkoutSource.displaySport(row.sport)) route, \(dist).")
+        return String(localized: "Map of your \(WorkoutSource.localizedSport(row.sport)) route, \(dist).")
     }
 
     // MARK: - HR curve
@@ -283,7 +283,7 @@ struct WorkoutDetailView: View {
                         showsArea: true,
                         valueFormat: { String(localized: "\(Int($0.rounded())) bpm") },
                         dateFormat: { Self.tooltipTime.string(from: $0) },
-                        accessibilityLabel: String(localized: "Heart rate during \(WorkoutSource.displaySport(row.sport))")
+                        accessibilityLabel: String(localized: "Heart rate during \(WorkoutSource.localizedSport(row.sport))")
                     )
                 } footer: {
                     ChartFooter([

@@ -41,7 +41,7 @@ struct WodLogView: View {
 
             if !benchmarks.isEmpty {
                 Section("Bests") {
-                    ForEach(benchmarks, id: \.title) { b in
+                    ForEach(benchmarks) { b in
                         NavigationLink {
                             WodProgressionView(title: b.title) { Task { await reload() } }
                         } label: {
@@ -51,7 +51,7 @@ struct WodLogView: View {
                                     Text("\(b.count) attempts").font(.caption).foregroundStyle(.secondary)
                                 }
                                 Spacer()
-                                Text(b.best).font(.body.monospacedDigit()).foregroundStyle(.secondary)
+                                benchBests(b)
                             }
                         }
                     }
@@ -88,46 +88,75 @@ struct WodLogView: View {
 
     // MARK: Bests (per-title progress)
 
-    private struct Bench { let title: String; let best: String; let count: Int }
+    private struct Bench: Identifiable {
+        let title: String
+        let best: [WodRanking.Best]
+        let count: Int
+        var id: String { WodRanking.titleKey(title) }
+    }
 
-    /// One "best" row per WOD title that has ≥ 2 attempts — the progress at a glance. The best is the
-    /// min finish time / max rounds / max reps / max weight, matching each WOD's own result kind.
+    /// One "best" row per WOD title (trimmed, case-insensitive) that has ≥ 2 attempts. The best is the
+    /// min finish time / max rounds + reps / max reps / max weight, ranked apart for RX and scaled
+    /// attempts; attempts without a real result never count (see `WodRanking`).
     private var benchmarks: [Bench] {
-        let byTitle = Dictionary(grouping: wods, by: { $0.title })
         var out: [Bench] = []
-        for (title, rows) in byTitle where rows.count >= 2 {
-            guard let best = WodFormat.best(of: rows) else { continue }
-            out.append(Bench(title: title, best: best, count: rows.count))
+        for g in WodRanking.groupByTitle(wods) where g.rows.count >= 2 {
+            let best = WodRanking.bests(of: g.rows)
+            if best.isEmpty { continue }
+            out.append(Bench(title: g.title, best: best, count: g.rows.count))
         }
         return out.sorted { $0.count > $1.count }
+    }
+
+    /// The best result (RX first), with a scaled best as a smaller second line when there is one.
+    private func benchBests(_ b: Bench) -> some View {
+        VStack(alignment: .trailing, spacing: 2) {
+            ForEach(Array(b.best.enumerated()), id: \.offset) { idx, entry in
+                benchLine(entry, tagged: b.best.count > 1 || entry.group == .scaled, primary: idx == 0)
+            }
+        }
+    }
+
+    private func benchLine(_ entry: WodRanking.Best, tagged: Bool, primary: Bool) -> some View {
+        HStack(spacing: 4) {
+            if tagged, entry.group != .unspecified {
+                Text(WodFormat.rxLabel(entry.group == .rx)).font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            Text(WodFormat.result(entry.row) ?? "")
+                .font(primary ? .body.monospacedDigit() : .caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
     }
 }
 
 // MARK: - History row
+
+/// The small "RX" / "Scaled" capsule, shared by the log, the detail, the attempts list and the import preview.
+struct WodRxBadge: View {
+    let rx: Bool
+    var body: some View {
+        Text(WodFormat.rxLabel(rx))
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background((rx ? Color.green : Color.orange).opacity(0.22), in: Capsule())
+    }
+}
 
 private struct WodRowView: View {
     let wod: WodLogRow
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
-                Text(wod.title.isEmpty ? wod.type : wod.title).font(.body).foregroundStyle(.primary)
-                if let rx = wod.rx {
-                    Text(rx ? "RX" : "Scaled")
-                        .font(.caption2.weight(.semibold))
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background((rx ? Color.green : Color.orange).opacity(0.22), in: Capsule())
-                }
+                Text(wod.title.isEmpty ? WodFormat.typeLabel(wod.type) : wod.title).font(.body).foregroundStyle(.primary)
+                if let rx = wod.rx { WodRxBadge(rx: rx) }
                 Spacer()
                 if let r = WodFormat.result(wod) {
                     Text(r).font(.body.monospacedDigit()).foregroundStyle(.primary)
                 }
             }
-            HStack(spacing: 6) {
-                Text(wod.type)
-                if let f = wod.format, !f.isEmpty { Text("· \(f)") }
-                Text("· \(WodFormat.day(wod.ts))")
-            }
-            .font(.caption).foregroundStyle(.secondary)
+            Text(WodFormat.typeLine(wod))
+                .font(.caption).foregroundStyle(.secondary)
             if !wod.movements.isEmpty {
                 Text(wod.movements.map(WodFormat.movement).joined(separator: ", "))
                     .font(.caption).foregroundStyle(.secondary).lineLimit(2)
@@ -145,57 +174,84 @@ enum WodFormat {
         dayFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ts)))
     }
 
-    /// A WOD's own result, formatted for its kind. Nil when there's no numeric result.
+    /// "RX" / "Scaled" in the user's language.
+    static func rxLabel(_ rx: Bool) -> String {
+        rx ? String(localized: "RX") : String(localized: "Scaled")
+    }
+
+    /// A WOD type or format for display. The stored value stays the English token; only the label is
+    /// localized. An unknown (typed or imported) value is shown as it is.
+    static func typeLabel(_ raw: String) -> String {
+        switch raw {
+        case "Weightlifting": return String(localized: "Weightlifting")
+        case "Running":       return String(localized: "Running")
+        case "Rowing":        return String(localized: "Rowing")
+        case "Other":         return String(localized: "Other")
+        case "Strength":      return String(localized: "Strength")
+        case "Intervals":     return String(localized: "Intervals")
+        default:              return raw
+        }
+    }
+
+    /// "Type · Format · day" for a list row or the import preview.
+    static func typeLine(_ w: WodLogRow) -> String {
+        var parts = [typeLabel(w.type)]
+        if let f = w.format, !f.isEmpty { parts.append(typeLabel(f)) }
+        parts.append(day(w.ts))
+        return parts.joined(separator: " · ")
+    }
+
+    /// Every attempt at `title` in `all` (trimmed, case-insensitive), newest first.
+    static func history(title: String, in all: [WodLogRow]) -> [WodLogRow] {
+        let key = WodRanking.titleKey(title)
+        return all.filter { WodRanking.titleKey($0.title) == key }.sorted { $0.ts > $1.ts }
+    }
+
+    /// "12 reps" with the number first or last as the language wants.
+    static func repsLabel(_ n: Int) -> String { String(localized: "\(n) reps") }
+
+    /// "62.5 kg" with a locale-aware number.
+    static func kgLabel(_ v: Double) -> String { String(localized: "\(trimmed(v)) kg") }
+
+    /// A WOD's own result, formatted for its kind. Nil when there's no numeric result (a row saved with a
+    /// blank result, or the old 0:00, counts as none).
     static func result(_ w: WodLogRow) -> String? {
-        switch w.resultKind {
+        switch w.effectiveResultKind {
         case .time:       return w.resultSeconds.map(clock)
-        case .roundsReps: return w.resultRounds.map { "\($0) + \(w.resultReps ?? 0)" }
-        case .reps:       return w.resultReps.map { "\($0) reps" }
-        case .weight:     return w.resultWeightKg.map { "\(trimmed($0)) kg" }
+        case .roundsReps: return "\(w.resultRounds ?? 0) + \(w.resultReps ?? 0)"
+        case .reps:       return w.resultReps.map(repsLabel)
+        case .weight:     return w.resultWeightKg.map(kgLabel)
         case .none:       return nil
         }
     }
 
-    /// The best result across attempts of one WOD title (all assumed same kind as the first).
-    static func best(of rows: [WodLogRow]) -> String? {
-        guard let kind = rows.first?.resultKind else { return nil }
-        switch kind {
-        case .time:
-            return rows.compactMap { $0.resultSeconds }.min().map(clock)
-        case .roundsReps:
-            // Rank by total reps ≈ rounds*100 + extra, so more rounds always wins.
-            let best = rows.max { ($0.resultRounds ?? 0) * 100 + ($0.resultReps ?? 0) < ($1.resultRounds ?? 0) * 100 + ($1.resultReps ?? 0) }
-            return best.flatMap { r in r.resultRounds.map { "\($0) + \(r.resultReps ?? 0)" } }
-        case .reps:
-            return rows.compactMap { $0.resultReps }.max().map { "\($0) reps" }
-        case .weight:
-            return rows.compactMap { $0.resultWeightKg }.max().map { "\(trimmed($0)) kg" }
-        case .none:
-            return nil
-        }
-    }
-
-    /// A movement summarised for a one-line list: "Thruster · 21-15-9 · 30 kg (RX 43)". Only the parts
-    /// that are present are shown, so a bare "Pull-up" stays "Pull-up".
+    /// A movement summarised for a one-line list: "Thruster · 21-15-9 · 23 done · 30 kg (RX 43)". Only
+    /// the parts that are present are shown, so a bare "Pull-up" stays "Pull-up".
     static func movement(_ m: WodMovement) -> String {
         var parts: [String] = [m.name]
         if let s = m.scheme, !s.isEmpty { parts.append(s) }
         else if let r = m.reps { parts.append("\(r)") }
+        if let d = m.repsDone { parts.append(String(localized: "\(d) done")) }
         if let me = m.weightKg, let rx = m.rxWeightKg {
-            parts.append("\(trimmed(me)) kg (RX \(trimmed(rx)))")
+            parts.append(String(localized: "\(trimmed(me)) kg (RX \(trimmed(rx)))"))
         } else if let rx = m.rxWeightKg {
-            parts.append("RX \(trimmed(rx)) kg")
+            parts.append(String(localized: "RX \(trimmed(rx)) kg"))
         } else if let me = m.weightKg {
-            parts.append("\(trimmed(me)) kg")
+            parts.append(kgLabel(me))
         }
         return parts.joined(separator: " · ")
     }
 
-    /// A comparable numeric value for a WOD's result, for plotting progression over time. nil for `.none`.
+    /// Rounds + reps are packed into one plotted number: rounds × this + reps. Only a plotted value, for
+    /// the chart (and the Health export); ranking compares the (rounds, reps) pair itself.
+    static let roundsRepsUnit = 100_000.0
+
+    /// A comparable numeric value for a WOD's result, for plotting progression over time. nil when the
+    /// WOD has no result.
     static func progressionValue(_ w: WodLogRow) -> Double? {
-        switch w.resultKind {
+        switch w.effectiveResultKind {
         case .time:       return w.resultSeconds.map(Double.init)
-        case .roundsReps: return w.resultRounds.map { Double($0 * 100 + (w.resultReps ?? 0)) }
+        case .roundsReps: return Double(w.resultRounds ?? 0) * roundsRepsUnit + Double(w.resultReps ?? 0)
         case .reps:       return w.resultReps.map(Double.init)
         case .weight:     return w.resultWeightKg
         case .none:       return nil
@@ -206,9 +262,12 @@ enum WodFormat {
     static func progressionLabel(_ v: Double, kind: WodResultKind) -> String {
         switch kind {
         case .time:       return clock(Int(v))
-        case .roundsReps: return "\(Int(v) / 100)+\(Int(v) % 100)"
+        case .roundsReps:
+            let packed = Int(v.rounded())
+            let unit = Int(roundsRepsUnit)
+            return "\(packed / unit)+\(packed % unit)"
         case .reps:       return "\(Int(v))"
-        case .weight:     return "\(trimmed(v)) kg"
+        case .weight:     return kgLabel(v)
         case .none:       return ""
         }
     }
