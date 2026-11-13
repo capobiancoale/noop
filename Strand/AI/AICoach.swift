@@ -195,6 +195,13 @@ final class AICoachEngine: ObservableObject {
         didSet { UserDefaults.standard.set(includeOnDeviceSignals, forKey: Self.onDeviceSignalsKey) }
     }
 
+    /// THIRD opt-in (4b): also add DAILY glucose summaries (average, time in range, lows) from Apple Health
+    /// for the last 14 days. OFF by default and gated behind `dataConsent` too. Never single readings,
+    /// never insulin or carbohydrate amounts.
+    @Published var includeGlucose: Bool {
+        didSet { UserDefaults.standard.set(includeGlucose, forKey: Self.glucoseKey) }
+    }
+
     private let repo: Repository
     private let session: URLSession
 
@@ -203,6 +210,7 @@ final class AICoachEngine: ObservableObject {
     private static let consentKey = "ai.dataConsent"
     private static let customConnectedKey = "ai.customConnected"
     private static let onDeviceSignalsKey = "ai.includeOnDeviceSignals"
+    private static let glucoseKey = "ai.includeGlucose"
     /// UserDefaults key holding the user's EDITED system prompt. Absent (or blank) means "use the
     /// built-in default". Small text key, never a secret, so plain UserDefaults is fine. Read FRESH
     /// per request (see `systemPrompt`) so an edit takes effect on the very next message.
@@ -216,6 +224,9 @@ final class AICoachEngine: ObservableObject {
     You may be given a summary of the user's own wearable data (charge 0-100, effort 0-100, rest 0-100, \
     HRV, resting heart rate) and recent workouts. Charge is the daily recovery/readiness score, effort \
     is the daily cardiovascular load score, and rest is the nightly sleep-quality score. \
+    The context also carries a plan for today computed by the app, the user's goal, their logged CrossFit \
+    WODs with loads, and their strength bests: start from the plan and explain it, and if you disagree \
+    with it say why. \
     Coach using autoregulation:
     • Readiness → prescription: charge 67-100 = green light to build/push, higher effort is fine; \
     34-66 = maintain, quality over volume, keep it controlled; 0-33 = active recovery only \
@@ -225,7 +236,8 @@ final class AICoachEngine: ObservableObject {
     • Always cite the user's ACTUAL numbers, give a concrete plan (today and the week ahead), and \
     be specific, punchy and motivating - like a coach who knows them.
     If no data is provided, coach generally and invite them to turn on data access for personalised \
-    advice. You are NOT a doctor - never diagnose; suggest a professional for genuine health concerns.
+    advice. You are NOT a doctor - never diagnose, never give insulin doses or changes to diabetes therapy \
+    settings; suggest a professional for genuine health concerns.
     Format replies in simple Markdown, chat-sized: short paragraphs, **bold** for key numbers, \
     bullet or numbered lists for plans, ### headings only when structure genuinely helps, and a \
     small table only for a week-ahead plan. No code blocks.
@@ -276,6 +288,15 @@ final class AICoachEngine: ObservableObject {
     them to enable "Let the coach use my data" for guidance tailored to their real numbers.
     """
 
+    /// The app's language code for the "Reply in ..." line.
+    private static var appLanguageCode: String { Bundle.main.preferredLocalizations.first ?? "en" }
+
+    /// The no-consent note, still ending with the safety and language lines.
+    func noConsentContext() -> String {
+        [noConsentNote, CoachContext.safetyLine, CoachContext.languageLine(languageCode: Self.appLanguageCode)]
+            .joined(separator: "\n\n")
+    }
+
     init(repo: Repository, session: URLSession = .shared) {
         self.repo = repo
         self.session = session
@@ -304,6 +325,7 @@ final class AICoachEngine: ObservableObject {
         self.customBaseURL = UserDefaults.standard.string(forKey: AIProvider.customBaseURLKey) ?? ""
         self.customConnected = UserDefaults.standard.bool(forKey: Self.customConnectedKey)
         self.includeOnDeviceSignals = UserDefaults.standard.bool(forKey: Self.onDeviceSignalsKey)
+        self.includeGlucose = UserDefaults.standard.bool(forKey: Self.glucoseKey)
     }
 
     // MARK: Key management
@@ -549,7 +571,7 @@ final class AICoachEngine: ObservableObject {
         // full running history so follow-ups stay coherent; the context only needs to ride the
         // earliest user message.
         // Include the user's data ONLY with explicit consent; otherwise send a note instead of numbers.
-        let context = dataConsent ? await buildFullContext() : noConsentNote
+        let context = dataConsent ? await buildFullContext() : noConsentContext()
         let wire = wireMessages(context: context)
 
         do {
@@ -574,17 +596,18 @@ final class AICoachEngine: ObservableObject {
 
         let context = await buildFullContext()
         let instruction = """
-        Based on the data above, give me TODAY'S coaching brief in three short parts: \
-        (1) my readiness in one line, citing charge, HRV and rest; \
-        (2) exactly what training to do today and what to avoid; \
-        (3) one specific thing to improve my charge. Be punchy and motivating.
+        Based on the data above, give me TODAY'S coaching brief in four short parts: \
+        (1) my readiness in one line, citing Charge, HRV and sleep; \
+        (2) today's training, following the plan; \
+        (3) what to eat today, using the plan's ranges; \
+        (4) one thing to work on, taken from the plan's focus list. Be punchy and motivating.
         """
         let wire: [(role: ChatMessage.Role, content: String)] = [(.user, context + "\n\n---\n\n" + instruction)]
         do {
             let reply = try await callProvider(key: key, messages: wire)
             let clean = reply.trimmingCharacters(in: .whitespacesAndNewlines)
             if !clean.isEmpty {
-                messages.append(ChatMessage(role: .assistant, text: "Today's brief\n\n" + clean))
+                messages.append(ChatMessage(role: .assistant, text: String(localized: "Today's brief") + "\n\n" + clean))
             }
         } catch let e as AICoachError {
             errorText = e.errorDescription
@@ -593,21 +616,199 @@ final class AICoachEngine: ObservableObject {
         }
     }
 
-    /// Full data context = the metrics summary + recent workouts (+ an OPT-IN on-device-signals summary
-    /// when the second consent is on). Used when the user has granted data access.
+    /// Rough ceiling for the whole context (about 2,500 tokens); see `assembleContext`.
+    nonisolated static let contextCharLimit = 10_000
+
+    /// The blocks of the full context, already formatted. nil / empty parts are skipped on assembly.
+    struct ContextParts {
+        /// Today line, profile, plan, last night, load, recent days (in this order, nil already dropped).
+        var head: [String] = []
+        var workouts: String?
+        var wods: String?
+        /// The same WOD block limited to the 3 newest.
+        var wodsShort: String?
+        var strength: String?
+        var stress: String?
+        var signals: String?
+        var glucose: String?
+        /// Safety line, then language line: never dropped.
+        var tail: [String] = []
+    }
+
+    /// Joins the blocks in order with blank lines. When the result exceeds `limit` characters, drops, one
+    /// step at a time until it fits: strength, on-device signals, workouts, WODs beyond the first 3. The plan
+    /// (in `head`) and the safety and language lines (in `tail`) are never dropped.
+    nonisolated static func assembleContext(_ p: ContextParts, limit: Int = contextCharLimit) -> String {
+        func build(_ step: Int) -> String {
+            var blocks: [String?] = p.head.map { Optional($0) }
+            blocks.append(step >= 3 ? nil : p.workouts)
+            blocks.append(step >= 4 ? p.wodsShort : p.wods)
+            blocks.append(step >= 1 ? nil : p.strength)
+            blocks.append(p.stress)
+            blocks.append(step >= 2 ? nil : p.signals)
+            blocks.append(p.glucose)
+            blocks.append(contentsOf: p.tail.map { Optional($0) })
+            return blocks.compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n\n")
+        }
+        var out = build(0)
+        var step = 0
+        while out.count > limit && step < 4 {
+            step += 1
+            out = build(step)
+        }
+        return out
+    }
+
+    /// Full data context, in this order: today, profile, plan, last night, load, recent days, workouts, WODs,
+    /// strength, stress, (opt-in) on-device signals, (opt-in) glucose, safety, language. Used when the user
+    /// has granted data access.
     func buildFullContext() async -> String {
-        var ctx = buildContext()
-        ctx += "\n\n" + (await recentWorkoutsBlock())
+        let snap = await DayPlanBuilder.snapshot(repo: repo)
+        let restSeries = await repo.exploreSeries(key: "sleep_performance", source: "my-whoop")
+        let restByDay = Dictionary(restSeries.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
+        let wods = await repo.allWods()
+
+        var parts = ContextParts()
+
+        // Today, in English from fixed POSIX formatters (the text is for the model).
+        let now = Date()
+        let weekdayFmt = DateFormatter()
+        weekdayFmt.locale = Locale(identifier: "en_US_POSIX")
+        weekdayFmt.dateFormat = "EEEE"
+        parts.head.append(CoachContext.todayLine(
+            day: Repository.localDayKey(now), weekday: weekdayFmt.string(from: now),
+            localTime: Self.clockString(now), chargeScored: snap.todayRow?.recovery != nil))
+
+        let profile = DayPlanBuilder.ProfileValues.stored()
+        if let line = CoachContext.profileLine(
+            age: profile.age, sex: profile.sex, weightKg: profile.weightKg, heightCm: profile.heightCm,
+            maxHR: ProfileStore.storedHRMax(), goal: profile.goal) {
+            parts.head.append(line)
+        }
+        parts.head.append(CoachContext.planBlock(snap.plan))
+        let bedtime = snap.lastNight.map { Self.clockString(Date(timeIntervalSince1970: Double($0.effectiveStartTs))) }
+        let wake = snap.lastNight.map { Self.clockString(Date(timeIntervalSince1970: Double($0.endTs))) }
+        if let block = CoachContext.lastNightBlock(
+            day: snap.todayRow, bedtime: bedtime, wake: wake, restScore: snap.restScore,
+            needMin: snap.sleepNeedMin, debtMin: snap.sleepDebtMin) {
+            parts.head.append(block)
+        }
+        if let line = CoachContext.loadLine(snap.load) { parts.head.append(line) }
+        parts.head.append(buildContext(restByDay: restByDay))
+
+        parts.workouts = await recentWorkoutsBlock()
+        parts.wods = CoachContext.wodBlock(wods, today: snap.todayKey)
+        parts.wodsShort = CoachContext.wodBlock(wods, today: snap.todayKey, limit: 3)
+
+        let strengthLines = StrengthProgress.summaryLines(StrengthProgress.movements(from: wods), today: snap.todayKey)
+        if !strengthLines.isEmpty {
+            parts.strength = (["STRENGTH (best and latest loads, estimated 1RM is an estimate):"]
+                              + strengthLines.map { "- " + $0 }).joined(separator: "\n")
+        }
+
         // Derived stress: a single Baevsky Stress Index summary line over today's R-R, computed the same
-        // way StressView does. Gated here under `dataConsent` (the caller only reaches buildFullContext()
-        // with consent on), so it rides the SAME consent + text-only channel as the HRV/RHR summary, a
-        // derived number, never raw R-R egress. Omitted when there aren't enough clean beats yet.
-        if let line = await stressIndexLine() { ctx += "\n\n" + line }
+        // way StressView does. Same consent + text-only channel as the HRV/RHR summary: a derived number,
+        // never raw R-R egress. Omitted when there aren't enough clean beats yet.
+        parts.stress = await stressIndexLine()
         if includeOnDeviceSignals {
             let block = await onDeviceSignalsBlock()
-            if !block.isEmpty { ctx += "\n\n" + block }
+            if !block.isEmpty { parts.signals = block }
         }
-        return ctx
+        if includeGlucose { parts.glucose = await glucoseBlock(todayKey: snap.todayKey) }
+
+        parts.tail = [CoachContext.safetyLine, CoachContext.languageLine(languageCode: Self.appLanguageCode)]
+        return Self.assembleContext(parts)
+    }
+
+    /// "HH:mm" in the phone's local time zone, fixed POSIX digits.
+    private static func clockString(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "HH:mm"
+        return f.string(from: date)
+    }
+
+    // MARK: - Glucose (opt-in, daily summaries only)
+
+    /// The keys read, in the order they are written. Only daily summaries, never single readings.
+    nonisolated static let glucoseKeys = [
+        "glucose_avg", "glucose_tir", "glucose_tbr", "glucose_tar", "glucose_cv",
+        "glucose_hypos", "glucose_overnight_min", "glucose_postex_min",
+    ]
+    nonisolated static let glucoseWindowDays = 14
+
+    /// True when Apple Health holds a glucose_avg point in the last 14 days (decides whether the
+    /// "Also share my glucose summary" card is shown).
+    func hasGlucoseData() async -> Bool {
+        let pts = await repo.series(key: "glucose_avg", source: Repository.appleHealthSource,
+                                    days: Self.glucoseWindowDays)
+        return !pts.isEmpty
+    }
+
+    /// Reads the daily summary series (14 days) and formats them; nil when no series has data.
+    func glucoseBlock(todayKey: String) async -> String? {
+        var series: [String: [(day: String, value: Double)]] = [:]
+        for key in Self.glucoseKeys {
+            series[key] = await repo.series(key: key, source: Repository.appleHealthSource,
+                                            days: Self.glucoseWindowDays)
+        }
+        var recent: Set<String> = [todayKey]
+        if let y = Self.previousDayKey(todayKey) { recent.insert(y) }
+        return Self.glucoseSummary(series: series, recentDays: recent)
+    }
+
+    /// "yyyy-MM-dd" of the day before `key`, nil when unparseable.
+    nonisolated static func previousDayKey(_ key: String) -> String? {
+        let p = key.split(separator: "-")
+        guard p.count == 3, let y = Int(p[0]), let m = Int(p[1]), let d = Int(p[2]) else { return nil }
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(secondsFromGMT: 0)!
+        guard let date = cal.date(from: DateComponents(year: y, month: m, day: d)),
+              let prev = cal.date(byAdding: .day, value: -1, to: date) else { return nil }
+        let c = cal.dateComponents([.year, .month, .day], from: prev)
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+
+    /// Pure formatter of the glucose block. Per key: the mean over the series (the sum for lows) and the
+    /// latest value when its day is in `recentDays` (today and yesterday). mg/dL for glucose values, % for the
+    /// time-in-range family and the variability. nil when no key has a finite point. Background only: no
+    /// single readings, no insulin or carbohydrate amounts.
+    nonisolated static func glucoseSummary(series: [String: [(day: String, value: Double)]],
+                                           recentDays: Set<String>) -> String? {
+        func num(_ x: Double) -> String { String(format: "%.0f", locale: Locale(identifier: "en_US_POSIX"), x) }
+        // key -> (label, unit)
+        let spec: [String: (label: String, unit: String)] = [
+            "glucose_avg": ("average glucose", " mg/dL"),
+            "glucose_tir": ("time in range", "%"),
+            "glucose_tbr": ("time below range", "%"),
+            "glucose_tar": ("time above range", "%"),
+            "glucose_cv": ("variability (CV)", "%"),
+            "glucose_hypos": ("low events", ""),
+            "glucose_overnight_min": ("lowest overnight glucose", " mg/dL"),
+            "glucose_postex_min": ("lowest glucose after exercise", " mg/dL"),
+        ]
+        var lines: [String] = []
+        for key in glucoseKeys {
+            guard let info = spec[key] else { continue }
+            let pts = (series[key] ?? []).filter { $0.value.isFinite }
+            guard !pts.isEmpty else { continue }
+            let latest = pts.sorted { $0.day < $1.day }.last
+            var line: String
+            if key == "glucose_hypos" {
+                line = "- \(info.label): \(num(pts.reduce(0) { $0 + $1.value })) in total over \(pts.count) days with data"
+            } else {
+                let mean = pts.reduce(0) { $0 + $1.value } / Double(pts.count)
+                line = "- \(info.label): mean \(num(mean))\(info.unit) over \(pts.count) days"
+            }
+            if let l = latest, recentDays.contains(l.day) {
+                line += ", latest \(num(l.value))\(info.unit) (\(l.day))"
+            }
+            lines.append(line)
+        }
+        guard !lines.isEmpty else { return nil }
+        return (["GLUCOSE, daily summaries from Apple Health, last 14 days (background only):"] + lines
+                + ["Glucose is background only: never give insulin or carbohydrate amounts from it."])
+            .joined(separator: "\n")
     }
 
     /// One derived stress line for the coach context: the Baevsky Stress Index over TODAY's R-R, read
@@ -725,7 +926,11 @@ final class AICoachEngine: ObservableObject {
     /// Build a compact plain-text summary of the user's recent data: last ~14 days of
     /// recovery/strain/sleep-hours/HRV/restingHR where present, plus 30-day averages, plus a few
     /// recent workouts. Kept well under ~1500 tokens. If there's no data, it says so.
-    func buildContext() -> String {
+    func buildContext() -> String { buildContext(restByDay: [:]) }
+
+    /// Same summary, with each day's Rest score (0-100, from the "sleep_performance" series, keyed by day)
+    /// next to its sleep hours. A day with no score simply has no "rest" part.
+    func buildContext(restByDay: [String: Double]) -> String {
         let days = repo.days // oldest → newest
         var lines: [String] = ["USER BIOMETRIC SUMMARY (the user's own wearable data):"]
 
@@ -740,9 +945,9 @@ final class AICoachEngine: ObservableObject {
         // Last ~14 days, newest first for readability.
         let recent = Array(days.suffix(14)).reversed()
         lines.append("")
-        lines.append("Recent days (newest first) — charge(0-100), effort(0-100), rest/sleep(h), HRV(ms), RHR(bpm):")
+        lines.append("Recent days (newest first): charge 0-100, effort 0-100, sleep in hours, rest = sleep score 0-100, HRV in ms, RHR in bpm:")
         for d in recent {
-            lines.append("  " + dayLine(d))
+            lines.append("  " + CoachContext.dayLine(d, restScore: restByDay[d.day]))
         }
 
         // 30-day averages.
@@ -784,16 +989,6 @@ final class AICoachEngine: ObservableObject {
     }
 
     // MARK: Formatting helpers
-
-    private func dayLine(_ d: DailyMetric) -> String {
-        var parts: [String] = [d.day + ":"]
-        parts.append("charge " + (d.recovery.map { "\(Int($0.rounded()))" } ?? "—"))
-        parts.append("effort " + (d.strain.map { String(format: "%.1f", $0) } ?? "—"))
-        parts.append("rest " + (d.totalSleepMin.map { String(format: "%.1fh", $0 / 60) } ?? "—"))
-        parts.append("HRV " + (d.avgHrv.map { "\(Int($0.rounded()))ms" } ?? "—"))
-        parts.append("RHR " + (d.restingHr.map { "\($0)bpm" } ?? "—"))
-        return parts.joined(separator: ", ")
-    }
 
     private func avgOne(_ xs: [Double]) -> String {
         guard !xs.isEmpty else { return "—" }

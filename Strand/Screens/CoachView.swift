@@ -30,6 +30,8 @@ struct CoachView: View {
     /// takes effect on the next send. Seeded from the engine when the editor opens.
     @State private var promptDraft: String = ""
     @FocusState private var composerFocused: Bool
+    /// True when Apple Health holds glucose summaries; the glucose card is shown only then.
+    @State private var hasGlucose: Bool = false
 
     /// Sentinel tag for the "Custom…" entry in the model Picker.
     private let customModelTag = "__custom__"
@@ -39,6 +41,8 @@ struct CoachView: View {
         String(localized: "What should today's training look like?"),
         String(localized: "Analyse my sleep"),
         String(localized: "Why am I run down?"),
+        String(localized: "What should I eat today?"),
+        String(localized: "How is my strength progressing?"),
     ]
 
     var body: some View {
@@ -54,6 +58,7 @@ struct CoachView: View {
                 // v5: a SECOND opt-in, only meaningful once data access is on, folds a summary of the
                 // new on-device signals (your strongest patterns + Lab Book) into the coach context.
                 if coach.dataConsent { onDeviceSignalsBar }
+                if coach.dataConsent && hasGlucose { glucoseBar }
                 systemPromptBar
                 transcript
                 if let error = coach.errorText, !error.isEmpty {
@@ -81,6 +86,7 @@ struct CoachView: View {
             }
         }
         .task(id: coach.dataConsent) { await coach.startBriefIfNeeded() }
+        .task { hasGlucose = await coach.hasGlucoseData() }
     }
 
     /// Explicit, revocable permission for the coach to read & send the user's data. Off by default.
@@ -95,7 +101,7 @@ struct CoachView: View {
                     Text("Let the coach use my data")
                         .font(StrandFont.subhead).foregroundStyle(StrandPalette.textPrimary)
                     Text(coach.dataConsent
-                         ? "On: your charge, rest, HRV and workouts are shared with the provider for tailored coaching."
+                         ? "On: your charge, rest, HRV, workouts, today's plan, WODs and profile are shared with the provider for tailored coaching."
                          : "Off: the coach answers generally and sends none of your metrics.")
                         .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -129,6 +135,34 @@ struct CoachView: View {
                 Toggle("", isOn: $coach.includeOnDeviceSignals)
                     .labelsHidden().toggleStyle(.switch).tint(StrandPalette.accent)
                     .accessibilityLabel("Also share my patterns and Lab Book with the coach")
+            }
+        }
+    }
+
+    /// The 4b third opt-in: daily glucose summaries from Apple Health. Never single readings or insulin.
+    private var glucoseBar: some View {
+        NoopCard(padding: 14, tint: StrandPalette.chargeColor) {
+            HStack(spacing: 10) {
+                Image(systemName: coach.includeGlucose ? "drop.fill" : "drop")
+                    .foregroundStyle(coach.includeGlucose ? StrandPalette.accent : StrandPalette.textTertiary)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Also share my glucose summary")
+                        .font(StrandFont.subhead).foregroundStyle(StrandPalette.textPrimary)
+                    Group {
+                        if coach.includeGlucose {
+                            Text("On: daily glucose summaries (average, time in range, lows) are added. Never single readings or insulin.")
+                        } else {
+                            Text("Off: no glucose data is shared.")
+                        }
+                    }
+                    .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 8)
+                Toggle("", isOn: $coach.includeGlucose)
+                    .labelsHidden().toggleStyle(.switch).tint(StrandPalette.accent)
+                    .accessibilityLabel("Also share my glucose summary with the coach")
             }
         }
     }

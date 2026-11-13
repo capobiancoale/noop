@@ -140717,6 +140717,86 @@
           }
         }
       }
+    },
+    "Today's brief": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il punto di oggi"
+          }
+        }
+      }
+    },
+    "What should I eat today?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cosa dovrei mangiare oggi?"
+          }
+        }
+      }
+    },
+    "How is my strength progressing?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Come stanno andando i miei carichi?"
+          }
+        }
+      }
+    },
+    "Also share my glucose summary": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Condividi anche il riepilogo della glicemia"
+          }
+        }
+      }
+    },
+    "On: daily glucose summaries (average, time in range, lows) are added. Never single readings or insulin.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attivo: vengono aggiunti i riepiloghi giornalieri della glicemia (media, tempo nel range, ipoglicemie). Mai letture singole né insulina."
+          }
+        }
+      }
+    },
+    "Off: no glucose data is shared.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disattivo: nessun dato di glicemia viene condiviso."
+          }
+        }
+      }
+    },
+    "Also share my glucose summary with the coach": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Condividi il riepilogo della glicemia con il coach"
+          }
+        }
+      }
+    },
+    "On: your charge, rest, HRV, workouts, today's plan, WODs and profile are shared with the provider for tailored coaching.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attivo: Charge, Rest, HRV, allenamenti, piano di oggi, WOD e profilo vengono condivisi con il provider per un coaching su misura."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
