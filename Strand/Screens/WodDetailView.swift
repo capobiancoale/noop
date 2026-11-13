@@ -48,10 +48,12 @@ struct WodDetailView: View {
     @AppStorage(TimelinePrefs.wodBeforeMinutes) private var chartBefore = TimelinePrefs.defaultWodBefore
     @AppStorage(TimelinePrefs.wodAfterMinutes) private var chartAfter = TimelinePrefs.defaultWodAfter
     @State private var glucoseResp: WodGlucoseResponse?
-    @State private var carbsPre = 0.0
-    @State private var carbsPost = 0.0
-    @State private var bolusPre = 0.0
-    @State private var bolusPost = 0.0
+    /// Grams of carbs / units of bolus in the 2 h before and 4 h after. nil = no entry in that window
+    /// (not the same as zero: it is shown as a dash).
+    @State private var carbsPre: Double?
+    @State private var carbsPost: Double?
+    @State private var bolusPre: Double?
+    @State private var bolusPost: Double?
     @State private var trendPerHour: Double?
     @State private var glucoseLoading = false
     @State private var glucoseLoaded = false
@@ -87,12 +89,17 @@ struct WodDetailView: View {
             WodEditorView(existing: current) { reloadAfterEdit() }
         }
         .task {
-            history = await repo.wodHistory(title: current.title)
+            history = await loadHistory()
             await loadEffortContribution()
             await loadGlucose()
         }
         // Re-runs when the span is (re)resolved, e.g. after an edit moves the WOD.
         .task(id: wodWindow.map { Int($0.end) }) { await loadRecovery() }
+    }
+
+    /// Every attempt at this WOD's title (trimmed, case-insensitive), newest first.
+    private func loadHistory() async -> [WodLogRow] {
+        WodFormat.history(title: current.title, in: await repo.allWods())
     }
 
     // MARK: Summary
@@ -101,16 +108,11 @@ struct WodDetailView: View {
         Section {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
-                    Text(current.type).font(.subheadline).foregroundStyle(.secondary)
+                    Text(WodFormat.typeLabel(current.type)).font(.subheadline).foregroundStyle(.secondary)
                     if let f = current.format, !f.isEmpty {
-                        Text("· \(f)").font(.subheadline).foregroundStyle(.secondary)
+                        Text(verbatim: "· " + WodFormat.typeLabel(f)).font(.subheadline).foregroundStyle(.secondary)
                     }
-                    if let rx = current.rx {
-                        Text(rx ? "RX" : "Scaled")
-                            .font(.caption2.weight(.semibold))
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background((rx ? Color.green : Color.orange).opacity(0.22), in: Capsule())
-                    }
+                    if let rx = current.rx { WodRxBadge(rx: rx) }
                     Spacer()
                     Text(WodFormat.day(current.ts)).font(.caption).foregroundStyle(.secondary)
                 }
@@ -307,16 +309,20 @@ struct WodDetailView: View {
     @ViewBuilder private var glucoseDetails: some View {
         if let r = glucoseResp {
             HStack {
-                stat("Carbs −2h", "\(Int(carbsPre.rounded())) g")
+                stat("Carbs −2h", gramsText(carbsPre))
                 Spacer()
-                stat("Carbs +4h", "\(Int(carbsPost.rounded())) g")
+                stat("Carbs +4h", gramsText(carbsPost))
             }
-            if bolusPre > 0 || bolusPost > 0 {
+            if bolusPre != nil || bolusPost != nil {
                 HStack {
-                    stat("Bolus −2h", trimU(bolusPre))
+                    stat("Bolus −2h", bolusPre.map(trimU) ?? "—")
                     Spacer()
-                    stat("Bolus +4h", trimU(bolusPost))
+                    stat("Bolus +4h", bolusPost.map(trimU) ?? "—")
                 }
+            }
+            if carbsPre == nil || carbsPost == nil {
+                Text("A dash means nothing was logged in Apple Health for that window, which is not the same as zero.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Text(deltaText(r)).font(.caption).foregroundStyle(.secondary)
             if let t = trendPerHour { Text(trendText(t)).font(.caption).foregroundStyle(.secondary) }
@@ -344,6 +350,11 @@ struct WodDetailView: View {
             Text(label).font(.caption2).foregroundStyle(.secondary)
             Text(value).font(.title3.monospacedDigit())
         }
+    }
+
+    /// Whole grams, or a dash when there was no carb entry in the window.
+    private func gramsText(_ g: Double?) -> String {
+        g.map { String(localized: "\(Int($0.rounded())) g") } ?? "—"
     }
 
     private func trimU(_ u: Double) -> String {
@@ -407,13 +418,25 @@ struct WodDetailView: View {
         minutesBelowLow = trace.secondsBelow(from: preStart, to: postEnd) / 60
         glucoseResp = DiabetesMetrics.wodGlucoseResponse(readings: readings,
                                                          workoutStart: workoutStart, workoutEnd: workoutEnd)
-        carbsPre = DiabetesMetrics.carbsIn(carbs, from: preStart, to: workoutStart)
-        carbsPost = DiabetesMetrics.carbsIn(carbs, from: workoutEnd, to: postEnd)
-        bolusPre = DiabetesMetrics.insulinIn(insulin, from: preStart, to: workoutStart, bolusOnly: true)
-        bolusPost = DiabetesMetrics.insulinIn(insulin, from: workoutEnd, to: postEnd, bolusOnly: true)
+        carbsPre = carbTotal(carbs, from: preStart, to: workoutStart)
+        carbsPost = carbTotal(carbs, from: workoutEnd, to: postEnd)
+        bolusPre = bolusTotal(insulin, from: preStart, to: workoutStart)
+        bolusPost = bolusTotal(insulin, from: workoutEnd, to: postEnd)
         trendPerHour = DiabetesMetrics.glucoseSlopePerHour(readings)
         glucoseLoading = false
         glucoseLoaded = true
+    }
+
+    /// Grams of carbs in [from, to), nil when Apple Health has no carb entry there.
+    private func carbTotal(_ carbs: [CarbEntry], from: Double, to: Double) -> Double? {
+        guard carbs.contains(where: { $0.ts >= from && $0.ts < to }) else { return nil }
+        return DiabetesMetrics.carbsIn(carbs, from: from, to: to)
+    }
+
+    /// Bolus units in [from, to), nil when Apple Health has no bolus entry there.
+    private func bolusTotal(_ doses: [InsulinEntry], from: Double, to: Double) -> Double? {
+        guard doses.contains(where: { $0.bolus && $0.ts >= from && $0.ts < to }) else { return nil }
+        return DiabetesMetrics.insulinIn(doses, from: from, to: to, bolusOnly: true)
     }
 
     /// The window of the figures above and below the chart (the chart's own window is in its settings).
@@ -446,7 +469,7 @@ struct WodDetailView: View {
             let all = await repo.allWods()
             if let updated = all.first(where: { $0.id == current.id }) {
                 current = updated
-                history = await repo.wodHistory(title: current.title)
+                history = await loadHistory()
                 await loadEffortContribution()
                 await loadGlucose(force: true)
             } else {
@@ -485,13 +508,14 @@ struct WodProgressionChart: View {
         let label: String
     }
 
-    private var kind: WodResultKind { history.first?.resultKind ?? .none }
+    /// The kind the title's attempts are plotted on: that of the latest attempt with a result.
+    private var kind: WodResultKind { WodRanking.primaryKind(of: history) }
     private var surface: Color { Color(uiColor: .secondarySystemGroupedBackground) }
 
     private var attempts: [Attempt] {
         let k = kind
         return history.compactMap { w -> Attempt? in
-            guard w.resultKind == k, let v = WodFormat.progressionValue(w) else { return nil }
+            guard w.effectiveResultKind == k, let v = WodFormat.progressionValue(w) else { return nil }
             return Attempt(id: w.id, date: Date(timeIntervalSince1970: TimeInterval(w.ts)),
                            plotted: k == .time ? -v : v, rx: w.rx, label: WodFormat.progressionLabel(v, kind: k))
         }
@@ -509,7 +533,7 @@ struct WodProgressionChart: View {
     }
 
     private func chart(_ points: [Attempt]) -> some View {
-        let best = points.max { $0.plotted < $1.plotted }          // up is better for every kind
+        let bests = WodRanking.bests(of: history)                  // RX and scaled ranked apart
         let yTicks = ticks(points.map(\.plotted))
         let mixed = points.contains { $0.rx == false } && points.contains { $0.rx != false }
         return VStack(alignment: .leading, spacing: 6) {
@@ -524,7 +548,7 @@ struct WodProgressionChart: View {
                         .symbol { marker(a) }
                         .annotation(position: .top, alignment: .center, spacing: 4,
                                     overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
-                            if let text = pointLabel(a, bestId: best?.id) {
+                            if let text = pointLabel(a, bests: bests) {
                                 Text(verbatim: text)
                                     .font(StrandFont.captionNumber.weight(.semibold))
                                     .foregroundStyle(StrandPalette.textPrimary)
@@ -572,11 +596,18 @@ struct WodProgressionChart: View {
         }
     }
 
-    /// The label over an attempt: "Best" and its result on the best one, the result on the one being
-    /// viewed, none on the others.
-    private func pointLabel(_ a: Attempt, bestId: String?) -> String? {
-        if a.id == bestId { return String(localized: "Best") + " " + a.label }
+    /// The label over an attempt: "Best" and its result on a best one (the RX best and the scaled best
+    /// each carry one when both exist), the result on the one being viewed, none on the others.
+    private func pointLabel(_ a: Attempt, bests: [WodRanking.Best]) -> String? {
+        if let b = bests.first(where: { $0.row.id == a.id }) {
+            return bestPrefix(b, of: bests.count) + " " + a.label
+        }
         return a.id == currentId ? a.label : nil
+    }
+
+    private func bestPrefix(_ b: WodRanking.Best, of count: Int) -> String {
+        guard count > 1 else { return String(localized: "Best") }
+        return b.group == .scaled ? String(localized: "Best scaled") : String(localized: "Best RX")
     }
 
     /// Filled for RX (or unknown), a ring for scaled; the attempt being viewed is drawn larger.
@@ -594,11 +625,12 @@ struct WodProgressionChart: View {
     }
 
     /// Axis values on the result's own scale: minutes and seconds for a time, whole rounds for
-    /// rounds + reps (their plotted value is rounds × 100 + reps), else kilograms or reps.
+    /// rounds + reps (their plotted value packs rounds and reps, see `WodFormat.roundsRepsUnit`), else
+    /// kilograms or reps.
     private func axisLabel(_ plotted: Double) -> String {
         switch kind {
         case .time: return WodFormat.progressionLabel(-plotted, kind: .time)
-        case .roundsReps: return String(localized: "\(Int(plotted) / 100) rounds")
+        case .roundsReps: return String(localized: "\(Int(plotted / WodFormat.roundsRepsUnit)) rounds")
         default: return WodFormat.progressionLabel(plotted, kind: kind)
         }
     }
@@ -609,7 +641,7 @@ struct WodProgressionChart: View {
         let steps: [Double]
         switch kind {
         case .time: steps = [15, 30, 60, 120, 300, 600, 900, 1_800]
-        case .roundsReps: steps = [100, 200, 500, 1_000]
+        case .roundsReps: steps = [1.0, 2.0, 5.0, 10.0].map { $0 * WodFormat.roundsRepsUnit }
         case .weight: steps = [2.5, 5, 10, 20, 25, 50]
         default: steps = [1, 2, 5, 10, 20, 50, 100]
         }
@@ -641,12 +673,7 @@ struct WodProgressionView: View {
                         NavigationLink { WodDetailView(wod: w, onChanged: reload) } label: {
                             HStack {
                                 Text(WodFormat.day(w.ts)).font(.subheadline)
-                                if let rx = w.rx {
-                                    Text(rx ? "RX" : "Scaled")
-                                        .font(.caption2.weight(.semibold))
-                                        .padding(.horizontal, 6).padding(.vertical, 2)
-                                        .background((rx ? Color.green : Color.orange).opacity(0.22), in: Capsule())
-                                }
+                                if let rx = w.rx { WodRxBadge(rx: rx) }
                                 Spacer()
                                 if let r = WodFormat.result(w) {
                                     Text(r).font(.body.monospacedDigit()).foregroundStyle(.secondary)
@@ -663,7 +690,7 @@ struct WodProgressionView: View {
     }
 
     private func reload() { onChanged(); Task { await reloadAsync() } }
-    private func reloadAsync() async { history = await repo.wodHistory(title: title) }
+    private func reloadAsync() async { history = WodFormat.history(title: title, in: await repo.allWods()) }
 }
 
 #endif

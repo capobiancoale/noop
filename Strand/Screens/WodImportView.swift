@@ -28,6 +28,10 @@ struct WodImportView: View {
     @State private var csvNote: String?
     /// Whether the preview came from a spreadsheet, which an empty paste box must not clear.
     @State private var fromCsv = false
+    /// WODs already in the log, to spot rows imported before (same day + title).
+    @State private var existing: [WodLogRow] = []
+    /// Import rows that match a WOD already in the log anyway (off: they are skipped).
+    @State private var importDuplicates = false
     @FocusState private var editorFocused: Bool
 
     var body: some View {
@@ -46,14 +50,17 @@ struct WodImportView: View {
 
                 if !parsed.isEmpty {
                     Section("Preview") {
-                        ForEach(parsed) { w in WodPreviewRow(wod: w) }
+                        ForEach(parsed) { w in
+                            WodPreviewRow(wod: w, skipped: !importDuplicates && duplicateIds.contains(w.id))
+                        }
                     }
+                    if !duplicateIds.isEmpty { duplicatesSection }
                     Section {
                         Button { saveAll() } label: {
                             Label(saveTitle, systemImage: "checkmark.circle.fill")
                                 .font(.headline)
                         }
-                        .disabled(saving)
+                        .disabled(saving || rowsToSave.isEmpty)
                     }
                 } else if didParse && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Section {
@@ -96,7 +103,7 @@ struct WodImportView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save all") { saveAll() }
-                        .disabled(parsed.isEmpty || saving)
+                        .disabled(rowsToSave.isEmpty || saving)
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
@@ -104,6 +111,7 @@ struct WodImportView: View {
                 }
             }
             // Read the box shortly after typing pauses; a new keystroke cancels the pending read.
+            .task { existing = await repo.allWods() }
             .task(id: text) {
                 try? await Task.sleep(nanoseconds: 300_000_000)
                 guard !Task.isCancelled else { return }
@@ -113,9 +121,39 @@ struct WodImportView: View {
     }
 
     private var saveTitle: String {
-        parsed.count == 1
+        rowsToSave.count == 1
             ? String(localized: "Save WOD")
-            : String(localized: "Save \(parsed.count) WODs")
+            : String(localized: "Save \(rowsToSave.count) WODs")
+    }
+
+    // MARK: Rows already in the log
+
+    private var duplicateIds: Set<String> {
+        Set(WodImportMatch.split(imported: parsed, existing: existing).duplicates.map(\.id))
+    }
+
+    /// What Save writes: everything, or only the rows not already in the log.
+    private var rowsToSave: [WodLogRow] {
+        importDuplicates ? parsed : parsed.filter { !duplicateIds.contains($0.id) }
+    }
+
+    private var duplicatesNote: String {
+        let n = duplicateIds.count
+        if importDuplicates {
+            return n == 1
+                ? String(localized: "1 WOD is already in your log (same day and name). It will be added again.")
+                : String(localized: "\(n) WODs are already in your log (same day and name). They will be added again.")
+        }
+        return n == 1
+            ? String(localized: "1 WOD is already in your log (same day and name) and will be skipped.")
+            : String(localized: "\(n) WODs are already in your log (same day and name) and will be skipped.")
+    }
+
+    private var duplicatesSection: some View {
+        Section {
+            Text(duplicatesNote).font(.subheadline).foregroundStyle(.secondary)
+            Toggle("Import them anyway", isOn: $importDuplicates)
+        }
     }
 
     private func analyze() {
@@ -174,10 +212,14 @@ struct WodImportView: View {
     }
 
     private func saveAll() {
-        guard !parsed.isEmpty else { return }
+        guard !rowsToSave.isEmpty else { return }
         saving = true
-        let rows = parsed
+        let all = parsed
+        let anyway = importDuplicates
         Task {
+            // Re-read the log so a WOD saved a moment ago still counts as already present.
+            let current = await repo.allWods()
+            let rows = anyway ? all : WodImportMatch.split(imported: all, existing: current).fresh
             for r in rows { await repo.saveWod(r) }
             await MainActor.run { onSaved(); dismiss() }
         }
@@ -188,27 +230,20 @@ struct WodImportView: View {
 
 private struct WodPreviewRow: View {
     let wod: WodLogRow
+    /// True for a row already in the log that Save will leave out.
+    var skipped = false
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Text(wod.title).font(.headline)
-                if let rx = wod.rx {
-                    Text(rx ? "RX" : "Scaled")
-                        .font(.caption2.weight(.semibold))
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background((rx ? Color.green : Color.orange).opacity(0.22), in: Capsule())
-                }
+                if let rx = wod.rx { WodRxBadge(rx: rx) }
                 Spacer()
                 if let r = WodFormat.result(wod) {
                     Text(r).font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
                 }
             }
-            HStack(spacing: 6) {
-                Text(wod.type)
-                if let f = wod.format, !f.isEmpty { Text("· \(f)") }
-                Text("· \(WodFormat.day(wod.ts))")
-            }
-            .font(.caption).foregroundStyle(.secondary)
+            Text(WodFormat.typeLine(wod))
+                .font(.caption).foregroundStyle(.secondary)
             ForEach(Array(wod.movements.enumerated()), id: \.offset) { _, m in
                 Text("• " + WodFormat.movement(m))
                     .font(.caption).foregroundStyle(.secondary)
@@ -218,7 +253,12 @@ private struct WodPreviewRow: View {
                     .font(.caption).foregroundStyle(.tertiary)
                     .lineLimit(3)
             }
+            if skipped {
+                Text("Already in your log, skipped")
+                    .font(.caption.weight(.semibold)).foregroundStyle(.orange)
+            }
         }
+        .opacity(skipped ? 0.55 : 1)
         .padding(.vertical, 2)
     }
 }

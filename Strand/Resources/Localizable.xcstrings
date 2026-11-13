@@ -139797,6 +139797,256 @@
           }
         }
       }
+    },
+    "%lld reps": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld rip."
+          }
+        }
+      }
+    },
+    "%@ kg": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ kg"
+          }
+        }
+      }
+    },
+    "%lld done": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld fatte"
+          }
+        }
+      }
+    },
+    "%@ kg (RX %@)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ kg (RX %2$@)"
+          }
+        }
+      }
+    },
+    "RX %@ kg": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RX %@ kg"
+          }
+        }
+      }
+    },
+    "%lld g": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld g"
+          }
+        }
+      }
+    },
+    "Best RX": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Migliore RX"
+          }
+        }
+      }
+    },
+    "Best scaled": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Migliore scalato"
+          }
+        }
+      }
+    },
+    "A dash means nothing was logged in Apple Health for that window, which is not the same as zero.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un trattino significa che in Apple Health non risulta nulla per quella finestra, il che non equivale a zero."
+          }
+        }
+      }
+    },
+    "1 WOD is already in your log (same day and name). It will be added again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 WOD è già nel tuo registro (stesso giorno e nome). Verrà aggiunto di nuovo."
+          }
+        }
+      }
+    },
+    "%lld WODs are already in your log (same day and name). They will be added again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld WOD sono già nel tuo registro (stesso giorno e nome). Verranno aggiunti di nuovo."
+          }
+        }
+      }
+    },
+    "1 WOD is already in your log (same day and name) and will be skipped.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 WOD è già nel tuo registro (stesso giorno e nome) e verrà saltato."
+          }
+        }
+      }
+    },
+    "%lld WODs are already in your log (same day and name) and will be skipped.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld WOD sono già nel tuo registro (stesso giorno e nome) e verranno saltati."
+          }
+        }
+      }
+    },
+    "Import them anyway": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importali comunque"
+          }
+        }
+      }
+    },
+    "Already in your log, skipped": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Già nel tuo registro, saltato"
+          }
+        }
+      }
+    },
+    "No sessions match these filters": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna sessione corrisponde a questi filtri"
+          }
+        }
+      }
+    },
+    "Try another sport, source or search word, or clear the filters to see every session.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova un altro sport, un'altra fonte o un'altra parola, oppure cancella i filtri per vedere tutte le sessioni."
+          }
+        }
+      }
+    },
+    "in the morning": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "al mattino"
+          }
+        }
+      }
+    },
+    "around noon": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "verso mezzogiorno"
+          }
+        }
+      }
+    },
+    "after 2pm": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dopo le 14"
+          }
+        }
+      }
+    },
+    "in the evening": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in serata"
+          }
+        }
+      }
+    },
+    "Caffeine %@ tends to line up with about %@ lower on tomorrow’s %@ for you, based on typical patterns.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con caffeina %1$@, il valore di %3$@ di domani tende a scendere di circa %2$@ per te, in base agli schemi tipici."
+          }
+        }
+      }
+    },
+    "Caffeine %@ tends to line up with about %@ lower on tomorrow’s %@ for you, based on %lld of your %@ days.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con caffeina %1$@, il valore di %3$@ di domani tende a scendere di circa %2$@ per te, in base a %4$lld dei tuoi giorni di %5$@."
+          }
+        }
+      }
+    },
+    "Caffeine %@ tends to line up with about %@ higher on tomorrow’s %@ for you, based on typical patterns.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con caffeina %1$@, il valore di %3$@ di domani tende a salire di circa %2$@ per te, in base agli schemi tipici."
+          }
+        }
+      }
+    },
+    "Caffeine %@ tends to line up with about %@ higher on tomorrow’s %@ for you, based on %lld of your %@ days.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con caffeina %1$@, il valore di %3$@ di domani tende a salire di circa %2$@ per te, in base a %4$lld dei tuoi giorni di %5$@."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

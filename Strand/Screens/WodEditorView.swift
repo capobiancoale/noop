@@ -63,11 +63,16 @@ struct WodEditorView: View {
     private let types = ["CrossFit", "Weightlifting", "Hyrox", "Running", "Rowing", "Other"]
     private let formats = ["For Time", "AMRAP", "EMOM", "Strength", "Intervals", "Other"]
 
+    /// The picker's choices, plus the WOD's own value when it is not a standard one (an imported type),
+    /// so the picker never shows an empty selection.
+    private var typeOptions: [String] { types.contains(type) ? types : types + [type] }
+    private var formatOptions: [String] { formats.contains(format) ? formats : formats + [format] }
+
     var body: some View {
         NavigationStack {
             Form {
                 Section("Workout") {
-                    Picker("Type", selection: $type) { ForEach(types, id: \.self) { Text($0) } }
+                    Picker("Type", selection: $type) { ForEach(typeOptions, id: \.self) { Text(WodFormat.typeLabel($0)) } }
                     TextField("Name (e.g. Fran, Back Squat 5×5)", text: $title)
                     DatePicker("Session start", selection: $date, displayedComponents: [.date, .hourAndMinute])
                     DatePicker("Ends at", selection: $endTime, displayedComponents: .hourAndMinute)
@@ -78,7 +83,7 @@ struct WodEditorView: View {
                         Text("Heart rate, zones and Effort read the whole session, warm-up and skill included. Rate the RPE for the whole session.")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
-                    Picker("Format", selection: $format) { ForEach(formats, id: \.self) { Text($0) } }
+                    Picker("Format", selection: $format) { ForEach(formatOptions, id: \.self) { Text(WodFormat.typeLabel($0)) } }
                     HStack {
                         Text("Time cap (min)")
                         Spacer()
@@ -245,10 +250,13 @@ struct WodEditorView: View {
             return m
         }
         resultKind = e.resultKind
-        if let s = e.resultSeconds { resMin = String(s / 60); resSec = String(s % 60) }
-        resRounds = e.resultRounds.map(String.init) ?? ""
-        resReps = e.resultReps.map(String.init) ?? ""
-        resWeight = e.resultWeightKg.map(WodFormat.trimmed) ?? ""
+        // A row saved without a result (or with the old 0:00) opens with blank fields.
+        if e.hasResult {
+            if let s = e.resultSeconds, s > 0 { resMin = String(s / 60); resSec = String(s % 60) }
+            resRounds = e.resultRounds.map(String.init) ?? ""
+            resReps = e.resultReps.map(String.init) ?? ""
+            resWeight = e.resultWeightKg.map(WodFormat.trimmed) ?? ""
+        }
         rpe = e.rpe ?? 0
         notes = e.notes ?? ""
     }
@@ -268,6 +276,7 @@ struct WodEditorView: View {
                                weightKg: parseDouble(m.weight),
                                rxWeightKg: parseDouble(m.rxWeight))
         }
+        let result = enteredResult()
         let row = WodLogRow(
             id: existing?.id ?? UUID().uuidString,
             ts: ts,
@@ -276,11 +285,11 @@ struct WodEditorView: View {
             title: title.trimmingCharacters(in: .whitespaces),
             format: format,
             timeCapS: Int(timeCapMin.trimmingCharacters(in: .whitespaces)).map { $0 * 60 },
-            resultKind: resultKind,
-            resultSeconds: resultKind == .time ? ((Int(resMin) ?? 0) * 60 + (Int(resSec) ?? 0)) : nil,
-            resultRounds: resultKind == .roundsReps ? Int(resRounds) : nil,
-            resultReps: (resultKind == .roundsReps || resultKind == .reps) ? Int(resReps) : nil,
-            resultWeightKg: resultKind == .weight ? parseDouble(resWeight) : nil,
+            resultKind: result.kind,
+            resultSeconds: result.seconds,
+            resultRounds: result.rounds,
+            resultReps: result.reps,
+            resultWeightKg: result.weightKg,
             rpe: rpe > 0 ? rpe : nil,
             rx: rxMode == 0 ? nil : (rxMode == 1),
             notes: notes.trimmingCharacters(in: .whitespaces).isEmpty ? nil : notes,
@@ -290,6 +299,42 @@ struct WodEditorView: View {
         )
         Task { await repo.saveWod(row); onSaved() }
         dismiss()
+    }
+
+    /// What the result fields hold, on the selected scale. Blank (or zero) fields mean "no result":
+    /// kind `.none` and no numbers, so an empty form never records 0:00 as a personal best.
+    private struct EnteredResult {
+        var kind: WodResultKind = .none
+        var seconds: Int?
+        var rounds: Int?
+        var reps: Int?
+        var weightKg: Double?
+    }
+
+    private func wholeNumber(_ s: String) -> Int? {
+        Int(s.trimmingCharacters(in: .whitespaces)).map { Swift.max(0, $0) }
+    }
+
+    private func enteredResult() -> EnteredResult {
+        var out = EnteredResult()
+        switch resultKind {
+        case .time:
+            let mins = wholeNumber(resMin), secs = wholeNumber(resSec)
+            guard mins != nil || secs != nil else { return out }
+            let total = (mins ?? 0) * 60 + Swift.min(secs ?? 0, 59)
+            if total > 0 { out.kind = .time; out.seconds = total }
+        case .roundsReps:
+            let rounds = wholeNumber(resRounds), reps = wholeNumber(resReps)
+            guard rounds != nil || reps != nil, (rounds ?? 0) > 0 || (reps ?? 0) > 0 else { return out }
+            out.kind = .roundsReps; out.rounds = rounds ?? 0; out.reps = reps ?? 0
+        case .reps:
+            if let reps = wholeNumber(resReps), reps > 0 { out.kind = .reps; out.reps = reps }
+        case .weight:
+            if let kg = parseDouble(resWeight), kg > 0 { out.kind = .weight; out.weightKg = kg }
+        case .none:
+            break
+        }
+        return out
     }
 
     /// Parse a weight allowing a comma decimal separator (Italian locale). Blank → nil.
