@@ -159,8 +159,76 @@ Da fare:
 
 ## 6. Difetti trovati dalla revisione delle schermate
 
-Due revisioni automatiche (Today/Sonno/Salute e Allenamenti/WOD/VO2max/Trend) sono ancora in corso
-mentre scrivo. I risultati vanno **verificati sul codice** prima di correggerli e aggiunti qui sotto.
+Trovati da una revisione automatica del codice. Quelli segnati **[verificato]** li ho ricontrollati
+io sulle righe indicate; gli altri vanno ricontrollati prima di correggerli. Niente è stato provato
+sul telefono: i punti di impaginazione sono stime.
+
+### 6a. Allenamenti e WOD
+
+Dati sbagliati (prima questi):
+1. **[verificato] Un WOD salvato senza risultato registra 0:00, che diventa il record.**
+   `WodEditorView.swift:54` parte con `resultKind = .time` e `:280` salva `(Int(resMin) ?? 0)*60 + …`
+   anche con i campi vuoti. Poi `WodLogView.swift:164` prende il minimo. Correzione: campi vuoti →
+   `resultKind = .none` e `resultSeconds = nil`; secondi limitati a 0–59; ignorare i tempi a 0 nei record.
+   Serve anche una migrazione o un filtro per i WOD già salvati con 0 secondi.
+2. **[verificato] Il record non distingue RX da scalato.** `WodLogView.swift:164-172` e
+   `WodDetailView.swift:512`. Correzione: record separati per RX e scalato (campo `rx` di `WodLogRow`).
+3. **[verificato] Reimportare lo stesso testo o CSV duplica i WOD.** `WodImportView.swift:181`
+   salva righe con id nuovi a ogni lettura. Correzione: prima di salvare, riconoscere i WOD con stessa
+   data e stesso titolo e chiedere se saltarli o sostituirli.
+4. **[verificato] "Questa settimana" in Allenamenti parte dall'ultimo allenamento, non da oggi.**
+   `WorkoutsView.swift:551-553`. Dopo una pausa mostra una settimana vecchia e contraddice la scheda
+   del carico. Correzione: ancorare a oggi, come già fatto in `TrendsView.swift:87-91`.
+5. **[verificato] Carboidrati "0 g" attorno al WOD quando il dato manca.** `WodDetailView.swift:310-313`
+   (valori iniziali 0.0 alle righe 51-52). Per un diabetico "0 g" e "dato assente" non sono la stessa
+   cosa. Correzione: valori opzionali e trattino con spiegazione quando mancano.
+6. Record raggruppati distinguendo maiuscole e minuscole (`WodLogView.swift:96`) mentre la cronologia
+   no (`WodStore.swift:151`): "Fran" e "fran" danno conteggi incoerenti. **[verificato la riga 96]**
+7. Punteggio AMRAP `giri*100 + ripetizioni` (`WodLogView.swift:167`): sbaglia con 100 o più
+   ripetizioni extra. **[verificato]**
+8. Tempo limite: il campo tiene solo i minuti interi, 90 s diventano 60 s (`WodEditorView.swift:237`).
+9. Giorno del WOD calcolato con 86.400 s fissi (`WodDetailView.swift:176-178`): sbaglia nei giorni
+   del cambio d'ora.
+10. Scheda del carico: "carico 7 giorni" è una somma, "settimana tipo" è una media × 7
+    (`TrainingLoadCard.swift:109`): con giorni mancanti i due numeri non tornano con il rapporto mostrato.
+
+Testi in inglese su telefono italiano:
+11. **[verificato]** "reps", "RX", "kg" costruiti come stringhe semplici (`WodLogView.swift:153, 170, 185, 187`).
+12. **[verificato]** Titolo del dettaglio allenamento in inglese (`WorkoutDetailView.swift:61, 156`
+    usa `displaySport`; l'elenco usa `localizedSport`).
+13. **[verificato]** Menu "Rinomina come" con nomi sport in inglese (`WorkoutsView.swift:1363`).
+14. Selettori Tipo e Formato del WOD in inglese pur avendo le traduzioni (`WodEditorView.swift:70, 81`).
+15. **[verificato]** Frase della caffeina con un numero nudo al posto dell'etichetta
+    (`InsightsHubView.swift:763`): "Con 2 stanotte…".
+
+Stati vuoti e impaginazione:
+16. Filtro o ricerca senza risultati: schede vuote senza messaggio (`WorkoutsView.swift:140, 613`).
+17. "0,0 km" e "0" calorie per chi fa solo CrossFit (`WorkoutsView.swift:759-766`): mostrare un trattino.
+18. Riga dei filtri che può uscire dallo schermo con filtri attivi (`WorkoutsView.swift:404-490`). Stima.
+19. Seconda riga dell'allenamento troncata prima di kcal, distanza e bpm (`WorkoutsView.swift:1259, 1316`). Stima.
+20. In Trend due schede con lo stesso titolo "Week in review", la seconda è la media del periodo
+    scelto (`TrendsView.swift:378, 417`).
+21. "Ripetizioni fatte" si inserisce ma non compare da nessuna parte (`WodEditorView.swift:108`).
+
+### 6b. Progressi nel sollevamento pesi (richiesta dell'utente, i dati ci sono già)
+
+`WodLogRow.movements` (`WodStore.swift:22-37`) conserva nome, ripetizioni, schema ("5x5"),
+ripetizioni fatte, carico e carico RX per ogni WOD. Oggi i progressi esistono solo per titolo del WOD.
+Da aggiungere, con un motore puro `StrengthProgress` in `StrandAnalytics` + test:
+- cronologia e grafico **per movimento** (Back Squat, Clean…), con nomi normalizzati senza
+  distinguere maiuscole;
+- **1RM stimato** con Epley, `kg × (1 + rip/30)`, solo quando ci sono carico e ripetizioni (1–10 rip),
+  sempre etichettato "stimato";
+- **volume settimanale** (serie × rip × kg) solo dove lo schema si legge con certezza ("NxM" o
+  ripetizioni intere); il resto escluso e dichiarato;
+- **segno di record** sul movimento;
+- i WOD senza risultato ma con carichi nei movimenti devono comunque entrare nei progressi
+  (oggi `WodLogView.swift:99-100` li scarta).
+Questi dati vanno anche nel blocco "Massimali" del contesto del Coach (§4, punto 7).
+
+### 6c. Oggi, Sonno, Salute
+
+La revisione di queste schermate è ancora in corso.
 
 _(da completare)_
 
@@ -169,7 +237,8 @@ _(da completare)_
 1. §5 (piccolo, serve subito per Ollama) → build TestFlight.
 2. §1 + §2 + §3 insieme (motore, obiettivo, scheda) → build.
 3. §4 (contesto del Coach, usa il motore del §1) → build.
-4. §4b e §6.
+4. §6a punti 1–5 (dati sbagliati) → build.
+5. §6b (progressi nei pesi), poi §4b e il resto del §6.
 
 Per ogni passo: test dei pacchetti in locale, push sulla branch di sviluppo, CI verde, cherry-pick
 sulla branch di build, controllo che la build arrivi su TestFlight (gli errori 500 di Apple e
