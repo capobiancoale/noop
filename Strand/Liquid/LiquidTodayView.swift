@@ -270,7 +270,6 @@ struct LiquidTodayView: View {
                     AnyView(detailsToggle)
                     if detailsExpanded {
                         AnyView(heartRateSection)
-                        if hasTodayCross { AnyView(todayCrossSection) }
                         AnyView(recoveryVitalsSection)
                         AnyView(keyMetricsSection)
                         if hasRecStrain { AnyView(recoveryStrainSection) }
@@ -1556,60 +1555,6 @@ struct LiquidTodayView: View {
         HStack(spacing: 6) {
             Circle().fill(c).frame(width: 8, height: 8)
             label.font(StrandFont.caption).foregroundStyle(StrandPalette.textSecondary)
-        }
-    }
-
-    // MARK: Heart & Glucose (intraday cross)
-
-    /// Show only when there's a real intraday glucose trace (≥2 readings) — that's the series this chart
-    /// exists for and the one the top heart-rate section doesn't already cover. Always false on macOS
-    /// (no Apple Health), so the section is iOS-only in practice without needing a compile guard here.
-    private var hasTodayCross: Bool { crossGlucose.count >= 2 }
-
-    private var todayCrossSection: some View {
-        VStack(spacing: 8) {
-            sectionHead("HEART & GLUCOSE", trailing: crossTrailing)
-            card {
-                VStack(alignment: .leading, spacing: 10) {
-                    #if os(iOS)
-                    // Glucose, heart rate and carbs / boluses in lanes on the day's clock, zoomable down to
-                    // single minutes (heart rate re-read at the zoom's resolution, as on the Deep Timeline).
-                    GlucoseHeartTimeline(glucose: crossTrace, carbs: crossCarbs, boluses: crossBolus,
-                                         bands: crossWorkouts, bounds: crossBounds, axis: .clock,
-                                         hrMax: profile.hrMax > 0 ? Double(profile.hrMax) : nil,
-                                         loadHeart: { await crossHeart($0) }, zoom: $crossZoom,
-                                         surface: StrandPalette.surfaceRaised)
-                    #endif
-                    Text("Informational only, not medical advice. Carb and insulin choices stay with you and your care team / Loop.")
-                        .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
-                }
-            }
-            .background {
-                // The chart's own drags (move, zoom, read) must not also swipe the day.
-                GeometryReader { g in
-                    Color.clear.preference(key: DaySwipeExclusionKey.self,
-                                           value: [g.frame(in: .named(Self.pullSpace))])
-                }
-            }
-        }
-    }
-
-    /// The strap's heart rate for the chart's window, at the resolution its zoom needs: about one point per
-    /// point of the chart's width (more would only cost drawing time).
-    private func crossHeart(_ window: ClosedRange<Date>) async -> HeartTrace {
-        let s = await repo.timelineSeries(metric: .hr, from: Int(window.lowerBound.timeIntervalSince1970),
-                                          to: Int(window.upperBound.timeIntervalSince1970), targetPoints: 360)
-        return HeartTrace(points: s.points, isRaw: s.isRaw, bucketSeconds: s.bucketSeconds)
-    }
-
-    /// The section overline's right-hand tag: "today" / "yesterday" / a short date for older days.
-    private var crossTrailing: Text {
-        switch selectedDayOffset {
-        case 0: return Text("today")
-        case 1: return Text("yesterday")
-        default:
-            return Text(verbatim: selectedLogicalDay.formatted(
-                .dateTime.day().month(.abbreviated).locale(Locale.autoupdatingCurrent)))
         }
     }
 
