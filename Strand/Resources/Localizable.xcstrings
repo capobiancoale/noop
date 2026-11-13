@@ -33241,7 +33241,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Collegamento…"
+            "value": "Collegamento in corso…"
           }
         },
         "pt-PT": {
@@ -139784,6 +139784,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Databricks ha risposto con un errore (HTTP %1$lld): %2$@"
+          }
+        }
+      }
+    },
+    "Couldn't reach the server at %@. Check that the Mac is on and awake, that it is on the same Wi-Fi as this iPhone, and that Ollama is running. Also make sure NOOP is allowed under Settings > Privacy & Security > Local Network.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile raggiungere il server a %@. Controlla che il Mac sia acceso e non in stop, che sia sulla stessa Wi-Fi di questo iPhone e che Ollama sia in esecuzione. Verifica anche che NOOP sia autorizzato in Impostazioni > Privacy e sicurezza > Rete locale."
           }
         }
       }

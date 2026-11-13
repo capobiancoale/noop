@@ -280,13 +280,23 @@ struct CoachView: View {
 
                 HStack {
                     if coach.provider == .custom {
-                        NoopButton("Connect", systemImage: "link", kind: .primary, action: connectCustom)
-                            .disabled(coach.customBaseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        NoopButton(coach.connecting ? "Connecting…" : "Connect", systemImage: "link", kind: .primary, action: connectCustom)
+                            .disabled(coach.connecting
+                                      || coach.customBaseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        if coach.connecting {
+                            ProgressView().controlSize(.small).tint(StrandPalette.accent)
+                        }
                     } else {
                         NoopButton("Save key", systemImage: "key.fill", kind: .primary, action: saveKey)
                             .disabled(keyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                     Spacer()
+                }
+
+                // A failed connect / key save must be visible here: the banner below the transcript only
+                // exists in the connected state.
+                if let error = coach.errorText, !error.isEmpty {
+                    errorBanner(error)
                 }
 
                 Divider().overlay(StrandPalette.hairline)
@@ -604,7 +614,7 @@ struct CoachView: View {
             coach.setKey(trimmed)
             keyDraft = ""
         }
-        coach.connectCustom()
+        Task { await coach.connectCustom() }
     }
 
     private func send(_ text: String) {

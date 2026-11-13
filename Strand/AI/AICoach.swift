@@ -151,6 +151,8 @@ final class AICoachEngine: ObservableObject {
     // Published state the UI binds to.
     @Published var messages: [ChatMessage] = []
     @Published var sending = false
+    /// True while `connectCustom()` is probing the server (drives the Connect button's progress state).
+    @Published var connecting = false
     @Published var errorText: String?
     @Published var provider: AIProvider {
         didSet {
@@ -329,19 +331,101 @@ final class AICoachEngine: ObservableObject {
         return provider == .custom ? "" : nil
     }
 
-    /// Commit the Custom (local) provider once the user has entered a server URL. Optionally stores a
-    /// key first if they pasted one. Pulls the server's live model list so the picker isn't empty.
-    func connectCustom() {
-        let url = customBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !url.isEmpty else { return }
+    /// Candidate base URLs to try for a user-typed Custom server address. Pure. Trims, adds `http://`
+    /// when there is no scheme, strips trailing slashes, returns the address as typed first and, when its
+    /// path does not already end in `/v1`, the same address + `/v1` second (Ollama serves the
+    /// OpenAI-compatible API under `/v1`). Empty input gives no candidates.
+    nonisolated static func customURLCandidates(_ raw: String) -> [String] {
+        var url = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !url.isEmpty else { return [] }
+        if !url.lowercased().hasPrefix("http://") && !url.lowercased().hasPrefix("https://") {
+            url = "http://" + url
+        }
+        while url.hasSuffix("/") { url.removeLast() }
+        if url.lowercased().hasSuffix("/v1") { return [url] }
+        return [url, url + "/v1"]
+    }
+
+    /// Practical, localized hint shown when no candidate address answered.
+    private static func customUnreachableMessage(_ url: String) -> String {
+        String(localized: "Couldn't reach the server at \(url). Check that the Mac is on and awake, that it is on the same Wi-Fi as this iPhone, and that Ollama is running. Also make sure NOOP is allowed under Settings > Privacy & Security > Local Network.")
+    }
+
+    /// One `GET <base>/models` against the current Custom base URL, through the DEBUG test seam when set.
+    private func fetchCustomModelIDs(key: String) async throws -> [String] {
+        #if DEBUG
+        if let override = fetchModelsOverride {
+            return try await override(.custom, key)
+        }
+        #endif
+        return try await AIProvider.custom.client.fetchModels(key: key, session: session)
+    }
+
+    /// Commit the Custom (local) provider only once the server answers. Tries each candidate address
+    /// (see `customURLCandidates`) with `GET /models`; the one that answers is stored in `customBaseURL`.
+    /// A 404/405/501 on `/models` means reachable-but-no-model-list and still counts as connected (a later
+    /// candidate that returns a real list wins over it). On failure the user's typed text is restored,
+    /// `customConnected` stays false and `errorText` explains what to check.
+    func connectCustom() async {
+        guard !connecting else { return }
+        let original = customBaseURL
+        let candidates = Self.customURLCandidates(original)
+        guard !candidates.isEmpty else { return }
+        connecting = true
         errorText = nil
+        defer { connecting = false }
+
+        guard let key = resolvedKey else { errorText = AICoachError.noKey.errorDescription; return }
+
+        var reachableWithoutList: String?
+        var ids: [String]?
+        var answered: String?
+        for candidate in candidates {
+            // `AIProvider.customURL(path:)` reads the base from UserDefaults, so set it before each try.
+            customBaseURL = candidate
+            do {
+                ids = try await fetchCustomModelIDs(key: key)
+                answered = candidate
+                break
+            } catch AICoachError.server(let code, _) where [404, 405, 501].contains(code) {
+                if reachableWithoutList == nil { reachableWithoutList = candidate }
+            } catch let e as AICoachError {
+                switch e {
+                case .badKey, .rateLimited:
+                    // The server answered but refused us: another address will not help.
+                    customBaseURL = original
+                    errorText = e.errorDescription
+                    return
+                default:
+                    continue
+                }
+            } catch {
+                continue
+            }
+        }
+
+        if answered == nil, let fallback = reachableWithoutList {
+            answered = fallback
+        }
+        guard let chosen = answered else {
+            customBaseURL = original
+            errorText = Self.customUnreachableMessage(candidates[0])
+            return
+        }
+        customBaseURL = chosen
+        guard provider == .custom else { return }
         customConnected = true
-        // Pull the server's model list; if the user hasn't picked one yet, default to the first.
-        Task {
-            await refreshModels()
-            if model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-               let first = availableModels.first {
+
+        if let ids, !ids.isEmpty {
+            let merged = Set(ids).sorted()
+            availableModels = merged
+            let current = model.trimmingCharacters(in: .whitespacesAndNewlines)
+            if merged.contains("noop-coach"), current.isEmpty || !merged.contains(current) {
+                model = "noop-coach"
+            } else if current.isEmpty, let first = merged.first {
                 model = first
+            } else if !current.isEmpty, !merged.contains(current) {
+                availableModels.insert(current, at: 0)
             }
         }
     }
