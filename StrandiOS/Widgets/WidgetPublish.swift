@@ -1,3 +1,94 @@
+import Foundation
+import StrandAnalytics
+
+// The pure part: Today's plan -> the plain fields of `WidgetSnapshot`. It needs only Foundation and
+// StrandAnalytics (no UIKit / WidgetKit), so it lives outside the `#if os(iOS)` block below and a test
+// can reach it. The widget extension does not link StrandAnalytics: it reads these keys and numbers and
+// builds the localized words itself.
+extension WidgetSnapshot {
+
+    /// A copy of `base` carrying `plan` (for the day `day`, a `yyyy-MM-dd` key).
+    ///  - `planReason`: the first reason (the Charge one, or `noCharge`); when other rules lowered the level
+    ///    below what Charge alone gave, the reason that brought it to its final level instead.
+    ///  - `planFocus`: the first focus, with its main number (minutes, bpm, pct, or ratio x 100).
+    nonisolated static func withPlan(_ base: WidgetSnapshot, plan: DayPlan.Plan, day: String) -> WidgetSnapshot {
+        var snap = base
+        snap.planTraining = trainingKey(plan.training)
+        let reason = widgetReason(plan)
+        snap.planReason = reason?.key
+        snap.planReasonValue = reason?.value
+        snap.planSleepMinutes = plan.sleep.minutes
+        snap.planBedtimeMinutes = plan.sleep.bedtimeMinutes
+        snap.planEnergyLow = plan.nutrition?.energyKcal.lowerBound
+        snap.planEnergyHigh = plan.nutrition?.energyKcal.upperBound
+        snap.planProteinLow = plan.nutrition?.proteinG.lowerBound
+        snap.planProteinHigh = plan.nutrition?.proteinG.upperBound
+        snap.planCarbsLow = plan.nutrition?.carbsG.lowerBound
+        snap.planCarbsHigh = plan.nutrition?.carbsG.upperBound
+        let focus = plan.focus.first.map(focusKeyAndValue)
+        snap.planFocus = focus?.key
+        snap.planFocusValue = focus?.value
+        snap.planDay = day
+        return snap
+    }
+
+    nonisolated static func trainingKey(_ t: DayPlan.Training) -> String {
+        switch t {
+        case .push: return "push"
+        case .maintain: return "maintain"
+        case .easy: return "easy"
+        }
+    }
+
+    /// The reason the widget shows. `DayPlan` lists the Charge reason first, then the rules that apply in
+    /// order; replaying them on the level Charge gave finds the last one that actually lowered it.
+    nonisolated static func widgetReason(_ plan: DayPlan.Plan) -> (key: String, value: Int?)? {
+        guard let first = plan.reasons.first else { return nil }
+        var level: Int
+        switch first {
+        case .chargeHigh: level = DayPlan.Training.push.rawValue
+        case .chargeLow: level = DayPlan.Training.easy.rawValue
+        default: level = DayPlan.Training.maintain.rawValue
+        }
+        var chosen = first
+        for r in plan.reasons.dropFirst() {
+            let before = level
+            switch r {
+            case .shortSleep: level = max(level - 1, DayPlan.Training.easy.rawValue)
+            case .loadSharpRise: level = min(level, DayPlan.Training.maintain.rawValue)
+            case .hardStreak: level = DayPlan.Training.easy.rawValue
+            default: break
+            }
+            if level < before { chosen = r }
+        }
+        return reasonKeyAndValue(chosen)
+    }
+
+    nonisolated static func reasonKeyAndValue(_ r: DayPlan.Reason) -> (key: String, value: Int?) {
+        switch r {
+        case .chargeHigh(let n): return ("chargeHigh", n)
+        case .chargeMid(let n): return ("chargeMid", n)
+        case .chargeLow(let n): return ("chargeLow", n)
+        case .noCharge: return ("noCharge", nil)
+        case .shortSleep: return ("shortSleep", nil)
+        case .loadSharpRise: return ("loadSharpRise", nil)
+        case .hardStreak: return ("hardStreak", nil)
+        }
+    }
+
+    nonisolated static func focusKeyAndValue(_ f: DayPlan.Focus) -> (key: String, value: Int) {
+        switch f {
+        case .sleepDebt(let minutes): return ("sleepDebt", minutes)
+        case .lowSleepAverage(let avg, _): return ("lowSleepAverage", avg)
+        case .irregularWake(let sd): return ("irregularWake", sd)
+        case .loadHigh(let ratio): return ("loadHigh", Int((ratio * 100).rounded()))
+        case .loadLow(let ratio): return ("loadLow", Int((ratio * 100).rounded()))
+        case .hrvDown(let pct, _, _): return ("hrvDown", pct)
+        case .restingHrUp(let bpm, _, _): return ("restingHrUp", Int(bpm.rounded()))
+        }
+    }
+}
+
 #if os(iOS)
 import Foundation
 import WidgetKit
@@ -45,7 +136,9 @@ extension WidgetSnapshot {
             let anchorIsToday = day.day == Repository.localDayKey(now)
             restScore = restByDay[day.day] ?? (anchorIsToday ? restSeries.last?.value : nil)
         }
-        let snap = WidgetSnapshot(
+        // Today's plan, from the ONE builder the Today card and the Coach use, so the widget cannot disagree.
+        let planSnapshot = await DayPlanBuilder.snapshot(repo: model.repo, now: now)
+        var snap = WidgetSnapshot(
             recovery: day?.recovery.map { Int($0.rounded()) },
             bpm: model.bpm ?? model.live.heartRate,
             batteryPct: model.live.batteryPct.map { Int($0.rounded()) },
@@ -59,6 +152,7 @@ extension WidgetSnapshot {
             hrv: day?.avgHrv.map { Int($0.rounded()) },
             restingHr: day?.restingHr
         )
+        snap = WidgetSnapshot.withPlan(snap, plan: planSnapshot.plan, day: planSnapshot.todayKey)
         snap.save()
         WidgetCenter.shared.reloadAllTimelines()
     }
