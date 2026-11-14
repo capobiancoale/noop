@@ -35,6 +35,7 @@ enum AppleDemoSeeder {
     static func seedIfRequested(into store: WhoopStore) async {
         guard requested else { return }
         seedDemoDeviceIfNeeded(into: store)
+        await seedDemoWodsIfNeeded(into: store)
         let existing = (try? await store.dailyMetrics(deviceId: whoop, from: "0000-00-00", to: "9999-99-99")) ?? []
         guard existing.isEmpty else { return }
         do { try await seed(into: store) }
@@ -56,6 +57,99 @@ enum AppleDemoSeeder {
             sourceKind: .liveBLE, capabilities: [.hr, .hrv], status: .paired,
             addedAt: now - 86_400, lastSeenAt: now - 3_600)
         try? registry.add(polar)
+    }
+
+    // MARK: Demo WOD log
+
+    /// DEBUG/demo-only: when the WOD log is empty, add ~15 deterministic WODs over the last 8 weeks so the
+    /// WOD log and Strength progress screens render with content. Never runs without `--demo-seed` (the
+    /// caller is `seedIfRequested`), never touches a log that already has rows, no randomness.
+    private static func seedDemoWodsIfNeeded(into store: WhoopStore) async {
+        let existing = (try? await store.allWods(limit: 1)) ?? []
+        guard existing.isEmpty else { return }
+        for wod in demoWods() { _ = try? await store.upsertWod(wod) }
+    }
+
+    /// Day offsets are days before today, performed at 18:00 local; the day key is the local civil day.
+    private static func demoStamp(_ daysAgo: Int) -> (ts: Int, day: String) {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let base = cal.date(byAdding: .day, value: -daysAgo, to: today) ?? today
+        let when = cal.date(byAdding: .hour, value: 18, to: base) ?? base
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "en_US_POSIX")
+        fmt.timeZone = TimeZone.current
+        fmt.dateFormat = "yyyy-MM-dd"
+        return (Int(when.timeIntervalSince1970), fmt.string(from: when))
+    }
+
+    /// A strength session: one headline lift (the title) at `kg`, scheme like "5x5", plus optional extras.
+    private static func demoLift(_ n: Int, _ daysAgo: Int, _ name: String, scheme: String, kg: Double,
+                                 rpe: Double, extra: [WodMovement] = []) -> WodLogRow {
+        let st = demoStamp(daysAgo)
+        var movements = [WodMovement(name: name, scheme: scheme, weightKg: kg)]
+        movements.append(contentsOf: extra)
+        return WodLogRow(id: "demo-wod-\(n)", ts: st.ts, day: st.day, type: "Weightlifting", title: name,
+                         format: "Strength", resultKind: .weight, resultWeightKg: kg, rpe: rpe,
+                         movements: movements, createdTs: st.ts)
+    }
+
+    /// A lift added to another session (no result of its own).
+    private static func demoExtra(_ name: String, scheme: String, kg: Double) -> WodMovement {
+        WodMovement(name: name, scheme: scheme, weightKg: kg)
+    }
+
+    private static func demoTimed(_ n: Int, _ daysAgo: Int, _ title: String, seconds: Int, rx: Bool,
+                                  rpe: Double, movements: [WodMovement]) -> WodLogRow {
+        let st = demoStamp(daysAgo)
+        return WodLogRow(id: "demo-wod-\(n)", ts: st.ts, day: st.day, type: "CrossFit", title: title,
+                         format: "For Time", resultKind: .time, resultSeconds: seconds, rpe: rpe, rx: rx,
+                         movements: movements, createdTs: st.ts)
+    }
+
+    private static func demoWods() -> [WodLogRow] {
+        var out: [WodLogRow] = []
+        // Strength: loads climb across the eight weeks.
+        out.append(demoLift(1, 53, "Back Squat", scheme: "5x5", kg: 80, rpe: 7))
+        out.append(demoLift(3, 46, "Deadlift", scheme: "3x5", kg: 100, rpe: 7.5))
+        out.append(demoLift(4, 43, "Strict Press", scheme: "5x5", kg: 40, rpe: 7,
+                            extra: [demoExtra("Front Squat", scheme: "3x3", kg: 60)]))
+        out.append(demoLift(6, 36, "Back Squat", scheme: "5x5", kg: 85, rpe: 7.5,
+                            extra: [demoExtra("Strict Press", scheme: "5x5", kg: 42.5)]))
+        out.append(demoLift(7, 32, "Clean", scheme: "5x3", kg: 60, rpe: 7))
+        out.append(demoLift(10, 21, "Deadlift", scheme: "3x5", kg: 110, rpe: 8,
+                            extra: [demoExtra("Clean", scheme: "5x3", kg: 65)]))
+        out.append(demoLift(12, 14, "Front Squat", scheme: "3x3", kg: 70, rpe: 8))
+        out.append(demoLift(13, 9, "Back Squat", scheme: "5x5", kg: 90, rpe: 8.5,
+                            extra: [demoExtra("Strict Press", scheme: "5x5", kg: 45)]))
+        out.append(demoLift(15, 2, "Deadlift", scheme: "3x5", kg: 115, rpe: 8.5,
+                            extra: [demoExtra("Clean", scheme: "5x3", kg: 70)]))
+        // Benchmarks for time: first attempts scaled, later ones RX.
+        out.append(demoTimed(2, 50, "Fran", seconds: 282, rx: false, rpe: 9, movements: [
+            WodMovement(name: "Thruster", scheme: "21-15-9", weightKg: 30, rxWeightKg: 43),
+            WodMovement(name: "Pull-up", scheme: "21-15-9")]))
+        out.append(demoTimed(5, 39, "Helen", seconds: 725, rx: false, rpe: 8, movements: [
+            WodMovement(name: "Run", notes: "400 m"),
+            WodMovement(name: "Kettlebell Swing", reps: 21, weightKg: 16, rxWeightKg: 24),
+            WodMovement(name: "Pull-up", reps: 12)]))
+        out.append(demoTimed(8, 28, "Grace", seconds: 380, rx: false, rpe: 9, movements: [
+            WodMovement(name: "Clean and Jerk", reps: 30, weightKg: 43, rxWeightKg: 61)]))
+        out.append(demoTimed(11, 17, "Fran", seconds: 255, rx: true, rpe: 9.5, movements: [
+            WodMovement(name: "Thruster", scheme: "21-15-9", weightKg: 43, rxWeightKg: 43),
+            WodMovement(name: "Pull-up", scheme: "21-15-9")]))
+        out.append(demoTimed(14, 5, "Helen", seconds: 648, rx: true, rpe: 8.5, movements: [
+            WodMovement(name: "Run", notes: "400 m"),
+            WodMovement(name: "Kettlebell Swing", reps: 21, weightKg: 24, rxWeightKg: 24),
+            WodMovement(name: "Pull-up", reps: 12)]))
+        // AMRAP: 20 minutes, 14 rounds + 3 reps.
+        let amrap = demoStamp(24)
+        out.append(WodLogRow(id: "demo-wod-9", ts: amrap.ts, day: amrap.day, type: "CrossFit", title: "Cindy",
+                             format: "AMRAP", timeCapS: 1200, resultKind: .roundsReps, resultRounds: 14,
+                             resultReps: 3, rpe: 8, rx: true, movements: [
+                                WodMovement(name: "Pull-up", reps: 5),
+                                WodMovement(name: "Push-up", reps: 10),
+                                WodMovement(name: "Air Squat", reps: 15)], createdTs: amrap.ts))
+        return out
     }
 
     private static func seed(into store: WhoopStore) async throws {
