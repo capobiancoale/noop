@@ -140877,6 +140877,46 @@
           }
         }
       }
+    },
+    "WOD log": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diario WOD"
+          }
+        }
+      }
+    },
+    "Your CrossFit sessions, loads and records.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le tue sessioni CrossFit, i carichi e i record."
+          }
+        }
+      }
+    },
+    "Movements tracked: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Movimenti monitorati: %lld"
+          }
+        }
+      }
+    },
+    "Records": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

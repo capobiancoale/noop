@@ -1,6 +1,8 @@
 #if os(iOS)
 import SwiftUI
 import WhoopStore
+import StrandDesign
+import StrandAnalytics
 
 // MARK: - WOD / strength log (user-authored)
 //
@@ -9,6 +11,11 @@ import WhoopStore
 // attempts and per-WOD bests. Distinct from the read-only `workout` rows imported from Apple Health /
 // the strap — these are what the user types in. Storage is `WhoopStore.wodLog` (migration v23), read
 // and written through the `Repository.saveWod` / `allWods` / `deleteWod` wrappers.
+//
+// Layout: the app's own scaffold (large title on the sky, cards with a hairline border) instead of a
+// system List. Top to bottom: actions + import hint, Strength progress row, Bests card, History card.
+// A List's swipe-to-delete is not available in a card, so delete lives on a long-press context menu
+// (and a VoiceOver action) on each history row.
 
 struct WodLogView: View {
     @EnvironmentObject private var repo: Repository
@@ -16,72 +23,30 @@ struct WodLogView: View {
     @State private var loaded = false
     @State private var showNew = false
     @State private var showImport = false
+    /// Derived from `wods` once per reload, never in `body`.
+    @State private var benches: [Bench] = []
+    @State private var strengthCount = 0
 
     var body: some View {
-        List {
-            Section {
-                Button { showNew = true } label: {
-                    Label("Log a WOD", systemImage: "plus.circle.fill")
-                        .font(.headline)
-                }
-                Button { showImport = true } label: {
-                    Label("Import from text", systemImage: "doc.text.viewfinder")
-                }
-            } footer: {
-                Text("Get the WOD as a photo? Have any AI turn it into text, then paste it here — movements, RX and your loads fill in automatically.")
-            }
-
+        ScreenScaffold(title: "WOD log", subtitle: "Your CrossFit sessions, loads and records.",
+                       onRefresh: { await reload() },
+                       topBackground: liquidScaffoldSky()) {
             if loaded && wods.isEmpty {
-                Section {
-                    Text("No WODs logged yet. Tap “Log a WOD” to record your first CrossFit session or lift — add the movements, reps and weight, and your progress builds from here.")
-                        .foregroundStyle(.secondary)
-                        .font(.subheadline)
-                }
+                AnyView(emptyCard)
+                AnyView(importBlock)
+            } else {
+                AnyView(actionsBlock)
             }
-
             if !wods.isEmpty {
-                Section {
-                    NavigationLink {
-                        StrengthProgressView()
-                    } label: {
-                        Label("Strength progress", systemImage: "chart.line.uptrend.xyaxis")
-                    }
-                }
+                AnyView(strengthRow)
             }
-
-            if !benchmarks.isEmpty {
-                Section("Bests") {
-                    ForEach(benchmarks) { b in
-                        NavigationLink {
-                            WodProgressionView(title: b.title) { Task { await reload() } }
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(b.title).font(.body)
-                                    Text("\(b.count) attempts").font(.caption).foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                benchBests(b)
-                            }
-                        }
-                    }
-                }
+            if !benches.isEmpty {
+                AnyView(bestsSection)
             }
-
             if !wods.isEmpty {
-                Section("History") {
-                    ForEach(wods) { w in
-                        NavigationLink { WodDetailView(wod: w) { Task { await reload() } } } label: { WodRowView(wod: w) }
-                    }
-                    .onDelete { offsets in
-                        let ids = offsets.map { wods[$0].id }
-                        Task { for id in ids { await repo.deleteWod(id: id) }; await reload() }
-                    }
-                }
+                AnyView(historySection)
             }
         }
-        .navigationTitle("WOD Log")
-        .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showNew) {
             WodEditorView(existing: nil) { Task { await reload() } }
         }
@@ -92,8 +57,120 @@ struct WodLogView: View {
     }
 
     private func reload() async {
-        wods = await repo.allWods()
+        let all = await repo.allWods()
+        wods = all
+        benches = Self.makeBenches(all)
+        strengthCount = StrengthProgress.movements(from: all).count
         loaded = true
+    }
+
+    private func delete(_ w: WodLogRow) {
+        let id = w.id
+        Task { await repo.deleteWod(id: id); await reload() }
+    }
+
+    // MARK: Small building blocks
+
+    private var hairline: some View {
+        Divider().overlay(StrandPalette.hairline)
+    }
+
+    /// The tinted symbol tile used across the newer cards (36 x 36, 12 pt corners).
+    private func symbolTile(_ symbol: String, tint: Color) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(tint)
+            .frame(width: 36, height: 36)
+            .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .accessibilityHidden(true)
+    }
+
+    private var chevron: some View {
+        Image(systemName: "chevron.right")
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(StrandPalette.textTertiary)
+            .accessibilityHidden(true)
+    }
+
+    // MARK: Actions
+
+    private var logButton: some View {
+        NoopButton("Log a WOD", systemImage: "plus.circle.fill", kind: .primary, fullWidth: true) {
+            showNew = true
+        }
+    }
+
+    private var importButton: some View {
+        NoopButton("Import from text", systemImage: "doc.text.viewfinder", kind: .secondary, fullWidth: true) {
+            showImport = true
+        }
+    }
+
+    private var importHint: some View {
+        Text("Get the WOD as a photo? Have any AI turn it into text, then paste it here — movements, RX and your loads fill in automatically.")
+            .font(StrandFont.footnote)
+            .foregroundStyle(StrandPalette.textTertiary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 4)
+    }
+
+    private var actionsBlock: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            logButton
+            importButton
+            importHint
+        }
+    }
+
+    private var importBlock: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            importButton
+            importHint
+        }
+    }
+
+    private var emptyCard: some View {
+        NoopCard(padding: 20, tint: StrandPalette.effortColor) {
+            VStack(alignment: .leading, spacing: 14) {
+                symbolTile("figure.strengthtraining.traditional", tint: StrandPalette.effortColor)
+                Text("No WODs logged yet. Tap “Log a WOD” to record your first CrossFit session or lift — add the movements, reps and weight, and your progress builds from here.")
+                    .font(StrandFont.subhead)
+                    .foregroundStyle(StrandPalette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                logButton
+            }
+        }
+    }
+
+    // MARK: Strength progress row
+
+    private var strengthRow: some View {
+        NavigationLink {
+            StrengthProgressView()
+        } label: {
+            NoopCard(padding: 14) {
+                HStack(spacing: 12) {
+                    symbolTile("chart.line.uptrend.xyaxis", tint: StrandPalette.statusPositive)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Strength progress")
+                            .font(StrandFont.headline)
+                            .foregroundStyle(StrandPalette.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text("Movements tracked: \(strengthCount)")
+                            .font(StrandFont.subhead)
+                            .foregroundStyle(StrandPalette.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    chevron
+                }
+                .frame(minHeight: 44)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: String(localized: "Strength progress") + ", " + String(localized: "Movements tracked: \(strengthCount)")))
+        .accessibilityAddTraits(.isButton)
     }
 
     // MARK: Bests (per-title progress)
@@ -108,7 +185,7 @@ struct WodLogView: View {
     /// One "best" row per WOD title (trimmed, case-insensitive) that has ≥ 2 attempts. The best is the
     /// min finish time / max rounds + reps / max reps / max weight, ranked apart for RX and scaled
     /// attempts; attempts without a real result never count (see `WodRanking`).
-    private var benchmarks: [Bench] {
+    private static func makeBenches(_ wods: [WodLogRow]) -> [Bench] {
         var out: [Bench] = []
         for g in WodRanking.groupByTitle(wods) where g.rows.count >= 2 {
             let best = WodRanking.bests(of: g.rows)
@@ -118,25 +195,115 @@ struct WodLogView: View {
         return out.sorted { $0.count > $1.count }
     }
 
-    /// The best result (RX first), with a scaled best as a smaller second line when there is one.
+    private var bestsSection: some View {
+        VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+            SectionHeader("Bests", overline: "Records")
+            NoopCard(padding: 0) {
+                VStack(spacing: 0) {
+                    ForEach(Array(benches.enumerated()), id: \.element.id) { idx, b in
+                        VStack(spacing: 0) {
+                            if idx > 0 { hairline }
+                            benchRow(b)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func benchRow(_ b: Bench) -> some View {
+        NavigationLink {
+            WodProgressionView(title: b.title) { Task { await reload() } }
+        } label: {
+            HStack(alignment: .center, spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: b.title)
+                        .font(StrandFont.headline)
+                        .foregroundStyle(StrandPalette.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("\(b.count) attempts")
+                        .font(StrandFont.footnote)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                benchBests(b)
+                    .layoutPriority(1)
+                chevron
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: benchLabel(b)))
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private func benchLabel(_ b: Bench) -> String {
+        var parts = [b.title, String(localized: "\(b.count) attempts")]
+        for entry in b.best {
+            let tag = entry.group == .unspecified ? "" : WodFormat.rxLabel(entry.group == .rx) + " "
+            parts.append(tag + (WodFormat.result(entry.row) ?? ""))
+        }
+        return parts.joined(separator: ", ")
+    }
+
+    /// The best result (RX first) prominent, with a scaled best as a smaller second line when there is one.
     private func benchBests(_ b: Bench) -> some View {
         VStack(alignment: .trailing, spacing: 2) {
             ForEach(Array(b.best.enumerated()), id: \.offset) { idx, entry in
                 benchLine(entry, tagged: b.best.count > 1 || entry.group == .scaled, primary: idx == 0)
             }
         }
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private func benchLine(_ entry: WodRanking.Best, tagged: Bool, primary: Bool) -> some View {
         HStack(spacing: 4) {
             if tagged, entry.group != .unspecified {
-                Text(WodFormat.rxLabel(entry.group == .rx)).font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                Text(verbatim: WodFormat.rxLabel(entry.group == .rx))
+                    .font(StrandFont.footnote.weight(.semibold))
+                    .foregroundStyle(entry.group == .rx ? StrandPalette.statusPositive : StrandPalette.statusWarning)
             }
-            Text(WodFormat.result(entry.row) ?? "")
-                .font(primary ? .body.monospacedDigit() : .caption.monospacedDigit())
-                .foregroundStyle(.secondary)
+            Text(verbatim: WodFormat.result(entry.row) ?? "")
+                .font(primary ? StrandFont.number(18) : StrandFont.captionNumber)
+                .foregroundStyle(primary ? StrandPalette.textPrimary : StrandPalette.textSecondary)
         }
+    }
+
+    // MARK: History
+
+    private var historySection: some View {
+        VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+            SectionHeader("History", overline: "Log", trailing: "\(wods.count)")
+            NoopCard(padding: 0) {
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(wods.enumerated()), id: \.element.id) { idx, w in
+                        VStack(spacing: 0) {
+                            if idx > 0 { hairline }
+                            historyRow(w)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func historyRow(_ w: WodLogRow) -> some View {
+        NavigationLink {
+            WodDetailView(wod: w) { Task { await reload() } }
+        } label: {
+            WodRowView(wod: w)
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button(role: .destructive) { delete(w) } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .accessibilityAction(named: Text("Delete")) { delete(w) }
     }
 }
 
@@ -155,27 +322,82 @@ struct WodRxBadge: View {
 
 private struct WodRowView: View {
     let wod: WodLogRow
+
+    private var displayTitle: String { wod.title.isEmpty ? WodFormat.typeLabel(wod.type) : wod.title }
+
+    private var dateText: String {
+        Date(timeIntervalSince1970: TimeInterval(wod.ts)).formatted(date: .abbreviated, time: .omitted)
+    }
+
+    /// "Type · Format" as one chip so a long Italian pair wraps inside it instead of overflowing.
+    private var chipText: String {
+        var parts = [WodFormat.typeLabel(wod.type)]
+        if let f = wod.format, !f.isEmpty { parts.append(WodFormat.typeLabel(f)) }
+        return parts.joined(separator: " · ")
+    }
+
+    private var movementsText: String {
+        wod.movements.map(WodFormat.movement).joined(separator: ", ")
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 6) {
-                Text(wod.title.isEmpty ? WodFormat.typeLabel(wod.type) : wod.title).font(.body).foregroundStyle(.primary)
-                if let rx = wod.rx { WodRxBadge(rx: rx) }
-                Spacer()
-                if let r = WodFormat.result(wod) {
-                    Text(r).font(.body.monospacedDigit()).foregroundStyle(.primary)
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(verbatim: displayTitle)
+                    .font(StrandFont.headline)
+                    .foregroundStyle(StrandPalette.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(verbatim: dateText)
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.textTertiary)
+                chips
+                if !wod.movements.isEmpty {
+                    Text(verbatim: movementsText)
+                        .font(StrandFont.caption)
+                        .foregroundStyle(StrandPalette.textSecondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            Text(WodFormat.typeLine(wod))
-                .font(.caption).foregroundStyle(.secondary)
-            if !wod.movements.isEmpty {
-                Text(wod.movements.map(WodFormat.movement).joined(separator: ", "))
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if let r = WodFormat.result(wod) {
+                Text(verbatim: r)
+                    .font(StrandFont.number(18))
+                    .foregroundStyle(StrandPalette.textPrimary)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .layoutPriority(1)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(minHeight: 44)
         .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: accessibilityText))
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var chips: some View {
+        HStack(spacing: 6) {
+            Text(verbatim: chipText)
+                .font(StrandFont.footnote)
+                .foregroundStyle(StrandPalette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 8).padding(.vertical, 3)
+                .background(StrandPalette.surfaceInset, in: Capsule(style: .continuous))
+            if let rx = wod.rx { WodRxBadge(rx: rx) }
+        }
+    }
+
+    private var accessibilityText: String {
+        var parts = [displayTitle, dateText, chipText]
+        if let rx = wod.rx { parts.append(WodFormat.rxLabel(rx)) }
+        if let r = WodFormat.result(wod) { parts.append(r) }
+        if !wod.movements.isEmpty { parts.append(movementsText) }
+        return parts.joined(separator: ", ")
     }
 }
+
 
 // MARK: - Formatting helpers (shared by the list + bests)
 
