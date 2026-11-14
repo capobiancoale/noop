@@ -22,9 +22,11 @@ final class DayPlanTests: XCTestCase {
 
     func inputs(days: [DailyMetric], need: Double? = 480, debt: Double? = 0, wakes: [Int] = [],
                 load: TrainingLoad.Summary? = nil, age: Int = 35, sex: DayPlan.Sex = .male,
-                kg: Double = 80, cm: Double = 180, goal: DayPlan.Goal = .performance) -> DayPlan.Inputs {
+                kg: Double = 80, cm: Double = 180, goal: DayPlan.Goal = .performance,
+                wakeTarget: Int? = nil) -> DayPlan.Inputs {
         DayPlan.Inputs(days: days, today: today, sleepNeedMin: need, sleepDebtMin: debt, wakeMinutes: wakes,
-                       load: load, age: age, sex: sex, weightKg: kg, heightCm: cm, goal: goal)
+                       load: load, age: age, sex: sex, weightKg: kg, heightCm: cm, goal: goal,
+                       wakeTargetMinutes: wakeTarget)
     }
 
     func plan(charge: Double?, sleep: Double? = 480, load: Double? = nil, extra: [DailyMetric] = [],
@@ -150,6 +152,46 @@ final class DayPlanTests: XCTestCase {
         let wakes = Array(repeating: 300, count: 20) + Array(repeating: 420, count: 14)
         let p = DayPlan.make(inputs(days: [], need: 480, debt: 0, wakes: wakes))
         XCTAssertEqual(p.sleep.bedtimeMinutes, 420 - 480 - 15 + 1440)
+    }
+
+    func testWakeTargetSetsBedtimeEvenWithoutRecordedNights() {
+        // wake 07:00 = 420; 8 h = 480; 420 - 480 - 15 = -75 -> 1365 = 22:45
+        let p = DayPlan.make(inputs(days: [], need: 480, debt: 0, wakes: [], wakeTarget: 420))
+        XCTAssertEqual(p.sleep.bedtimeMinutes, 1365)
+        XCTAssertEqual(p.sleep.wakeMinutes, 420)
+        XCTAssertTrue(p.sleep.wakeIsUserSet)
+    }
+
+    func testWakeTargetBeatsMedian() {
+        let p = DayPlan.make(inputs(days: [], need: 480, debt: 0, wakes: Array(repeating: 300, count: 14),
+                                    wakeTarget: 480))
+        XCTAssertEqual(p.sleep.bedtimeMinutes, 480 - 480 - 15 + 1440)
+        XCTAssertEqual(p.sleep.wakeMinutes, 480)
+    }
+
+    func testWakeTargetWrapsAcrossMidnight() {
+        // wake 00:30 = 30; 9 h = 540; 30 - 540 - 15 = -525 -> 915 = 15:15
+        let p = DayPlan.make(inputs(days: [], need: 540, debt: 0, wakeTarget: 30))
+        XCTAssertEqual(p.sleep.bedtimeMinutes, 915)
+        // wake 05:00, 8 h: 300 - 480 - 15 = -195 -> 1245 = 20:45
+        let q = DayPlan.make(inputs(days: [], need: 480, debt: 0, wakeTarget: 300))
+        XCTAssertEqual(q.sleep.bedtimeMinutes, 1245)
+    }
+
+    func testNoWakeTargetKeepsMedianRule() {
+        let p = DayPlan.make(inputs(days: [], need: 480, debt: 0, wakes: Array(repeating: 420, count: 5)))
+        XCTAssertEqual(p.sleep.bedtimeMinutes, 1365)
+        XCTAssertEqual(p.sleep.wakeMinutes, 420)
+        XCTAssertFalse(p.sleep.wakeIsUserSet)
+        let q = DayPlan.make(inputs(days: [], wakes: [400, 400]))
+        XCTAssertNil(q.sleep.bedtimeMinutes)
+        XCTAssertNil(q.sleep.wakeMinutes)
+    }
+
+    func testIrregularWakeFocusIgnoresWakeTarget() {
+        let wild = (0..<14).map { $0 % 2 == 0 ? 300 : 480 }
+        let p = DayPlan.make(inputs(days: [], wakes: wild, wakeTarget: 420))
+        XCTAssertEqual(p.focus, [.irregularWake(sdMinutes: 90)])
     }
 
     // MARK: Nutrition

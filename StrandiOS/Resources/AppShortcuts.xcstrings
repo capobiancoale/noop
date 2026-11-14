@@ -21,6 +21,16 @@
         }
       }
     },
+    "Log a WOD in ${applicationName}" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registra un WOD in ${applicationName}"
+          }
+        }
+      }
+    },
     "Mark a moment in ${applicationName}" : {
       "localizations" : {
         "it" : {

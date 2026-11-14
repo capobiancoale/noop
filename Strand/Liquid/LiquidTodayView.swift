@@ -378,6 +378,8 @@ struct LiquidTodayView: View {
         .sheet(isPresented: $showCoachSheet) { DayPlanCoachSheet() }
         // A new goal changes the energy, protein and carbohydrate ranges at once.
         .onChangeCompat(of: profile.goal) { _ in Task { await refreshDayPlan() } }
+        // A new wake-up time moves tonight's bedtime.
+        .onChangeCompat(of: profile.wakeTimeMinutes) { _ in Task { await refreshDayPlan() } }
         // The note under the scores while Charge is empty → what last night recorded and what to try.
         .sheet(isPresented: $showChargeWhy) {
             ChargeMissingSheet(onClose: { showChargeWhy = false })
@@ -1695,8 +1697,8 @@ struct LiquidTodayView: View {
     }
 
     private func dayPlanSection(_ snapshot: DayPlanBuilder.Snapshot) -> some View {
-        DayPlanCard(snapshot: snapshot, goal: $profile.goal, hasGlucose: hasGlucoseBlock,
-                    askCoach: { showCoachSheet = true })
+        DayPlanCard(snapshot: snapshot, goal: $profile.goal, wakeMinutes: $profile.wakeTimeMinutes,
+                    hasGlucose: hasGlucoseBlock, askCoach: { showCoachSheet = true })
     }
 
     /// Rebuilds the plan from the live profile (today only; a past day has no plan).
@@ -1704,7 +1706,7 @@ struct LiquidTodayView: View {
         guard selectedDayOffset == 0 else { dayPlan = nil; return }
         let values = DayPlanBuilder.ProfileValues(
             age: profile.age, sex: profile.sex, weightKg: profile.weightKg, heightCm: profile.heightCm,
-            goal: DayPlanBuilder.goal(from: profile.goal))
+            goal: DayPlanBuilder.goal(from: profile.goal), wakeTimeMinutes: profile.wakeTimeMinutes)
         dayPlan = await DayPlanBuilder.snapshot(repo: repo, profile: values)
     }
 

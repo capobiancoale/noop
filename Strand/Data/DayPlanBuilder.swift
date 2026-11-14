@@ -9,6 +9,16 @@ enum DayPlanBuilder {
     /// UserDefaults key of the personal goal (`ProfileStore.goal`).
     static let goalKey = "profile.goal"
 
+    /// UserDefaults key of the wake-up time the user wants (`ProfileStore.wakeTimeMinutes`): minutes after local
+    /// midnight, or -1 for "automatic, from my usual wake time".
+    static let wakeTimeKey = "profile.wakeTimeMinutes"
+
+    /// NOOP's own smart alarm keys. They MIRROR `BehaviorStore`'s private keys (`behavior.smartAlarmEnabled`,
+    /// `behavior.smartAlarmMinutes`, `behavior.smartAlarmWeekdays`); keep them in step.
+    nonisolated static let smartAlarmEnabledKey = "behavior.smartAlarmEnabled"
+    nonisolated static let smartAlarmMinutesKey = "behavior.smartAlarmMinutes"
+    nonisolated static let smartAlarmWeekdaysKey = "behavior.smartAlarmWeekdays"
+
     /// The profile fields the plan needs, read from the same UserDefaults keys `ProfileStore` writes.
     struct ProfileValues: Equatable, Sendable {
         var age: Int
@@ -16,6 +26,8 @@ enum DayPlanBuilder {
         var weightKg: Double
         var heightCm: Double
         var goal: DayPlan.Goal
+        /// Minutes after local midnight, or -1 for automatic (see `ProfileStore.wakeTimeMinutes`).
+        var wakeTimeMinutes: Int = -1
 
         /// Same defaults as `ProfileStore.init()`.
         nonisolated static func stored(defaults: UserDefaults = .standard) -> ProfileValues {
@@ -24,7 +36,8 @@ enum DayPlanBuilder {
                 sex: defaults.string(forKey: ProfileStore.sexKey) ?? "male",
                 weightKg: defaults.object(forKey: ProfileStore.weightKey) as? Double ?? 75,
                 heightCm: defaults.object(forKey: ProfileStore.heightKey) as? Double ?? 178,
-                goal: DayPlanBuilder.goal(from: defaults.string(forKey: DayPlanBuilder.goalKey)))
+                goal: DayPlanBuilder.goal(from: defaults.string(forKey: DayPlanBuilder.goalKey)),
+                wakeTimeMinutes: DayPlanBuilder.validWakeMinutes(defaults.object(forKey: DayPlanBuilder.wakeTimeKey) as? Int))
         }
     }
 
@@ -75,7 +88,8 @@ enum DayPlanBuilder {
             days: days, today: todayKey, sleepNeedMin: need, sleepDebtMin: debt,
             wakeMinutes: wakes, load: load, age: profile.age,
             sex: DayPlan.Sex(profileString: profile.sex),
-            weightKg: profile.weightKg, heightCm: profile.heightCm, goal: profile.goal)
+            weightKg: profile.weightKg, heightCm: profile.heightCm, goal: profile.goal,
+            wakeTargetMinutes: wakeTarget(userMinutes: profile.wakeTimeMinutes, now: now, timeZone: tz))
         return Snapshot(plan: DayPlan.make(inputs), inputs: inputs, todayKey: todayKey, todayRow: todayRow,
                         restScore: rest, sleepNeedMin: need, sleepDebtMin: debt, lastNight: night, load: load)
     }
@@ -89,6 +103,37 @@ enum DayPlanBuilder {
     }
 
     // MARK: - Pure steps
+
+    /// A stored wake time when it is a real time of day (0 ..< 1440), else -1 (automatic).
+    nonisolated static func validWakeMinutes(_ raw: Int?) -> Int {
+        guard let raw, (0..<1440).contains(raw) else { return -1 }
+        return raw
+    }
+
+    /// The wake-up time the plan should aim for: the user's own setting when it is a time of day, else NOOP's
+    /// smart alarm time when that alarm is on and rings tomorrow morning, else nil (the plan then uses the
+    /// usual wake time).
+    nonisolated static func wakeTarget(userMinutes: Int, defaults: UserDefaults = .standard, now: Date = Date(),
+                                       timeZone: TimeZone = .current) -> Int? {
+        if (0..<1440).contains(userMinutes) { return userMinutes }
+        return smartAlarmWakeMinutes(defaults: defaults, now: now, timeZone: timeZone)
+    }
+
+    /// NOOP's smart alarm time (minutes after local midnight) for the morning after `now`, or nil when the alarm
+    /// is off, its time is not a time of day, or its weekday selection leaves tomorrow out (an empty selection
+    /// means every day, as in `AppModel.nextSmartAlarmDate`). Weekday numbers are Calendar's (1 = Sunday).
+    nonisolated static func smartAlarmWakeMinutes(defaults: UserDefaults = .standard, now: Date = Date(),
+                                                  timeZone: TimeZone = .current) -> Int? {
+        guard defaults.object(forKey: smartAlarmEnabledKey) as? Bool == true else { return nil }
+        let minutes = defaults.object(forKey: smartAlarmMinutesKey) as? Int ?? 7 * 60
+        guard (0..<1440).contains(minutes) else { return nil }
+        let days = Set((defaults.array(forKey: smartAlarmWeekdaysKey) as? [Int] ?? []).filter { (1...7).contains($0) })
+        if days.isEmpty { return minutes }
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = timeZone
+        guard let tomorrow = cal.date(byAdding: .day, value: 1, to: now) else { return minutes }
+        return days.contains(cal.component(.weekday, from: tomorrow)) ? minutes : nil
+    }
 
     /// `DayPlan.Goal` from its stored raw value; anything unknown is `.performance`.
     nonisolated static func goal(from raw: String?) -> DayPlan.Goal {

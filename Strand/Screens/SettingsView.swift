@@ -362,6 +362,10 @@ struct SettingsView: View {
                     .accessibilityLabel("Goal")
                 }
                 rowDivider
+                FormRow(label: "Wake-up time") {
+                    WakeTimeField(minutes: $profile.wakeTimeMinutes, autoLabel: "Automatic")
+                }
+                rowDivider
                 // Waist (optional). Unlike the rows above it, an empty waist is valid (0 = unset) —
                 // it's the ONE measurement that ADDS the VO₂max estimate alongside Fitness Age. It does
                 // NOT sharpen the Fitness Age itself (the body term cancels in the Nes model), so it sits
