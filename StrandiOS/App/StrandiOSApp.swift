@@ -318,6 +318,7 @@ enum DemoScreens {
         // Screen audit (verification): the rest of the screens a user reaches, each on its own.
         case "liquidtoday": return AnyView(LiquidTodayView())
         case "wodlog": return AnyView(WodLogView())
+        case "strength": return AnyView(StrengthProgressView())
         case "coach": return AnyView(CoachView())
         case "intelligence": return AnyView(IntelligenceView())
         case "insightshub": return AnyView(InsightsHubView())

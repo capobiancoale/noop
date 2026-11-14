@@ -50,7 +50,7 @@ launch
 sleep 45
 shot "00-first-launch"
 
-SCREENS="liquidtoday trends sleep workouts wodlog coach intelligence insightshub insights explore compare health stress \
+SCREENS="liquidtoday trends sleep workouts wodlog strength coach intelligence insightshub insights explore compare health stress \
 applehealth vo2max weeklydigest settings devices datasources fullday scoringguide labbook coupled breathing intervals \
 smartalarm automations storage backup today hraccuracy wodimport"
 
