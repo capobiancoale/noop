@@ -83,7 +83,7 @@ struct NOOPPlanWidgetView: View {
     }
 
     private var restCell: some View {
-        StatCell(label: "Rest", value: widgetPercent(snap.rest), tint: WidgetColors.rest(snap.rest))
+        StatCell(label: "Rest", value: snap.rest.map { $0.formatted() }, tint: WidgetColors.rest(snap.rest))
     }
 
     /// Charge ring with Effort and Rest beside it.
@@ -174,15 +174,19 @@ struct NOOPPlanWidgetView: View {
 
     @ViewBuilder private var large: some View {
         if let plan {
-            VStack(alignment: .leading, spacing: 14) {
+            // The blocks share the height evenly: fixed spacing left the lower half of the widget empty.
+            VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 16) {
                     scores
                     planColumn(plan, details: false)
                 }
+                Spacer(minLength: 8)
                 Divider()
+                Spacer(minLength: 8)
                 sleepBlock(plan)
+                Spacer(minLength: 8)
                 nutritionRow(plan)
-                Spacer(minLength: 0)
+                Spacer(minLength: 8)
                 footer
             }
         } else {
@@ -199,34 +203,64 @@ struct NOOPPlanWidgetView: View {
 
     // MARK: - Large pieces
 
+    /// Tonight's bedtime and the first thing to work on, each beside a tinted symbol.
     private func sleepBlock(_ plan: WidgetPlan) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 10) {
             if let sleep = plan.sleepLine {
-                Text(verbatim: sleep)
-                    .font(.system(size: WidgetSize.mid, weight: .semibold, design: .rounded))
-                    .foregroundStyle(StrandPalette.textPrimary)
-                    .minimumScaleFactor(0.7)
-                    .lineLimit(1)
-            }
-            if let target = plan.sleepTargetLine {
-                CaptionText(text: target, lines: 1)
+                iconRow(symbol: "moon.fill", tint: StrandPalette.restColor) {
+                    Text(verbatim: sleep)
+                        .font(.system(size: WidgetSize.mid, weight: .semibold, design: .rounded))
+                        .foregroundStyle(StrandPalette.textPrimary)
+                        .minimumScaleFactor(0.7)
+                        .lineLimit(1)
+                    if let target = plan.sleepTargetLine {
+                        CaptionText(text: target, lines: 1)
+                    }
+                }
             }
             if let focus = plan.focusText {
-                CaptionText(text: focus, lines: 2)
-                    .padding(.top, 2)
+                iconRow(symbol: "scope", tint: StrandPalette.statusWarning) {
+                    Text(verbatim: focus)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(StrandPalette.textPrimary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private func iconRow<Content: View>(symbol: String, tint: Color,
+                                        @ViewBuilder content: () -> Content) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: symbol)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 30, height: 30)
+                .background(tint.opacity(0.18), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) { content() }
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
     @ViewBuilder private func nutritionRow(_ plan: WidgetPlan) -> some View {
         if plan.energy != nil || plan.protein != nil || plan.carbs != nil {
             HStack(spacing: 8) {
-                StatCell(label: "Energy (kcal)", value: plan.energy.map(WidgetPlan.rangeText))
-                StatCell(label: "Protein (g)", value: plan.protein.map(WidgetPlan.rangeText))
-                StatCell(label: "Carbs (g)", value: plan.carbs.map(WidgetPlan.rangeText))
+                nutritionTile(StatCell(label: "Energy (kcal)", value: plan.energy.map(WidgetPlan.rangeText)))
+                nutritionTile(StatCell(label: "Protein (g)", value: plan.protein.map(WidgetPlan.rangeText)))
+                nutritionTile(StatCell(label: "Carbs (g)", value: plan.carbs.map(WidgetPlan.rangeText)))
             }
         }
+    }
+
+    private func nutritionTile(_ cell: StatCell) -> some View {
+        cell
+            .padding(.horizontal, 9)
+            .padding(.vertical, 8)
+            .background(StrandPalette.surfaceInset, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
 
     private var footer: some View {

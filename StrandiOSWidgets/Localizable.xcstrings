@@ -390,6 +390,36 @@
           }
         }
       }
+    },
+    "High recovery" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recupero alto"
+          }
+        }
+      }
+    },
+    "Average recovery" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recupero nella media"
+          }
+        }
+      }
+    },
+    "Low recovery" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recupero basso"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

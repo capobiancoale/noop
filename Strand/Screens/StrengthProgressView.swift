@@ -305,16 +305,24 @@ private struct StrengthWeeklyChart: View {
                 }
             }
             .chartYAxis {
-                AxisMarks(position: .leading) { _ in
+                AxisMarks(position: .leading) { value in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                         .foregroundStyle(StrandPalette.hairline)
-                    AxisValueLabel()
+                    // The unit on every tick: a bare "6000" read as calories.
+                    AxisValueLabel {
+                        if let kg = value.as(Double.self) {
+                            Text(verbatim: StrengthFormat.volume(kg))
+                        }
+                    }
                 }
             }
             .frame(height: 170)
             .accessibilityLabel(Text("Weekly volume in kg, last 8 weeks"))
             .accessibilityValue(Text(chartSummary))
 
+            Text("Kilograms lifted in the week: sets × reps × load, added up over every movement. Not calories.")
+                .font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
             Text("Volume counts only movements where sets and reps are known.")
                 .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
