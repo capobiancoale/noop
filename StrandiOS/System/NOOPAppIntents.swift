@@ -248,6 +248,88 @@ struct UploadToDatabricksIntent: AppIntent {
     }
 }
 
+/// Why "Log a WOD" could not save.
+enum LogWodError: Error, CustomLocalizedStringResourceConvertible {
+    case emptyTitle
+    case storeUnavailable
+
+    var localizedStringResource: LocalizedStringResource {
+        switch self {
+        case .emptyTitle: return "Give the WOD a name."
+        case .storeUnavailable: return "Couldn't open the local store."
+        }
+    }
+}
+
+/// Logs a WOD for right now in a few words: "Fran", "4:32", RPE 8. When the title matches an earlier WOD
+/// (case-insensitive), its type, format and movements are copied. The result is read only when it is a time
+/// (m:ss), rounds + reps (12+5), a load (100 kg) or a rep count (150); anything else is saved without one.
+struct LogWodIntent: AppIntent {
+    static var title: LocalizedStringResource = "Log a WOD"
+    static var description = IntentDescription("Saves a WOD for now with an optional result and RPE. If the name matches an earlier WOD, its movements are copied.")
+    static var openAppWhenRun = false
+
+    @Parameter(title: "Title")
+    var wodTitle: String
+
+    @Parameter(title: "Result", description: "A time like 4:32, rounds and reps like 12+5, a rep count like 150, or a load like 100 kg.")
+    var result: String?
+
+    @Parameter(title: "RPE", description: "How hard it felt, 1 to 10.")
+    var rpe: Int?
+
+    @Parameter(title: "Scaled", default: false)
+    var scaled: Bool
+
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        let name = wodTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { throw LogWodError.emptyTitle }
+
+        // The running app's repository when NOOP is alive: its `saveWod` also fires `onWodsChanged`, which
+        // rescores the day. Otherwise the same database file is opened and written directly; the WOD screens
+        // read the store when they appear, so the next launch shows the row.
+        let live = await Self.liveRepo()
+        let history: [WodLogRow]
+        let store: WhoopStore?
+        if let live {
+            history = await live.allWods()
+            store = nil
+        } else {
+            let opened: WhoopStore
+            do { opened = try await ExportForDatabricksIntent.openStore() } catch { throw LogWodError.storeUnavailable }
+            history = (try? await opened.allWods()) ?? []
+            store = opened
+        }
+
+        let now = Date()
+        let row = WodQuickLog.makeRow(title: name, resultText: result, rpe: rpe, scaled: scaled, history: history,
+                                      id: UUID().uuidString, now: Int(now.timeIntervalSince1970),
+                                      dayKey: Self.dayKey(now))
+        if let live {
+            await live.saveWod(row)
+        } else if let store {
+            do { _ = try await store.upsertWod(row) } catch { throw LogWodError.storeUnavailable }
+        }
+
+        if let shown = WodFormat.result(row) {
+            return .result(dialog: "Saved \(name), \(shown)")
+        }
+        return .result(dialog: "Saved \(name)")
+    }
+
+    @MainActor
+    private static func liveRepo() -> Repository? { AppModel.shared?.repo }
+
+    /// Canonical yyyy-MM-dd (local) day key, as the WOD editor writes it.
+    private static func dayKey(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = .current
+        return f.string(from: date)
+    }
+}
+
 /// Surfaces NOOP's intents to Siri, Spotlight, and the Shortcuts gallery without any user setup.
 struct NOOPShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
@@ -263,6 +345,10 @@ struct NOOPShortcuts: AppShortcutsProvider {
                     phrases: ["Export my \(.applicationName) data for Databricks"],
                     shortTitle: "Export for Databricks",
                     systemImageName: "square.and.arrow.up")
+        AppShortcut(intent: LogWodIntent(),
+                    phrases: ["Log a WOD in \(.applicationName)"],
+                    shortTitle: "Log a WOD",
+                    systemImageName: "figure.strengthtraining.traditional")
     }
 }
 #endif

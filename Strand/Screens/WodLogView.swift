@@ -23,6 +23,8 @@ struct WodLogView: View {
     @State private var loaded = false
     @State private var showNew = false
     @State private var showImport = false
+    /// The WOD being repeated as a new entry (sheet item).
+    @State private var repeatTemplate: WodLogRow?
     /// Derived from `wods` once per reload, never in `body`.
     @State private var benches: [Bench] = []
     @State private var strengthCount = 0
@@ -49,6 +51,9 @@ struct WodLogView: View {
         }
         .sheet(isPresented: $showNew) {
             WodEditorView(existing: nil) { Task { await reload() } }
+        }
+        .sheet(item: $repeatTemplate) { template in
+            WodEditorView(existing: nil, template: template) { Task { await reload() } }
         }
         .sheet(isPresented: $showImport) {
             WodImportView { Task { await reload() } }
@@ -292,17 +297,33 @@ struct WodLogView: View {
     }
 
     private func historyRow(_ w: WodLogRow) -> some View {
-        NavigationLink {
-            WodDetailView(wod: w) { Task { await reload() } }
-        } label: {
-            WodRowView(wod: w)
+        HStack(spacing: 0) {
+            NavigationLink {
+                WodDetailView(wod: w) { Task { await reload() } }
+            } label: {
+                WodRowView(wod: w)
+            }
+            .buttonStyle(.plain)
+            // A separate control next to the link (a button inside a NavigationLink label is unreliable).
+            Button { repeatTemplate = w } label: {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(StrandPalette.accent)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Repeat"))
         }
-        .buttonStyle(.plain)
         .contextMenu {
+            Button { repeatTemplate = w } label: {
+                Label("Repeat", systemImage: "arrow.counterclockwise")
+            }
             Button(role: .destructive) { delete(w) } label: {
                 Label("Delete", systemImage: "trash")
             }
         }
+        .accessibilityAction(named: Text("Repeat")) { repeatTemplate = w }
         .accessibilityAction(named: Text("Delete")) { delete(w) }
     }
 }

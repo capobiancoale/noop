@@ -26,6 +26,9 @@ final class ProfileStore: ObservableObject {
     /// Personal goal for "Today's plan": a `DayPlan.Goal` raw value ("performance", "strength", "fatLoss",
     /// "endurance", "health"). Default "performance". Unknown values read back as performance.
     @Published var goal: String { didSet { d.set(goal, forKey: K.goal) } }
+    /// The wake-up time the user wants, minutes after local midnight (0 ..< 1440); -1 = automatic, from the
+    /// usual wake time (or NOOP's smart alarm when it is on). Feeds the bedtime in "Today's plan".
+    @Published var wakeTimeMinutes: Int { didSet { d.set(wakeTimeMinutes, forKey: K.wakeTime) } }
     /// 0 = auto-estimate from age.
     @Published var hrMaxOverride: Int { didSet { d.set(hrMaxOverride, forKey: K.hrMax) } }
     /// Step-calibration divisor (#139/#132): counter ticks per real step for the @57 motion
@@ -77,6 +80,7 @@ final class ProfileStore: ObservableObject {
         static let stepsManualCoeff = "profile.stepsManualCoefficient"
         static let avatar = "profile.avatarImageData"
         static let goal = DayPlanBuilder.goalKey
+        static let wakeTime = DayPlanBuilder.wakeTimeKey
     }
 
     // Key names for code that reads the persisted profile without a live store (`DayPlanBuilder.ProfileValues.stored`).
@@ -100,6 +104,7 @@ final class ProfileStore: ObservableObject {
         stepsManualCoefficient = max(0, d.object(forKey: K.stepsManualCoeff) as? Double ?? 0)
         avatarImageData = d.data(forKey: K.avatar)
         goal = d.string(forKey: K.goal) ?? "performance"
+        wakeTimeMinutes = DayPlanBuilder.validWakeMinutes(d.object(forKey: K.wakeTime) as? Int)
     }
 
     // MARK: - Profile picture

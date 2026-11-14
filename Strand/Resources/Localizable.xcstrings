@@ -19592,7 +19592,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatico"
+            "value": "Automatica"
           }
         },
         "pt-PT": {
@@ -140944,6 +140944,166 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chili sollevati nella settimana: serie × ripetizioni × carico, sommati su tutti i movimenti. Non sono calorie."
+          }
+        }
+      }
+    },
+    "Wake-up %@ · target %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sveglia %@ · obiettivo %@"
+          }
+        }
+      }
+    },
+    "Tap to set your wake-up time": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tocca per impostare l'ora della sveglia"
+          }
+        }
+      }
+    },
+    "Opens the wake-up time setting": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apre l'impostazione dell'ora di sveglia"
+          }
+        }
+      }
+    },
+    "Wake-up time": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ora della sveglia"
+          }
+        }
+      }
+    },
+    "Automatic (from my usual wake time)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatica (dal mio solito orario di risveglio)"
+          }
+        }
+      }
+    },
+    "iPhone does not let apps read the alarms in the Clock app, so you set your wake-up time here. When it is automatic and NOOP's smart alarm is on, the plan uses the alarm's time.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone non permette alle app di leggere le sveglie dell'app Orologio, quindi l'ora della sveglia si imposta qui. Se è automatica e la sveglia intelligente di NOOP è attiva, il piano usa l'orario di quella sveglia."
+          }
+        }
+      }
+    },
+    "Repeat": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripeti"
+          }
+        }
+      }
+    },
+    "Last time: %@ (%@)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultima volta: %@ (%@)"
+          }
+        }
+      }
+    },
+    "%@ @ %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ @ %@"
+          }
+        }
+      }
+    },
+    "Title": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titolo"
+          }
+        }
+      }
+    },
+    "A time like 4:32, rounds and reps like 12+5, a rep count like 150, or a load like 100 kg.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un tempo come 4:32, round e ripetizioni come 12+5, un numero di ripetizioni come 150, o un carico come 100 kg."
+          }
+        }
+      }
+    },
+    "How hard it felt, 1 to 10.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quanto è stato duro, da 1 a 10."
+          }
+        }
+      }
+    },
+    "Saved %@, %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvato %@, %@"
+          }
+        }
+      }
+    },
+    "Saved %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvato %@"
+          }
+        }
+      }
+    },
+    "Give the WOD a name.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dai un nome al WOD."
+          }
+        }
+      }
+    },
+    "Log a WOD in ${applicationName}": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra un WOD in ${applicationName}"
           }
         }
       }

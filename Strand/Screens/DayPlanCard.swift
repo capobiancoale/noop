@@ -12,8 +12,12 @@ import StrandAnalytics
 struct DayPlanCard: View {
     let snapshot: DayPlanBuilder.Snapshot
     @Binding var goal: String
+    /// The wake-up time the user wants (minutes after local midnight), -1 = automatic.
+    @Binding var wakeMinutes: Int
     let hasGlucose: Bool
     let askCoach: () -> Void
+
+    @State private var showWakeSheet = false
 
     private var plan: DayPlan.Plan { snapshot.plan }
 
@@ -28,6 +32,9 @@ struct DayPlanCard: View {
                 NoopButton("Ask the Coach", systemImage: "bubble.left.and.text.bubble.right",
                            kind: .secondary, fullWidth: true, action: askCoach)
             }
+        }
+        .sheet(isPresented: $showWakeSheet) {
+            WakeTimeSheet(minutes: $wakeMinutes, suggested: plan.sleep.wakeMinutes)
         }
     }
 
@@ -193,17 +200,33 @@ struct DayPlanCard: View {
         return String(localized: "Sleep \(Self.duration(plan.sleep.minutes)) tonight")
     }
 
+    /// "Wake-up 07:00 · target 8 h 20 min"; without a known wake time, an invitation to set one.
     private var sleepDetail: String? {
-        plan.sleep.bedtimeMinutes == nil ? nil : String(localized: "Target \(Self.duration(plan.sleep.minutes))")
+        guard plan.sleep.bedtimeMinutes != nil, let wake = plan.sleep.wakeMinutes else {
+            return String(localized: "Tap to set your wake-up time")
+        }
+        return String(localized: "Wake-up \(Self.clock(wake)) · target \(Self.duration(plan.sleep.minutes))")
     }
 
     private var sleepRow: some View {
-        actionRow(symbol: "moon.fill", tint: StrandPalette.restColor) {
-            actionHeadline(sleepHeadline)
-            if let sleepDetail { bodyLine(sleepDetail) }
+        Button { showWakeSheet = true } label: {
+            HStack(alignment: .center, spacing: 8) {
+                actionRow(symbol: "moon.fill", tint: StrandPalette.restColor) {
+                    actionHeadline(sleepHeadline)
+                    if let sleepDetail { bodyLine(sleepDetail) }
+                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .accessibilityHidden(true)
+            }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: [tonightLine, bedtimeLine].compactMap { $0 }.joined(separator: ", ")))
+        .accessibilityLabel(Text(verbatim: [tonightLine, bedtimeLine, sleepDetail].compactMap { $0 }.joined(separator: ", ")))
+        .accessibilityHint(Text("Opens the wake-up time setting"))
+        .accessibilityAddTraits(.isButton)
     }
 
     // Nutrition
@@ -324,6 +347,13 @@ struct DayPlanCard: View {
         HeartRhythmCard.durationText(minutes: Double(minutes))
     }
 
+    /// A time of day (minutes after local midnight) in the phone's clock style.
+    static func clock(_ minutes: Int) -> String {
+        let m = ((minutes % 1440) + 1440) % 1440
+        let date = Calendar.current.date(bySettingHour: m / 60, minute: m % 60, second: 0, of: Date()) ?? Date()
+        return date.formatted(date: .omitted, time: .shortened)
+    }
+
     /// A whole number in the user's locale ("2.450" / "2,450" / "2450").
     private static func whole(_ v: Int) -> String {
         v.formatted(.number.grouping(.never))
@@ -345,6 +375,78 @@ struct DayPlanCoachSheet: View {
         }
         #if os(macOS)
         .frame(minWidth: 520, minHeight: 640)
+        #endif
+    }
+}
+
+// MARK: - Wake-up time
+
+/// The wake-up time as a control: an "Automatic" switch and, when it is off, a time picker. Shared by the
+/// plan card's sheet and the Settings profile section. `minutes` is minutes after local midnight, -1 = automatic.
+struct WakeTimeField: View {
+    @Binding var minutes: Int
+    /// The time the picker starts at when the user turns Automatic off.
+    var suggested: Int?
+    var autoLabel: LocalizedStringKey = "Automatic (from my usual wake time)"
+
+    private var automatic: Binding<Bool> {
+        Binding(
+            get: { minutes < 0 },
+            set: { on in minutes = on ? -1 : (suggested ?? 7 * 60) })
+    }
+
+    private var time: Binding<Date> {
+        Binding(
+            get: {
+                let m = minutes < 0 ? (suggested ?? 7 * 60) : minutes
+                return Calendar.current.date(bySettingHour: m / 60, minute: m % 60, second: 0, of: Date()) ?? Date()
+            },
+            set: { date in
+                let c = Calendar.current.dateComponents([.hour, .minute], from: date)
+                minutes = (c.hour ?? 0) * 60 + (c.minute ?? 0)
+            })
+    }
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 8) {
+            Toggle(autoLabel, isOn: automatic)
+            if minutes >= 0 {
+                DatePicker("Wake-up time", selection: time, displayedComponents: .hourAndMinute)
+            }
+        }
+    }
+}
+
+/// Opened from the plan card's sleep row: set when you want to wake up. iPhone gives apps no access to the
+/// Clock app's alarms, so the time is set here.
+struct WakeTimeSheet: View {
+    @Binding var minutes: Int
+    var suggested: Int?
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    WakeTimeField(minutes: $minutes, suggested: suggested)
+                } footer: {
+                    Text("iPhone does not let apps read the alarms in the Clock app, so you set your wake-up time here. When it is automatic and NOOP's smart alarm is on, the plan uses the alarm's time.")
+                }
+            }
+            .navigationTitle(Text("Wake-up time"))
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        #if os(iOS)
+        .presentationDetents([.medium])
+        #else
+        .frame(minWidth: 380, minHeight: 280)
         #endif
     }
 }

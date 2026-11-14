@@ -26,8 +26,9 @@ import WhoopStore
 //           (a missing day or one without Effort ends the streak); >= 3 -> cap at easy, `.hardStreak`.
 //     The first reason is always the Charge one.
 //  2. Sleep target. minutes = need + min(max(debt, 0), 60), rounded to 5 (need = `sleepNeedMin` ?? 480).
-//     bedtime = median(last 14 `wakeMinutes`) - minutes - 15, wrapped into 0 ..< 1440; nil with fewer than 5
-//     wake times. Wake times are morning times of day, so a plain (not circular) median is used; a person
+//     bedtime = wake - minutes - 15, wrapped into 0 ..< 1440, where wake is the user's `wakeTargetMinutes` when
+//     set (used even with no recorded nights), else the median of the last 14 `wakeMinutes`; nil with no target
+//     and fewer than 5 wake times. Wake times are morning times of day, so a plain (not circular) median is used; a person
 //     waking around midnight would break that assumption, which does not occur for real night sleep.
 //  3. Nutrition (nil when age, weight or height is <= 0).
 //     Resting energy, Mifflin-St Jeor (Mifflin et al. 1990, Am J Clin Nutr 51:241): 10·kg + 6.25·cm − 5·age + 5
@@ -95,8 +96,14 @@ public enum DayPlan {
         public let minutes: Int
         /// Minutes after local midnight, 0 ..< 1440; nil with fewer than 5 wake times.
         public let bedtimeMinutes: Int?
-        public init(minutes: Int, bedtimeMinutes: Int?) {
+        /// The wake time (minutes after local midnight) the bedtime was computed for: the user's target, or the
+        /// median of the recorded wake times; nil when neither exists.
+        public let wakeMinutes: Int?
+        /// True when `wakeMinutes` is the user's own target rather than the median of recorded nights.
+        public let wakeIsUserSet: Bool
+        public init(minutes: Int, bedtimeMinutes: Int?, wakeMinutes: Int? = nil, wakeIsUserSet: Bool = false) {
             self.minutes = minutes; self.bedtimeMinutes = bedtimeMinutes
+            self.wakeMinutes = wakeMinutes; self.wakeIsUserSet = wakeIsUserSet
         }
     }
 
@@ -125,9 +132,13 @@ public enum DayPlan {
         public var weightKg: Double
         public var heightCm: Double
         public var goal: Goal
+        /// The wake-up time the user wants, minutes after local midnight (0 ..< 1440); nil = derive it from the
+        /// recorded wake times.
+        public var wakeTargetMinutes: Int?
         public init(days: [DailyMetric], today: String, sleepNeedMin: Double?, sleepDebtMin: Double?,
                     wakeMinutes: [Int], load: TrainingLoad.Summary?, age: Int, sex: Sex,
-                    weightKg: Double, heightCm: Double, goal: Goal) {
+                    weightKg: Double, heightCm: Double, goal: Goal, wakeTargetMinutes: Int? = nil) {
+            self.wakeTargetMinutes = wakeTargetMinutes
             self.days = days; self.today = today; self.sleepNeedMin = sleepNeedMin
             self.sleepDebtMin = sleepDebtMin; self.wakeMinutes = wakeMinutes; self.load = load
             self.age = age; self.sex = sex; self.weightKg = weightKg; self.heightCm = heightCm
@@ -244,13 +255,21 @@ public enum DayPlan {
         let extra = min(max(i.sleepDebtMin ?? 0, 0), 60)
         let minutes = roundTo(need + extra, 5)
         let wakes = Array(i.wakeMinutes.suffix(14))
+        if let target = i.wakeTargetMinutes {
+            let wake = ((target % 1440) + 1440) % 1440
+            let raw = wake - minutes - 15
+            return SleepTarget(minutes: minutes, bedtimeMinutes: ((raw % 1440) + 1440) % 1440,
+                               wakeMinutes: wake, wakeIsUserSet: true)
+        }
         var bed: Int?
+        var wake: Int?
         if wakes.count >= 5 {
             let med = median(wakes.map(Double.init))
+            wake = Int(med.rounded())
             let raw = Int(med.rounded()) - minutes - 15
             bed = ((raw % 1440) + 1440) % 1440
         }
-        return SleepTarget(minutes: minutes, bedtimeMinutes: bed)
+        return SleepTarget(minutes: minutes, bedtimeMinutes: bed, wakeMinutes: wake, wakeIsUserSet: false)
     }
 
     static func median(_ v: [Double]) -> Double {

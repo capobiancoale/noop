@@ -1285,8 +1285,8 @@ struct TodayView: View {
                     .staggeredAppear(index: 0)
                 #endif
                 if selectedDayOffset == 0, let plan = dayPlan {
-                    DayPlanCard(snapshot: plan, goal: $profile.goal, hasGlucose: false,
-                                askCoach: { showCoachSheet = true })
+                    DayPlanCard(snapshot: plan, goal: $profile.goal, wakeMinutes: $profile.wakeTimeMinutes,
+                                hasGlucose: false, askCoach: { showCoachSheet = true })
                         .staggeredAppear(index: 1)
                 }
                 heartRateTrendSection.staggeredAppear(index: 1)
@@ -1339,7 +1339,7 @@ struct TodayView: View {
         // day-scoped, so navigating must re-fetch them for the newly selected window.
         .task(id: TodayLoadKey(seq: repo.refreshSeq, offset: selectedDayOffset)) { await loadAll() }
         // The plan follows the data, the selected day (today only) and the profile (goal, age, weight, height).
-        .task(id: "\(repo.refreshSeq)-\(selectedDayOffset)-\(profile.goal)-\(profile.age)-\(profile.sex)-\(profile.weightKg)-\(profile.heightCm)") {
+        .task(id: "\(repo.refreshSeq)-\(selectedDayOffset)-\(profile.goal)-\(profile.age)-\(profile.sex)-\(profile.weightKg)-\(profile.heightCm)-\(profile.wakeTimeMinutes)") {
             await refreshDayPlan()
         }
         .sheet(isPresented: $showCoachSheet) { DayPlanCoachSheet() }
@@ -3798,7 +3798,7 @@ struct TodayView: View {
         guard selectedDayOffset == 0 else { dayPlan = nil; return }
         let values = DayPlanBuilder.ProfileValues(
             age: profile.age, sex: profile.sex, weightKg: profile.weightKg, heightCm: profile.heightCm,
-            goal: DayPlanBuilder.goal(from: profile.goal))
+            goal: DayPlanBuilder.goal(from: profile.goal), wakeTimeMinutes: profile.wakeTimeMinutes)
         dayPlan = await DayPlanBuilder.snapshot(repo: repo, profile: values)
     }
 

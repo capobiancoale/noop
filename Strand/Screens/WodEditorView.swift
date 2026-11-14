@@ -16,14 +16,19 @@ struct WodEditorView: View {
 
     /// The row being edited, or nil to create a new one.
     let existing: WodLogRow?
+    /// A WOD to repeat: a NEW entry pre-filled with its title, type, format, time cap and movements (with
+    /// loads); result, RPE and notes stay blank. Ignored when `existing` is set.
+    let template: WodLogRow?
     /// Called after a successful save or delete so the list can refresh.
     let onSaved: () -> Void
 
     /// Every WOD is logged with its session's start and end. `initialDate` / `initialEnd` set a new WOD's
     /// (Today: when its workout started and ended); without them a new WOD is the hour up to now. An edit
     /// keeps the WOD's own times.
-    init(existing: WodLogRow?, initialDate: Date? = nil, initialEnd: Date? = nil, onSaved: @escaping () -> Void) {
+    init(existing: WodLogRow?, template: WodLogRow? = nil, initialDate: Date? = nil, initialEnd: Date? = nil,
+         onSaved: @escaping () -> Void) {
         self.existing = existing
+        self.template = template
         self.onSaved = onSaved
         if existing == nil, let initialDate {
             _date = State(initialValue: initialDate)
@@ -59,6 +64,8 @@ struct WodEditorView: View {
     @State private var resWeight = ""
     @State private var rpe = 0.0
     @State private var notes = ""
+    /// Every logged WOD, for "Last time" under a movement name (loaded once on appear).
+    @State private var history: [WodLogRow] = []
 
     private let types = ["CrossFit", "Weightlifting", "Hyrox", "Running", "Rowing", "Other"]
     private let formats = ["For Time", "AMRAP", "EMOM", "Strength", "Intervals", "Other"]
@@ -107,6 +114,7 @@ struct WodEditorView: View {
                     ForEach($movements) { $m in
                         VStack(spacing: 6) {
                             TextField("Movement (e.g. Thruster, Pull-up)", text: $m.name)
+                            lastTimeHint(for: $m)
                             HStack(spacing: 8) {
                                 TextField("Reps / scheme", text: $m.reps)
                                 Divider()
@@ -171,7 +179,68 @@ struct WodEditorView: View {
                         .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || sessionTooLong)
                 }
             }
-            .onAppear { if let e = existing { prefill(e) } }
+            .onAppear {
+                if let e = existing { prefill(e) } else if let t = template { prefillTemplate(t) }
+            }
+            .task { history = await repo.allWods() }
+        }
+    }
+
+    // MARK: Last time (per movement)
+
+    /// "Last time: 5x5 @ 90 kg (5 Nov)" under a movement whose name is in the history, with a button that
+    /// copies its reps / scheme and loads into the row. Hidden once the row already holds those values.
+    @ViewBuilder private func lastTimeHint(for m: Binding<EditMovement>) -> some View {
+        if let entry = WodMovementHistory.latest(named: m.wrappedValue.name, in: history, excluding: existing?.id),
+           let text = Self.lastTimeText(entry), !Self.alreadyApplied(entry.movement, to: m.wrappedValue) {
+            HStack(spacing: 8) {
+                Text(verbatim: text)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 4)
+                Button("Use") {
+                    var row = m.wrappedValue
+                    Self.apply(entry.movement, to: &row)
+                    m.wrappedValue = row
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+        }
+    }
+
+    private static func repsText(_ mv: WodMovement) -> String? {
+        if let s = mv.scheme, !s.isEmpty { return s }
+        return mv.reps.map(String.init)
+    }
+
+    private static func lastTimeText(_ entry: WodMovementHistory.Entry) -> String? {
+        let mv = entry.movement
+        let reps = repsText(mv)
+        let detail: String
+        switch (reps, mv.weightKg) {
+        case let (r?, w?): detail = String(localized: "\(r) @ \(WodFormat.kgLabel(w))")
+        case let (r?, nil): detail = r
+        case let (nil, w?): detail = WodFormat.kgLabel(w)
+        case (nil, nil): return nil
+        }
+        let when = Date(timeIntervalSince1970: TimeInterval(entry.ts)).formatted(.dateTime.day().month(.abbreviated))
+        return String(localized: "Last time: \(detail) (\(when))")
+    }
+
+    private static func alreadyApplied(_ mv: WodMovement, to row: EditMovement) -> Bool {
+        let reps = repsText(mv) ?? ""
+        let kg = mv.weightKg.map(WodFormat.trimmed) ?? ""
+        return row.reps.trimmingCharacters(in: .whitespaces) == reps
+            && row.weight.trimmingCharacters(in: .whitespaces) == kg
+    }
+
+    private static func apply(_ mv: WodMovement, to row: inout EditMovement) {
+        if let r = repsText(mv) { row.reps = r }
+        if let w = mv.weightKg { row.weight = WodFormat.trimmed(w) }
+        if let rx = mv.rxWeightKg, row.rxWeight.trimmingCharacters(in: .whitespaces).isEmpty {
+            row.rxWeight = WodFormat.trimmed(rx)
         }
     }
     /// The result inputs for the selected scoring kind.
@@ -259,6 +328,25 @@ struct WodEditorView: View {
         }
         rpe = e.rpe ?? 0
         notes = e.notes ?? ""
+    }
+
+    /// Repeat: everything that defines the workout, nothing that records the attempt. The date stays what a
+    /// new WOD gets (the hour up to now).
+    private func prefillTemplate(_ t: WodLogRow) {
+        type = t.type
+        title = t.title
+        format = t.format ?? "For Time"
+        timeCapMin = t.timeCapS.map { String($0 / 60) } ?? ""
+        let movs = WodQuickLog.repeatMovements(of: t)
+        movements = movs.isEmpty ? [EditMovement()] : movs.map {
+            var m = EditMovement(); m.name = $0.name
+            m.reps = $0.scheme ?? $0.reps.map(String.init) ?? ""
+            m.weight = $0.weightKg.map(WodFormat.trimmed) ?? ""
+            m.rxWeight = $0.rxWeightKg.map(WodFormat.trimmed) ?? ""
+            return m
+        }
+        // Score on the same scale as the original, with blank fields.
+        resultKind = t.effectiveResultKind == .none ? .time : t.effectiveResultKind
     }
 
     private func save() {
