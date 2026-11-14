@@ -72,4 +72,32 @@ final class PuffinCaptureTests: XCTestCase {
         XCTAssertEqual(obj?.first?.keys.sorted(), ["hex"])
         XCTAssertEqual(obj?.first?["hex"] as? String, helloHex)
     }
+
+    /// Only type-47 records in the v20/v21 optical layouts qualify for the offload sample.
+    func testOpticalHistoryRecordFilter() {
+        func frame(type: UInt8, version: UInt8) -> [UInt8] {
+            var f = [UInt8](repeating: 0, count: 40)
+            f[0] = 0xAA; f[8] = type; f[9] = version
+            return f
+        }
+        XCTAssertTrue(PuffinCapture.isOpticalHistoryRecord(frame(type: 0x2f, version: 20)))
+        XCTAssertTrue(PuffinCapture.isOpticalHistoryRecord(frame(type: 0x2f, version: 21)))
+        XCTAssertFalse(PuffinCapture.isOpticalHistoryRecord(frame(type: 0x2f, version: 18)))
+        XCTAssertFalse(PuffinCapture.isOpticalHistoryRecord(frame(type: 0x2f, version: 26)))
+        XCTAssertFalse(PuffinCapture.isOpticalHistoryRecord(frame(type: 0x31, version: 21)))   // metadata
+        XCTAssertFalse(PuffinCapture.isOpticalHistoryRecord(Array(frame(type: 0x2f, version: 21).prefix(9))))
+        XCTAssertFalse(PuffinCapture.isOpticalHistoryRecord(helloFrame()))
+    }
+
+    func testHistoryLogRoundTripsAndDropsATruncatedTail() {
+        var v18 = [UInt8](repeating: 7, count: 124); v18[8] = 0x2f; v18[9] = 18
+        var v26 = [UInt8](repeating: 9, count: 84); v26[8] = 0x2f; v26[9] = 26
+        XCTAssertTrue(PuffinCapture.isHistoryRecord(v18))
+        XCTAssertFalse(PuffinCapture.isHistoryRecord(helloFrame()))
+        let entry = PuffinCapture.historyLogEntry(v18)
+        XCTAssertEqual(Array(entry.prefix(2)), [124, 0])
+        let log = entry + PuffinCapture.historyLogEntry(v26)
+        XCTAssertEqual(PuffinCapture.parseHistoryLog(log), [v18, v26])
+        XCTAssertEqual(PuffinCapture.parseHistoryLog(Array(log.dropLast(5))), [v18])
+    }
 }

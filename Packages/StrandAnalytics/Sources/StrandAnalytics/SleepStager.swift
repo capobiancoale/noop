@@ -427,7 +427,8 @@ public enum SleepStager {
         return periods
     }
 
-    /// Absorb runs shorter than mergeMin minutes into their neighbours.
+    /// Absorb runs shorter than mergeMin minutes into their neighbours, except a short ACTIVE run at the
+    /// very end, which is never folded into the SLEEP run before it (it is where the data stops).
     static func mergePeriods(_ periods: [Period], mergeMinutes: Int = mergeMin) -> [Period] {
         if periods.isEmpty { return [] }
         var pending = periods
@@ -450,6 +451,16 @@ public enum SleepStager {
             } else if hasNext {
                 pending[i + 1] = Period(stage: pending[i + 1].stage,
                                         start: current.start, end: pending[i + 1].end)
+                i += 1
+            } else if hasPrev, current.stage == "active", merged[merged.count - 1].stage == "sleep" {
+                // The LAST run is where the data stops, not a finished fleck: movement that began a few
+                // minutes before the latest sync is the start of being up, and folding it into the still
+                // run before it stretched that run to the edge of the data. A morning hour of sitting
+                // still then read 66 min (over minSleepMin) at a 10:24 sync, was kept as part of the
+                // night and showed as a 10:24 wake, though the stillness ended at 10:10 and the same
+                // stretch reads 52 min (dropped) once the next minutes arrive. Keep it as its own active
+                // run; once more data comes it is either interior (bridged as before) or long enough.
+                merged.append(current)
                 i += 1
             } else if hasPrev {
                 let prev = merged.removeLast()
@@ -866,11 +877,15 @@ public enum SleepStager {
                     detail: "daytime=true restingHR=\(resting ?? -1) baseline=\(baseline.map { Int($0) } ?? -1) nightTail=false"))
                 continue
             }
-            let stages = useSleepStagerV2
+            let staged = useSleepStagerV2
                 ? SleepStagerV2.stageSession(start: p.start, end: p.end, grav: grav,
                                              hr: hrS, rr: rrS, resp: respS)
                 : stageSession(start: p.start, end: p.end, grav: grav,
                                hr: hrS, rr: rrS, resp: respS)
+            // Time awake in bed before real sleep (SleepOnsetLatency.swift): the still-but-awake stretch
+            // before the first sustained-stillness window is wake, not light sleep. No such window → unchanged.
+            let stages = sustainedStillOnset(grav: grav, deltas: deltas, start: p.start, end: p.end)
+                .map { applyOnsetLatency(staged, onset: $0) } ?? staged
             let eff = efficiency(start: p.start, end: p.end, stages: stages)
             let avgHrv = sessionAvgHRV(start: p.start, end: p.end, rr: rrS)
             sessions.append(SleepSession(start: p.start, end: p.end, efficiency: eff,
@@ -1900,8 +1915,15 @@ public enum SleepStager {
         return Int(all.rounded())
     }
 
-    /// Mean RMSSD over 5-min tumbling windows across the session (ms), or nil.
-    /// Uses the same range-filter + ≥2-valid-interval rule as hrv.rmssd().
+    /// Mean RMSSD over the session's quality-accepted 5-min tumbling windows (ms), or nil.
+    ///
+    /// Each window is cleaned with the Lipponen–Tarvainen pipeline (`HRVAnalyzer.windowQuality`) and used
+    /// only when it passes the evidence-based gates: ≥ 120 s of clean beats (Munoz 2015), ≤ 5% corrected
+    /// beats (Kubios acceptance threshold) and ≤ 36% of intervals lost (Sheridan 2020). The 0x2A37 RR on a
+    /// WHOOP 5/MG is PPG-derived and noisier than a 4.0's; rMSSD is built from SUCCESSIVE differences, so a
+    /// single uncorrected artefact inflates it (#262/#235) — a window that needed too much repair is
+    /// excluded rather than averaged in. The plain mean across windows keeps the whole-night definition,
+    /// which is also the closest match to WHOOP's reported HRV (Dial et al., Physiol Rep 2025).
     static func sessionAvgHRV(start: Int, end: Int, rr: [RRInterval]) -> Double? {
         let seg = rr.filter { $0.ts >= start && $0.ts <= end }
         guard !seg.isEmpty else { return nil }
@@ -1909,13 +1931,11 @@ public enum SleepStager {
         var vals: [Double] = []
         var t = start
         while t < end {
-            let bucket = seg.filter { $0.ts >= t && $0.ts < t + windowS }.map { Double($0.rrMs) }
-            // Full clean (range + Malik ectopic rejection), not just range — matches the
-            // analyze() pipeline. The 0x2A37 RR on a WHOOP 5/MG is PPG-derived and noisier
-            // than a 4.0's; rMSSD is built from SUCCESSIVE differences, so an un-rejected
-            // jitter spike inflates the session HRV. Ectopic rejection drops those (#262/#235).
-            let cleaned = HRVAnalyzer.cleanRR(bucket)
-            if cleaned.count >= 2, let r = HRVAnalyzer.rmssdRaw(cleaned) { vals.append(r) }
+            let bucket = seg.filter { $0.ts >= t && $0.ts < t + windowS }
+            if !bucket.isEmpty {
+                let q = HRVAnalyzer.windowQuality(bucket)
+                if q.accepted, let r = q.rmssd { vals.append(r) }
+            }
             t += windowS
         }
         guard !vals.isEmpty else { return nil }

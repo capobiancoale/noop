@@ -233,9 +233,32 @@ enum UnitFormatter {
 
     // MARK: Helpers
 
-    private static func oneDecimal(_ v: Double) -> String { String(format: "%.1f", v) }
+    private static func oneDecimal(_ v: Double) -> String { DisplayNumber.decimal(v) }
 
     private static func decimalString(_ v: Double, _ decimals: Int) -> String {
-        decimals == 0 ? "\(Int(v.rounded()))" : String(format: "%.\(decimals)f", v)
+        decimals == 0 ? "\(Int(v.rounded()))" : DisplayNumber.decimal(v, digits: decimals)
+    }
+}
+
+// MARK: - Locale-aware decimals (display only)
+
+/// Decimal numbers for the screen, written the way the reader's locale writes them: "59,2" in Italian,
+/// "59.2" in English. `String(format: "%.1f", …)` always prints a dot (it ignores the locale), so every
+/// value that reaches a `Text` goes through here instead. Anything that is parsed back, exported (CSV,
+/// JSON, backup), logged or sent to an API keeps the POSIX `String(format:)`: only DISPLAY changes.
+///
+/// Grouping is off so the output matches `%.Nf` digit for digit in `en_US` (the locale CI runs the tests
+/// in); only the separator moves. Pass `locale` to pin a locale in a test.
+enum DisplayNumber {
+    /// `v` with exactly `digits` fraction digits: `decimal(59.24)` gives "59,2" (it) / "59.2" (en).
+    static func decimal(_ v: Double, digits: Int = 1, locale: Locale = .autoupdatingCurrent) -> String {
+        v.formatted(.number.precision(.fractionLength(digits)).grouping(.never).locale(locale))
+    }
+
+    /// Like `decimal`, with an explicit "+" on positive values (a delta): `signed(1.25)` gives "+1,3".
+    /// Negative values keep the locale's own minus sign.
+    static func signed(_ v: Double, digits: Int = 1, locale: Locale = .autoupdatingCurrent) -> String {
+        v.formatted(.number.precision(.fractionLength(digits)).grouping(.never)
+            .sign(strategy: .always()).locale(locale))
     }
 }

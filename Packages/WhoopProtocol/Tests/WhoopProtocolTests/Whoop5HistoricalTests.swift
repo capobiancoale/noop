@@ -161,6 +161,37 @@ final class Whoop5HistoricalTests: XCTestCase {
         XCTAssertEqual(parseFrame(f, family: .whoop5).parsed["aux_byte_82"]?.intValue, 0x5A)
     }
 
+    func testHistoricalV18Spo2Candidate82() {
+        // @82 is the strap's own SpO2 channel: a percentage (70...100) during its 30 s sleep-time readings,
+        // a status code otherwise. Only the percentage range also surfaces as `spo2_candidate_82`; the raw
+        // byte always stays in `aux_byte_82`. Override just that byte on the real fixture (no CRC gate on
+        // decode).
+        var f = bytes(historicalHex)
+        for pct in [90, 70, 100] {
+            f[82] = UInt8(pct)
+            let p = parseFrame(f, family: .whoop5).parsed
+            XCTAssertEqual(p["spo2_candidate_82"]?.intValue, pct, "\(pct) is a percentage")
+            XCTAssertEqual(p["aux_byte_82"]?.intValue, pct)
+        }
+        for raw in [0, 0x80, 0xA0, 0x20, 69, 101] {
+            f[82] = UInt8(raw)
+            let p = parseFrame(f, family: .whoop5).parsed
+            XCTAssertNil(p["spo2_candidate_82"], "\(raw) is not a percentage")
+            XCTAssertEqual(p["aux_byte_82"]?.intValue, raw, "the raw byte still decodes")
+        }
+    }
+
+    func testHistoricalV18Spo2CandidateIsAnnotatedWhenFieldsAreCollected() {
+        var f = bytes(historicalHex)
+        f[82] = 95
+        let parsed = parseFrame(f, family: .whoop5, collectFields: true)
+        let field = parsed.fields.first { $0.name == "spo2_candidate_82" }
+        XCTAssertEqual(field?.off, 82)
+        XCTAssertEqual(field?.len, 1)
+        XCTAssertEqual(field?.cat, "spo2")
+        XCTAssertEqual(field?.value?.intValue, 95)
+    }
+
     func testHistoricalV18SleepStateMapping() {
         // @81's high nibble (bits 4-5) is the band's sleep state; the low nibble is sub-flags. Exercise
         // the mapping by overriding just that byte on the existing real fixture — no extra captures.
@@ -214,6 +245,45 @@ final class Whoop5HistoricalTests: XCTestCase {
             XCTAssertEqual(s.sleepState, [SleepStateSample(ts: 1780916150, state: expected)],
                            "band code \(expected) must reach the stream (raw 0x\(String(raw, radix: 16)))")
         }
+    }
+
+    // MARK: - Strap SpO2 (@82) STREAM extraction (decode → extractHistoricalStreams row)
+
+    func testHistoricalV18StrapSpo2ReachesStream() {
+        // A percentage reading at byte 82 becomes one StrapSpo2Sample at the record's own unix, carrying
+        // the raw byte verbatim. The CRC is re-stamped so the extractor's CRC gate passes.
+        let f = parseFrame(mutatingCRCValid(82, to: 95), family: .whoop5)
+        XCTAssertEqual(f.crcOK, true)
+        let s = extractHistoricalStreams([f], deviceClockRef: 1780916150, wallClockRef: 1780916150)
+        XCTAssertEqual(s.strapSpo2, [StrapSpo2Sample(ts: 1780916150, raw: 95)])
+        XCTAssertFalse(s.isEmpty)
+    }
+
+    func testHistoricalV18StrapSpo2ZeroAddsNothing() {
+        // Byte 82 is 0 nearly always (the real worn daytime fixture reads 0): no row, so the stream stays
+        // sparse and a WHOOP 4.0 (no such key) behaves the same way.
+        let f = parseFrame(bytes(historicalHex), family: .whoop5)
+        let s = extractHistoricalStreams([f], deviceClockRef: 1780916150, wallClockRef: 1780916150)
+        XCTAssertEqual(f.parsed["aux_byte_82"]?.intValue, 0)
+        XCTAssertTrue(s.strapSpo2.isEmpty)
+    }
+
+    func testHistoricalV18StrapSpo2StatusCodeIsKeptVerbatim() {
+        // A status code (32) is not a percentage but is still a nonzero byte-82 second: it reaches the
+        // stream as-is so the nightly aggregation can count the attempt without ever averaging it.
+        let f = parseFrame(mutatingCRCValid(82, to: 32), family: .whoop5)
+        let s = extractHistoricalStreams([f], deviceClockRef: 1780916150, wallClockRef: 1780916150)
+        XCTAssertEqual(s.strapSpo2, [StrapSpo2Sample(ts: 1780916150, raw: 32)])
+        XCTAssertNil(f.parsed["spo2_candidate_82"])
+    }
+
+    func testStreamsStrapSpo2CodableRoundTripAndOldFixtures() throws {
+        // `strap_spo2` round-trips, and a payload without the key (an older golden fixture) decodes to [].
+        let s = Streams(strapSpo2: [StrapSpo2Sample(ts: 10, raw: 97), StrapSpo2Sample(ts: 11, raw: 160)])
+        let data = try JSONEncoder().encode(s)
+        XCTAssertEqual(try JSONDecoder().decode(Streams.self, from: data), s)
+        let old = try JSONDecoder().decode(Streams.self, from: Data("{}".utf8))
+        XCTAssertTrue(old.strapSpo2.isEmpty)
     }
 
     func testHistoricalV18SkinTempTracksWristContact() {

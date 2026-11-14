@@ -321,9 +321,10 @@ private func parseFrameWhoop5(_ frame: [UInt8], collectFields: Bool) -> ParsedFr
 ///   • unix monotonic at +1 s,  • rr_count matches the number of valid R-R intervals (100%),
 ///   • 60000/mean(R-R) ≈ heart_rate (88%, the rest being HR-averaging cases),  • |gravity| ≈ 1 g
 ///     (100% of 500 records).
-/// PPG / SpO₂ / skin-temp live further in the 124-byte record but lack on-device ground truth, so
-/// they are left as a raw region rather than guessed (project rule: real captures, never invented
-/// offsets).
+/// PPG and the rest of the optical block live further in the 124-byte record but lack on-device ground
+/// truth, so they are left as a raw region rather than guessed (project rule: real captures, never
+/// invented offsets). The one exception is the strap's own SpO₂ byte @82, which the community validated
+/// against the WHOOP app's nightly value (see `aux_byte_82` / `spo2_candidate_82` below).
 private func decodeWhoop5Historical(_ frame: [UInt8], fb: FieldBuilder, payloadEnd: Int?) {
     let version = frame.count > 9 ? Int(frame[9]) : -1
     fb.parsed["hist_version"] = .int(version)
@@ -460,21 +461,34 @@ private func decodeWhoop5Historical(_ frame: [UInt8], fb: FieldBuilder, payloadE
                note: "quality code (b2-3); observed nonzero only in wake")
     }
     if let v = readDType(frame, 82, "u8") {
+        // @82 is the strap's OWN blood-oxygen channel. It is 0 nearly always; while the band scores the
+        // wearer asleep the strap takes a 30 s reading about every 20 min and the byte then holds either a
+        // percentage (70...100) or a status code (1, 2, 8, 16, 32, 128, 160 and sums; bit-7 values are
+        // sentinels). The raw byte is kept as `aux_byte_82` (lossless, codes included); only the in-range
+        // values are also surfaced as `spo2_candidate_82`. The name and the range match the community
+        // decoder on purpose (ryanbr/noop PR 709), which keeps upstream merges simple.
         fb.add(82, 1, "aux_byte_82", "status", value: .int(v),
-               note: "raw; observed nonzero only while sleep_state = asleep (meaning not pinned)")
+               note: "raw; nonzero only while sleep_state = asleep: 70...100 is the strap's SpO2 %, other values are status codes")
+        if (70...100).contains(v) {
+            fb.add(82, 1, "spo2_candidate_82", "spo2", value: .int(v),
+                   note: "strap-computed SpO2 % (30 s about every 20 min while the band scores sleep); other nonzero values of the byte are status codes")
+        }
     }
     if let d = readF32(frame, 113), d.isFinite {
         // A float32 at @113 (observed range ~ -5.3…0, 0 = unset); purpose unknown, carried raw.
         fb.add(113, 4, "unknown_f32_113", "aux", value: .double(d), note: "float32, purpose unknown")
     }
-    // The remaining bytes (optical/perfusion + the unmapped tail) are not ground-truth-mapped; keep them
-    // as one honest raw region.
+    // The remaining bytes (the rest of the optical/perfusion block + the unmapped tail) are not
+    // ground-truth-mapped; keep them as one honest raw region.
     // PROVENANCE / lossless-tail note (A10): the fields above split into VERIFIED (physiologically
-    // cross-checked vs the live 2A37 HR / |gravity|~1g: unix, heart_rate, rr, gravity, skin_temp) and
-    // EMPIRICAL / not-pinned (status words, aux bytes, unknown_f32_113). This decoder never truncates
-    // `frame`; the unmapped trailing bytes are preserved verbatim upstream (RawHistoryArchive for
-    // undecodable records, the raw-capture batch when that toggle is on), so a future re-decode is
-    // lossless. Kept in lockstep with the Android decodeWhoop5Historical provenance note.
+    // cross-checked vs the live 2A37 HR / |gravity|~1g: unix, heart_rate, rr, gravity, skin_temp), a
+    // COMMUNITY-VALIDATED SpO2 byte (@82: its nightly mean tracked the WHOOP app's value across several
+    // nights and two independent captures; see StrandAnalytics' StrapSpo2) and EMPIRICAL / not-pinned
+    // (status words, unknown_f32_113). Bytes 106-109 are NOT SpO2 (they follow heart rate and motion).
+    // This decoder never truncates `frame`; the unmapped trailing bytes are preserved verbatim upstream
+    // (RawHistoryArchive for undecodable records, the raw-capture batch when that toggle is on), so a
+    // future re-decode is lossless. Kept in lockstep with the Android decodeWhoop5Historical provenance
+    // note.
     if let payloadEnd = payloadEnd, 82 < payloadEnd, payloadEnd <= frame.count {
         fb.region(82, payloadEnd, "unmapped (optical/perfusion + tail)", "unknown")
     }

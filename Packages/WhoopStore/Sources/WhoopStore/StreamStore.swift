@@ -153,6 +153,18 @@ extension WhoopStore {
                     try stmt.execute(arguments: [deviceId, s.ts, s.state])
                 }
             }
+            // The strap's OWN blood-oxygen byte (v18 @82), nonzero seconds only. Persist-only like sleepState
+            // (not added to the counts tuple). ON CONFLICT DO NOTHING keeps the first-seen byte for a second
+            // so a re-sync is idempotent. The raw byte is stored verbatim, status codes included.
+            if !streams.strapSpo2.isEmpty {
+                let stmt = try db.cachedStatement(sql: """
+                    INSERT INTO strapSpo2Sample (deviceId, ts, raw) VALUES (?, ?, ?)
+                    ON CONFLICT(deviceId, ts) DO NOTHING
+                    """)
+                for s in streams.strapSpo2 {
+                    try stmt.execute(arguments: [deviceId, s.ts, s.raw])
+                }
+            }
             // PPG-derived HR from the v26 optical buffer (#156). Persist-only, same as steps, the count
             // is not added to the 8-field return tuple (the Backfiller call site reads that tuple by name;
             // extending it would ripple), so it is inserted without being counted. ON CONFLICT DO NOTHING
@@ -382,6 +394,26 @@ extension WhoopStore {
 
     public func sleepStateCountForTest() async throws -> Int {
         try syncRead { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM sleepStateSample") ?? 0 }
+    }
+
+    /// The strap's OWN banked blood-oxygen byte (v18 @82) in `[from, to]` for one device, ascending by ts.
+    /// Each `(ts, raw)` is a nonzero second: 70...100 is a percentage, any other value a status code,
+    /// carried verbatim off the offload stream. Empty when the strap never reported it (a WHOOP 4.0, or a
+    /// not-yet-offloaded window). The nightly value is built from these by `StrapSpo2` (StrandAnalytics).
+    public func strapSpo2Samples(deviceId: String, from: Int, to: Int, limit: Int = 200_000) async throws
+        -> [StrapSpo2Sample] {
+        try syncRead { db in
+            try Row.fetchAll(db, sql: """
+                SELECT ts, raw FROM strapSpo2Sample
+                WHERE deviceId = ? AND ts >= ? AND ts <= ?
+                ORDER BY ts LIMIT ?
+                """, arguments: [deviceId, from, to, limit])
+                .map { StrapSpo2Sample(ts: $0["ts"], raw: $0["raw"]) }
+        }
+    }
+
+    public func strapSpo2CountForTest() async throws -> Int {
+        try syncRead { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM strapSpo2Sample") ?? 0 }
     }
 
     public func ppgHrCountForTest() async throws -> Int {

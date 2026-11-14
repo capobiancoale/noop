@@ -96,11 +96,11 @@ struct HydrationView: View {
                         .frame(width: 184, height: 184)
                     VStack(spacing: 2) {
                         CountUpText(value: HydrationGoal.litres(fromML: totalML),
-                                    format: { String(format: "%.1f", $0) },
+                                    format: { DisplayNumber.decimal($0) },
                                     font: StrandFont.rounded(40, weight: .bold),
                                     color: StrandPalette.textPrimary)
                             .shadow(color: .black.opacity(0.5), radius: 6, y: 1)
-                        Text(String(localized: "of \(String(format: "%.1f", HydrationGoal.litres(fromML: Double(goalML)))) L"))
+                        Text(String(localized: "of \(DisplayNumber.decimal(HydrationGoal.litres(fromML: Double(goalML)))) L"))
                             .font(StrandFont.subhead)
                             .foregroundStyle(StrandPalette.textSecondary)
                     }
@@ -108,7 +108,7 @@ struct HydrationView: View {
                 }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Hydration today")
-                .accessibilityValue("\(String(format: "%.1f", HydrationGoal.litres(fromML: totalML))) of \(String(format: "%.1f", HydrationGoal.litres(fromML: Double(goalML)))) litres")
+                .accessibilityValue("\(DisplayNumber.decimal(HydrationGoal.litres(fromML: totalML))) of \(DisplayNumber.decimal(HydrationGoal.litres(fromML: Double(goalML)))) litres")
 
                 Text("\(percent)% of today's goal")
                     .font(StrandFont.footnote)
@@ -285,7 +285,7 @@ struct HydrationView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("\(weekdayInitial(bar.day)): \(String(format: "%.1f", HydrationGoal.litres(fromML: bar.value))) litres")
+                    .accessibilityLabel("\(weekdayInitial(bar.day)): \(DisplayNumber.decimal(HydrationGoal.litres(fromML: bar.value))) litres")
                 }
             }
         }

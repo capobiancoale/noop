@@ -12,7 +12,20 @@ final class ProfileStore: ObservableObject {
     @Published var heightCm: Double { didSet { d.set(heightCm, forKey: K.height) } }
     /// Optional waist circumference (cm); 0 = not set. Only used to ALSO show an estimated VO₂max
     /// alongside Fitness Age — the Fitness Age itself does not need it (the body term cancels).
-    @Published var waistCm: Double { didSet { d.set(waistCm, forKey: K.waist) } }
+    @Published var waistCm: Double {
+        didSet {
+            d.set(waistCm, forKey: K.waist)
+            d.set(Date().timeIntervalSince1970, forKey: K.waistSetAt)
+        }
+    }
+    /// When `waistCm` was last set (nil if before this was recorded). The daily VO₂max estimate files each new
+    /// waist as a dated measurement on this day, so it counts from then on and leaves the days before alone.
+    var waistSetAt: Date? {
+        (d.object(forKey: K.waistSetAt) as? Double).map { Date(timeIntervalSince1970: $0) }
+    }
+    /// Personal goal for "Today's plan": a `DayPlan.Goal` raw value ("performance", "strength", "fatLoss",
+    /// "endurance", "health"). Default "performance". Unknown values read back as performance.
+    @Published var goal: String { didSet { d.set(goal, forKey: K.goal) } }
     /// 0 = auto-estimate from age.
     @Published var hrMaxOverride: Int { didSet { d.set(hrMaxOverride, forKey: K.hrMax) } }
     /// Step-calibration divisor (#139/#132): counter ticks per real step for the @57 motion
@@ -56,13 +69,21 @@ final class ProfileStore: ObservableObject {
         static let height = "profile.heightCm", hrMax = "profile.hrMaxOverride"
         static let stepScale = "profile.stepTicksPerStep"
         static let waist = "profile.waistCm"
+        static let waistSetAt = "profile.waistSetAt"
         static let stepsCoeff = "profile.stepsCalibrationCoefficient"
         static let stepsSampleDays = "profile.stepsCalibrationSampleDays"
         static let stepsConfidence = "profile.stepsCalibrationConfidence"
         static let stepsManualFlag = "profile.stepsCalibrationManual"
         static let stepsManualCoeff = "profile.stepsManualCoefficient"
         static let avatar = "profile.avatarImageData"
+        static let goal = DayPlanBuilder.goalKey
     }
+
+    // Key names for code that reads the persisted profile without a live store (`DayPlanBuilder.ProfileValues.stored`).
+    nonisolated static let ageKey = K.age
+    nonisolated static let sexKey = K.sex
+    nonisolated static let weightKey = K.weight
+    nonisolated static let heightKey = K.height
 
     init() {
         age = d.object(forKey: K.age) as? Int ?? 30
@@ -78,6 +99,7 @@ final class ProfileStore: ObservableObject {
         stepsCalibrationManual = d.object(forKey: K.stepsManualFlag) as? Bool ?? false
         stepsManualCoefficient = max(0, d.object(forKey: K.stepsManualCoeff) as? Double ?? 0)
         avatarImageData = d.data(forKey: K.avatar)
+        goal = d.string(forKey: K.goal) ?? "performance"
     }
 
     // MARK: - Profile picture
@@ -112,7 +134,20 @@ final class ProfileStore: ObservableObject {
     var stepsManualOverride: Double? { stepsManualCoefficient > 0 ? stepsManualCoefficient : nil }
 
     /// Tanaka estimate unless overridden.
-    var hrMax: Int { hrMaxOverride > 0 ? hrMaxOverride : Int((208 - 0.7 * Double(age)).rounded()) }
+    var hrMax: Int { Self.hrMaxValue(age: age, manual: hrMaxOverride) }
+
+    /// The HRmax rule in one place: the user's own value when set (> 0), else Tanaka from age.
+    nonisolated static func hrMaxValue(age: Int, manual: Int) -> Int {
+        manual > 0 ? manual : Int((208 - 0.7 * Double(age)).rounded())
+    }
+
+    /// HRmax from the persisted profile keys, for code that runs without a live `ProfileStore` (the
+    /// Shortcuts export intent has no view models). Same defaults as `init()`.
+    nonisolated static func storedHRMax(defaults: UserDefaults = .standard) -> Int {
+        let age = defaults.object(forKey: K.age) as? Int ?? 30
+        let manual = defaults.object(forKey: K.hrMax) as? Int ?? 0
+        return hrMaxValue(age: age, manual: manual)
+    }
 
     /// Whether the cycle-awareness opt-in applies to this profile (#801). Cycle phase is read from the
     /// MENSTRUAL skin-temperature shift, so the opt-in (the Health card + the Automations toggle) is only

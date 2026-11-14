@@ -277,6 +277,62 @@ final class SleepStageTotalsTests: XCTestCase {
         XCTAssertEqual(r.sleep.totalSleepMin, 48 + 392, accuracy: 0.001, "no onsets → legacy sum")
     }
 
+    // MARK: - Edited blocks count only on their own day
+
+    private func editedBlock(_ start: String, _ end: String, _ stages: String) -> CachedSleepSession {
+        CachedSleepSession(startTs: ts525(start), endTs: ts525(end), efficiency: nil, restingHr: nil,
+                           avgHrv: nil, stagesJSON: stages, userEdited: true)
+    }
+
+    /// A block counts on the LOCAL day it ends, with the offset in force then.
+    func testWakeDayIsTheLocalDayTheBlockEnds() throws {
+        let b = editedBlock("2026-10-14T21:00", "2026-10-14T23:30", #"{"awake":5,"light":90,"deep":30,"rem":25}"#)
+        XCTAssertEqual(SleepStageTotals.wakeDay(of: b, timeZone: try XCTUnwrap(TimeZone(identifier: "UTC"))),
+                       "2026-10-14")
+        // 23:30 UTC is 01:30 the next day in Rome (CEST, +2 h).
+        XCTAssertEqual(SleepStageTotals.wakeDay(of: b, timeZone: try XCTUnwrap(TimeZone(identifier: "Europe/Rome"))),
+                       "2026-10-15")
+    }
+
+    /// Out of every edited block in the window, a day keeps the edit of its own detected block and a
+    /// hand-logged block that ends on it, and nothing from another day.
+    func testEditsForDayKeepsOnlyThatDaysEdits() throws {
+        let utc = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let stages = #"{"awake":10,"light":157,"deep":150,"rem":200}"#
+        let ownTwin = editedBlock("2026-10-14T23:30", "2026-10-15T06:00", stages)    // the day's own night, edited
+        let napToday = editedBlock("2026-10-15T14:00", "2026-10-15T14:40", #"{"awake":2,"light":30,"deep":5,"rem":3}"#)
+        let otherNight = editedBlock("2026-10-05T22:40", "2026-10-06T07:27", stages)  // edited nine days earlier
+        let edits = [ownTwin.startTs: ownTwin, napToday.startTs: napToday, otherNight.startTs: otherNight]
+        let kept = SleepStageTotals.editsForDay(edits, detectedStarts: [ownTwin.startTs],
+                                                day: "2026-10-15", timeZone: utc)
+        XCTAssertEqual(Set(kept.keys), [ownTwin.startTs, napToday.startTs])
+    }
+
+    /// The reported bug: every edited block in the scoring window went into every day's main-night pick,
+    /// so an 8h27m night edited nine days earlier replaced a day's own 6 h night (and did the same on each
+    /// day it out-scored: one total, deep and REM repeated night after night). Filtered to the day, the
+    /// day keeps its own night.
+    func testAnotherDaysEditedNightNoLongerReplacesTheDaysOwnNight() throws {
+        let utc = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let tonight = ts525("2026-10-14T23:30")
+        let own = #"{"awake":20,"light":200,"deep":70,"rem":90}"#                  // 360 asleep
+        let other = editedBlock("2026-10-05T22:40", "2026-10-06T07:27",
+                                #"{"awake":10,"light":157,"deep":150,"rem":200}"#) // 507 asleep
+        // What the scoring pass used to hand the seam: the other day's block as a twinless `manual` one.
+        let leaked = try XCTUnwrap(SleepStageTotals.dailyAggregateHonoringEdits(
+            detected: [(startTs: tonight, stagesJSON: own)],
+            edited: [other.startTs: other.stagesJSON],
+            manual: [(startTs: other.startTs, stagesJSON: other.stagesJSON)],
+            onsetByStart: [tonight: tonight, other.startTs: other.startTs],
+            offsetSec: 7200))
+        XCTAssertTrue(leaked.editApplied)
+        XCTAssertEqual(leaked.sleep.totalSleepMin, 507, accuracy: 0.001, "the other day's night won the pick")
+        // Filtered to the day, no edit is left, so the scoring pass keeps the day's own detected night.
+        let dayEdits = SleepStageTotals.editsForDay([other.startTs: other], detectedStarts: [tonight],
+                                                    day: "2026-10-15", timeZone: utc)
+        XCTAssertTrue(dayEdits.isEmpty)
+    }
+
     // MARK: - #777/#705 inter-fragment awake (out-of-bed gap between bridged fragments)
 
     /// The shared definition: sum only the POSITIVE gaps between consecutive (start,end) spans, sorted by

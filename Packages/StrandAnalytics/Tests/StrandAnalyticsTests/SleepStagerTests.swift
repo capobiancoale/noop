@@ -75,6 +75,48 @@ final class SleepStagerTests: XCTestCase {
         XCTAssertEqual(s.restingHR, 50)
     }
 
+    // MARK: - The edge of the data
+
+    private func period(_ stage: String, _ startMin: Int, _ endMin: Int) -> SleepStager.Period {
+        SleepStager.Period(stage: stage, start: startMin * 60, end: endMin * 60)
+    }
+
+    private func spans(_ ps: [SleepStager.Period]) -> [String] {
+        ps.map { "\($0.stage) \($0.start / 60)-\($0.end / 60)" }
+    }
+
+    /// Movement that began a few minutes before the data ends is the start of being up: it must not be
+    /// folded into the still run before it, which would stretch that run to the edge of the data.
+    func testMergePeriodsKeepsTrailingActiveRunOutOfSleep() {
+        let merged = SleepStager.mergePeriods([period("sleep", 0, 52), period("active", 52, 66)])
+        XCTAssertEqual(spans(merged), ["sleep 0-52", "active 52-66"])
+    }
+
+    /// An active fleck BETWEEN two sleep runs is still bridged, and a short trailing sleep run is still
+    /// folded into the active run before it: only the trailing active-after-sleep case changed.
+    func testMergePeriodsInteriorFleckAndTrailingSleepUnchanged() {
+        let interior = SleepStager.mergePeriods([period("sleep", 0, 60), period("active", 60, 70),
+                                                 period("sleep", 70, 130)])
+        XCTAssertEqual(spans(interior), ["sleep 0-130"])
+        let trailingSleep = SleepStager.mergePeriods([period("active", 0, 60), period("sleep", 60, 70)])
+        XCTAssertEqual(spans(trailingSleep), ["active 0-70"])
+    }
+
+    /// The field case: 55 still minutes, then movement for the last 10 minutes before the sync. The still
+    /// run (52 min once the stillness window has smeared the edge) is under minSleepMin, so no session;
+    /// folding the 12-min trailing active run in made it 64 min and a "sleep".
+    func testStillStretchEndingInMovementAtTheDataEdgeIsNotASession() {
+        let start = nightStart(02)
+        let still = 55 * 60, moving = 10 * 60
+        let grav = stillGravity(start: start, durationS: still)
+            + activeGravity(start: start + still, durationS: moving)
+        let hr = hrStream(start: start, durationS: still + moving, bpm: 50)
+        XCTAssertTrue(SleepStager.detectSleep(hr: hr, gravity: grav).isEmpty)
+        // Control: the same span with no movement at the end is a real 65-min still run and is kept.
+        let allStill = stillGravity(start: start, durationS: still + moving)
+        XCTAssertEqual(SleepStager.detectSleep(hr: hr, gravity: allStill).count, 1)
+    }
+
     func testDetectSleepRejectsShortBout() {
         // Only 30 min still — below MIN_SLEEP_MIN (60) → no session.
         let start = 2_000_000
@@ -802,20 +844,29 @@ final class SleepStagerTests: XCTestCase {
     }
 
     func testSessionAvgHRVRejectsEctopicSpikes() {
-        // A 5-min window of steady ~900 ms beats (≈67 bpm) with a +600 ms ectopic
-        // spike every 15th beat — the shape of PPG-derived 0x2A37 RR on a WHOOP 5/MG.
-        // rMSSD is built from SUCCESSIVE differences, so the spikes would inflate the
-        // session HRV if left in. cleanRR's Malik ectopic rejection drops them, so the
-        // cleaned series is steady → HRV ≈ 0. Pre-fix (rangeFilter only) this path
-        // returned ~200 ms; this guards the #262/#235 fix against regression.
-        var rr: [RRInterval] = []
+        // Five minutes of realistic resting beats (~900 ms) carrying the shape of PPG-derived 0x2A37 RR on a
+        // WHOOP 5/MG: +600 ms spikes. rMSSD is built from SUCCESSIVE differences, so spikes left in inflate
+        // the session HRV (pre-fix this path returned ~200 ms; guards the #262/#235 fix). Lipponen–Tarvainen
+        // corrects them; a window that needed more than 5% of its beats corrected (Kubios' acceptance
+        // threshold) is excluded rather than averaged in.
         let start = 1000, end = start + 300
-        for i in 0..<300 {
-            rr.append(RRInterval(ts: start + i, rrMs: (i % 15 == 0) ? 1500 : 900))
-        }
-        let hrv = SleepStager.sessionAvgHRV(start: start, end: end, rr: rr)
+        let truth = RRFixtures.resting(count: 330, seed: 31)
+        let truthHrv = SleepStager.sessionAvgHRV(start: start, end: end, rr: RRFixtures.timed(truth, start: start))
+        XCTAssertNotNil(truthHrv)
+
+        // (a) A spike every 25th beat (~4%): corrected, so the session HRV stays near the artefact-free value
+        // instead of the ~5x the raw series gives.
+        var sparse = truth
+        for i in stride(from: 12, to: sparse.count, by: 25) { sparse[i] += 600 }
+        let hrv = SleepStager.sessionAvgHRV(start: start, end: end, rr: RRFixtures.timed(sparse, start: start))
         XCTAssertNotNil(hrv)
-        XCTAssertLessThan(hrv!, 50, "ectopic spikes must be rejected before rMSSD")
+        XCTAssertEqual(hrv!, truthHrv!, accuracy: 0.15 * truthHrv!, "ectopic spikes must be corrected before rMSSD")
+        XCTAssertGreaterThan(HRVAnalyzer.rmssdRaw(sparse)!, 4 * truthHrv!)
+
+        // (b) A spike every 15th beat (~7%): too much repair, so the window is excluded, never an inflated value.
+        var dense = truth
+        for i in stride(from: 7, to: dense.count, by: 15) { dense[i] += 600 }
+        XCTAssertNil(SleepStager.sessionAvgHRV(start: start, end: end, rr: RRFixtures.timed(dense, start: start)))
     }
 
     // MARK: - Helper robustness

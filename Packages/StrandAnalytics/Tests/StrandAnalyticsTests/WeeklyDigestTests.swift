@@ -343,6 +343,65 @@ final class WeeklyDigestTests: XCTestCase {
         XCTAssertEqual(a, b)   // same input → byte-identical digest
     }
 
+    // MARK: - Focal points as data (the UI localizes them; the English stays the canonical rendering)
+
+    func testSparseWeekIsDataNotProse() {
+        // One day into the week with a full previous week: the focal point is the typed .earlyWeek(days: 1),
+        // and its English text is exactly the sentence the digest has always carried.
+        var charge: [String: Double] = [:]
+        for d in 1...7 { charge[String(format: "2026-06-%02d", d)] = 70 }
+        charge["2026-06-08"] = 40
+        let d = WeeklyDigestEngine.build(byMetric: [.charge: charge], anchorDay: "2026-06-08")
+        XCTAssertEqual(d.focalItems, [.earlyWeek(days: 1)])
+        XCTAssertEqual(d.focalPoints,
+                       ["Only 1 day into this week so far, too early to call a week-over-week trend yet."])
+    }
+
+    func testSparsePreviousWeekIsDataNotProse() {
+        var charge: [String: Double] = [:]
+        charge["2026-06-06"] = 70; charge["2026-06-07"] = 74
+        for d in 8...12 { charge[String(format: "2026-06-%02d", d)] = 41 }
+        let d = WeeklyDigestEngine.build(byMetric: [.charge: charge], anchorDay: "2026-06-12")
+        XCTAssertEqual(d.focalItems, [.sparseLastWeek(days: 2)])
+        XCTAssertEqual(d.focalPoints,
+                       ["Last week only had 2 days of data, so week-over-week changes are rough, not a trend."])
+    }
+
+    func testMoverCarriesTheNumbersTheSentencePrints() {
+        // Charge 55 → 80 is up 25 pts = 45% of last week's mean, a good sign.
+        var charge: [String: Double] = [:]
+        for d in 8...14 { charge[String(format: "2026-06-%02d", d)] = 80 }
+        for d in 1...7  { charge[String(format: "2026-06-%02d", d)] = 55 }
+        let d = WeeklyDigestEngine.build(byMetric: [.charge: charge], anchorDay: "2026-06-13")
+        guard case let .mover(metric, direction, magnitude, thisAvg, lastAvg, goodness)? = d.focalItems.first else {
+            return XCTFail("expected a mover first, got \(d.focalItems)")
+        }
+        XCTAssertEqual(metric, .charge)
+        XCTAssertEqual(direction, 1)
+        XCTAssertEqual(magnitude, .percent(45))
+        XCTAssertEqual(thisAvg, 80)
+        XCTAssertEqual(lastAvg, 55)
+        XCTAssertEqual(goodness, 1)
+        XCTAssertEqual(d.focalPoints.first,
+                       "Charge is up 45% week over week (avg 80 vs 55), a good sign.")
+        // The mover's own English text is what the legacy API returns.
+        XCTAssertEqual(d.focalItems.first?.english, WeeklyDigestEngine.moverSentence(d.summary(.charge)!))
+    }
+
+    func testSteadyWeekItemsAreData() {
+        var charge: [String: Double] = [:], effort: [String: Double] = [:], rest: [String: Double] = [:]
+        for d in 1...14 {
+            let key = String(format: "2026-06-%02d", d)
+            charge[key] = 65; effort[key] = 63; rest[key] = 84
+        }
+        let d = WeeklyDigestEngine.build(byMetric: [.charge: charge, .effort: effort, .rest: rest],
+                                         anchorDay: "2026-06-13")
+        XCTAssertEqual(d.focalItems, [.steadyRestHeld(sd: 0.0)])
+        XCTAssertEqual(d.focalPoints, ["A steady week: Rest held even (±0.0 pts) and nothing moved much."])
+        XCTAssertEqual(WeeklyFocalPoint.steady.english,
+                       "A steady week: no metric moved meaningfully from last week.")
+    }
+
     // MARK: - Helpers
 
     /// Inclusive list of "yyyy-MM-dd" days from `start` to `end`, using the engine's own

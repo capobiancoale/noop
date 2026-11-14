@@ -255,7 +255,7 @@ public final class LiveState: ObservableObject {
     /// so they're trivially unit-testable away from the @MainActor instance.
     static func formatSpeedKmh(_ kmh: Double?) -> String? {
         guard let kmh, kmh.isFinite, kmh >= 0 else { return nil }
-        return String(format: "%.1f", kmh)
+        return DisplayNumber.decimal(kmh)
     }
     static func formatCadence(_ perMin: Double?) -> String? {
         guard let perMin, perMin.isFinite, perMin >= 0 else { return nil }
@@ -275,10 +275,12 @@ public final class LiveState: ObservableObject {
     /// "Connected" for the same connected-but-unbonded 5/MG link). Once the link is up and HR is
     /// flowing — even over the unbonded standard profile — this reads "Connected", never "Connecting…".
     public var connectionStatusLabel: String {
-        if connected && bonded { return "Bonded · streaming" }
-        if connected { return "Connected" }
-        if bonded { return "Bonded · idle" }
-        return "Disconnected"
+        // Localized here, not at the call sites: both consumers show the result as a plain String (a
+        // `Text(String)` or an interpolated pill title), which never goes through the catalog.
+        if connected && bonded { return String(localized: "Bonded · streaming") }
+        if connected { return String(localized: "Connected") }
+        if bonded { return String(localized: "Bonded · idle") }
+        return String(localized: "Disconnected")
     }
     /// True when the link is up (HR flowing) → status reads green. Drives the sidebar + Settings tone.
     public var connectionStatusIsActive: Bool { connected }
@@ -530,6 +532,7 @@ public final class LiveState: ObservableObject {
         #endif
         var header = "NOOP strap log (scheduled export) — \(osName)\nApp: \(v)\n\(osName): "
             + ProcessInfo.processInfo.operatingSystemVersionString + "\n"
+        header += HistoryLayoutTallyStore.summaryLine() + "\n"
         header += String(repeating: "-", count: 40) + "\n"
         return header + persistedLogTail().joined(separator: "\n")
     }
@@ -576,6 +579,7 @@ public final class LiveState: ObservableObject {
         let diagLines = IOSDiagnostics.capture().summaryLines()
         if !diagLines.isEmpty { header += diagLines.joined(separator: "\n") + "\n" }
         #endif
+        header += HistoryLayoutTallyStore.summaryLine() + "\n"
         header += String(repeating: "-", count: 40) + "\n"
         return header + log.joined(separator: "\n")
     }

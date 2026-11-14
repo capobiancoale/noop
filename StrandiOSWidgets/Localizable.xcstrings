@@ -1,0 +1,396 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ bpm" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ bpm"
+          }
+        }
+      }
+    },
+    "%@ ms" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ms"
+          }
+        }
+      }
+    },
+    "%@ · bed %@" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · letto %2$@"
+          }
+        }
+      }
+    },
+    "Battery" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Batteria"
+          }
+        }
+      }
+    },
+    "Carbs (g)" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carboidrati (g)"
+          }
+        }
+      }
+    },
+    "Charge" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charge"
+          }
+        }
+      }
+    },
+    "Charge %@%%" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charge %@%%"
+          }
+        }
+      }
+    },
+    "Charge, Effort, Rest, HRV, resting and live heart rate, and strap battery at a glance." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charge, Effort, Rest, HRV, battito a riposo e in tempo reale e batteria della fascia a colpo d'occhio."
+          }
+        }
+      }
+    },
+    "Easy day" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giornata leggera"
+          }
+        }
+      }
+    },
+    "Effort" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effort"
+          }
+        }
+      }
+    },
+    "Energy (kcal)" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energia (kcal)"
+          }
+        }
+      }
+    },
+    "HR" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FC"
+          }
+        }
+      }
+    },
+    "HR %@ · Effort %@" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FC %1$@ · Effort %2$@"
+          }
+        }
+      }
+    },
+    "HRV" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HRV"
+          }
+        }
+      }
+    },
+    "HRV %@%% below your usual" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HRV %@%% sotto il tuo solito"
+          }
+        }
+      }
+    },
+    "Load high: %@× your usual" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carico alto: %@× il tuo solito"
+          }
+        }
+      }
+    },
+    "Load low: %@× your usual" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carico basso: %@× il tuo solito"
+          }
+        }
+      }
+    },
+    "Load well above your usual" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carico ben sopra il tuo solito"
+          }
+        }
+      }
+    },
+    "Maintain" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantieni"
+          }
+        }
+      }
+    },
+    "NOOP Charge" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charge NOOP"
+          }
+        }
+      }
+    },
+    "NOOP Today's plan" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Piano di oggi NOOP"
+          }
+        }
+      }
+    },
+    "No Charge yet" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ancora nessun Charge"
+          }
+        }
+      }
+    },
+    "Open NOOP to build today's plan" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apri NOOP per creare il piano di oggi"
+          }
+        }
+      }
+    },
+    "Protein (g)" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Proteine (g)"
+          }
+        }
+      }
+    },
+    "Push" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spingi"
+          }
+        }
+      }
+    },
+    "Rest" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rest"
+          }
+        }
+      }
+    },
+    "Rest HR" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FC a riposo"
+          }
+        }
+      }
+    },
+    "Resting HR %@ bpm above your usual" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FC a riposo %@ bpm sopra il tuo solito"
+          }
+        }
+      }
+    },
+    "Several hard days in a row" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Più giorni intensi di fila"
+          }
+        }
+      }
+    },
+    "Short night" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notte corta"
+          }
+        }
+      }
+    },
+    "Sleep debt %@" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Debito di sonno %@"
+          }
+        }
+      }
+    },
+    "Sleep target %@" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obiettivo di sonno %@"
+          }
+        }
+      }
+    },
+    "Sleeps %@ a night on average" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dormi in media %@ a notte"
+          }
+        }
+      }
+    },
+    "Today's training advice, tonight's bedtime and what to work on, next to Charge, Effort and Rest." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il consiglio di allenamento di oggi, l'ora a cui andare a letto stasera e su cosa lavorare, accanto a Charge, Effort e Rest."
+          }
+        }
+      }
+    },
+    "Tonight in bed by %@" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stasera a letto entro le %@"
+          }
+        }
+      }
+    },
+    "Tonight: %@" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stasera: %@"
+          }
+        }
+      }
+    },
+    "Updated %@" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiornato alle %@"
+          }
+        }
+      }
+    },
+    "Wake time varies by about %@ min" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il risveglio varia di circa %@ min"
+          }
+        }
+      }
+    },
+    "in bed by %@" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a letto entro le %@"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

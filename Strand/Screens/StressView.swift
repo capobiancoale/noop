@@ -203,7 +203,7 @@ struct StressView: View {
                         Text("Autonomic load through the day").strandOverline()
                         Spacer()
                         if let peak = day.peak, let lvl = peak.level {
-                            Text("peak \(String(format: "%.1f", lvl)) · \(hourLabel(peak.hour))")
+                            Text("peak \(DisplayNumber.decimal(lvl)) · \(hourLabel(peak.hour))")
                                 .font(StrandFont.captionNumber)
                                 .foregroundStyle(StressRamp.color(lvl))
                         }
@@ -249,7 +249,7 @@ struct StressView: View {
     private func timelineTrailing(_ day: DaytimeStress.Result) -> String {
         let n = day.scored.count
         guard let mean = day.dayMean else { return String(localized: "\(n)h") }
-        return String(localized: "avg \(String(format: "%.1f", mean)) · \(n)h")
+        return String(localized: "avg \(DisplayNumber.decimal(mean)) · \(n)h")
     }
 
     /// A passive, in-app nudge to run a Breathe session after a sustained high-stress run.
@@ -371,7 +371,7 @@ struct StressView: View {
                         if let ratio = f.lfhf {
                             StatTile(
                                 label: "Autonomic balance (LF/HF)",
-                                value: String(format: "%.1f", ratio),
+                                value: DisplayNumber.decimal(ratio),
                                 caption: String(localized: "Sympathetic vs parasympathetic tone from frequency-domain HRV. Higher leans sympathetic (stress-ward)."),
                                 accent: StressRamp.steady
                             )
@@ -405,7 +405,7 @@ struct StressView: View {
             // Today's stress value, with its band as the caption.
             StatTile(
                 label: "Stress",
-                value: String(format: "%.1f", model.score),
+                value: DisplayNumber.decimal(model.score),
                 caption: String(localized: "of 3 · \(model.band.title)"),
                 accent: StressRamp.color(model.score),
                 sparkline: model.sparkValues.count > 1 ? model.sparkValues : nil,
@@ -438,23 +438,28 @@ struct StressView: View {
     }
 
     /// A vs-baseline marker as a fixed-height StatTile. The delta is tinted by
-    /// whether the move is toward stress (warning) or recovery (positive).
+    /// whether the move is toward stress (warning) or recovery (positive). The chip carries only the
+    /// signed number ("↘ −5"): it shares a row with the value on a half-width tile, where a longer chip
+    /// ("−5 vs base") was clipped to "−5 vs…". What it is measured against goes on the caption line.
     private func markerTile(label: LocalizedStringKey, value: String, delta: Double?, accent: Color, higherIsStress: Bool) -> some View {
         let deltaText: String?
         let deltaColor: Color
+        let caption: String
         if let delta, abs(delta) >= 0.5 {
             let up = delta > 0
             let isStressful = (up == higherIsStress)
-            deltaText = String(localized: "\(up ? "+" : "−")\(Int(abs(delta).rounded())) vs base")
+            deltaText = "\(up ? "+" : "−")\(Int(abs(delta).rounded()))"
             deltaColor = isStressful ? StrandPalette.statusWarning : StrandPalette.statusPositive
+            caption = String(localized: "vs your baseline")
         } else {
-            deltaText = String(localized: "at baseline")
+            deltaText = nil
             deltaColor = StrandPalette.textTertiary
+            caption = String(localized: "at baseline")
         }
         return StatTile(
             label: label,
             value: value,
-            caption: nil,
+            caption: caption,
             accent: accent,
             delta: deltaText,
             deltaColor: deltaColor
@@ -479,7 +484,7 @@ struct StressView: View {
                 ChartCard(
                     title: "Stress · \(range.label)",
                     subtitle: String(localized: "Daily 0-3 proxy"),
-                    trailing: String(localized: "avg \(String(format: "%.1f", avg))"),
+                    trailing: String(localized: "avg \(DisplayNumber.decimal(avg))"),
                     tint: StressRamp.calm
                 ) {
                     TrendChart(
@@ -488,14 +493,14 @@ struct StressView: View {
                         valueRange: 0...3,
                         showsArea: true,
                         height: NoopMetrics.chartHeight,
-                        valueFormat: { String(format: "%.1f", $0) },
+                        valueFormat: { DisplayNumber.decimal($0) },
                         accessibilityLabel: String(localized: "Stress trend"),
                         yDomain: 0...yTop
                     )
                 } footer: {
                     ChartFooter([
-                        ("Today", String(format: "%.1f", model.score)),
-                        ("Average", String(format: "%.1f", avg)),
+                        ("Today", DisplayNumber.decimal(model.score)),
+                        ("Average", DisplayNumber.decimal(avg)),
                         ("Days", "\(points.count)"),
                     ])
                 }
@@ -590,7 +595,7 @@ private struct StressHeroGauge: View {
                 // so the score is passed straight through — no external roll state needed.
                 CountUpText(
                     value: score,
-                    format: { String(format: "%.1f", $0) },
+                    format: { DisplayNumber.decimal($0) },
                     font: StrandFont.rounded(34, weight: .bold),
                     color: .white
                 )
@@ -602,7 +607,7 @@ private struct StressHeroGauge: View {
             .allowsHitTesting(false)   // taps fall through to the vessel → splash
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Stress \(String(format: "%.1f", score)) of 3")
+        .accessibilityLabel("Stress \(DisplayNumber.decimal(score)) of 3")
     }
 }
 
@@ -974,7 +979,7 @@ struct DaytimeLoadLine: View {
     private var accessibilitySummary: String {
         let scored = hours.compactMap { p in p.level.map { (p.hour, $0) } }
         guard !scored.isEmpty else { return String(localized: "No intraday stress data yet today.") }
-        let parts = scored.map { "\($0.0):00 \(String(format: "%.1f", $0.1))" }
+        let parts = scored.map { "\($0.0):00 \(DisplayNumber.decimal($0.1))" }
         return String(localized: "Autonomic load today: \(parts.joined(separator: ", "))")
     }
 }
@@ -1152,7 +1157,7 @@ private struct StressPreviewHarness: View {
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 168), spacing: NoopMetrics.gap)],
                           alignment: .leading, spacing: NoopMetrics.gap) {
-                    StatTile(label: "Stress", value: String(format: "%.1f", score),
+                    StatTile(label: "Stress", value: DisplayNumber.decimal(score),
                              caption: "of 3 · \(band.title)", accent: StressRamp.color(score))
                     StatTile(label: "Resting HR", value: "54 bpm", accent: StrandPalette.metricRose,
                              delta: "+3 vs base", deltaColor: StrandPalette.statusWarning)
@@ -1165,9 +1170,9 @@ private struct StressPreviewHarness: View {
                 ChartCard(title: "Stress · M", subtitle: "Daily 0-3 proxy", trailing: "avg 1.5") {
                     TrendChart(points: sampleStressTrend(30), gradient: StressRamp.gradient,
                                valueRange: 0...3, showsArea: true, height: NoopMetrics.chartHeight,
-                               valueFormat: { String(format: "%.1f", $0) })
+                               valueFormat: { DisplayNumber.decimal($0) })
                 } footer: {
-                    ChartFooter([("Today", String(format: "%.1f", score)), ("Average", "1.5"), ("Days", "30")])
+                    ChartFooter([("Today", DisplayNumber.decimal(score)), ("Average", "1.5"), ("Days", "30")])
                 }
                 HStack { Spacer(); SegmentedPillControl(ExploreRange.allCases, selection: $range) { $0.label } }
             }

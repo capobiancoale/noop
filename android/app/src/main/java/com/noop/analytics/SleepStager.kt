@@ -513,6 +513,13 @@ object SleepStager {
                     end = pending[i + 1].end,
                 )
                 i += 1
+            } else if (hasPrev && current.stage == "active" && merged[merged.size - 1].stage == "sleep") {
+                // The LAST run is where the data stops: movement that began just before the latest sync is
+                // the start of being up, so it is not folded into the still run before it (that stretched
+                // the run to the edge of the data and turned a morning hour of sitting still into "sleep").
+                // Twin of the Swift mergePeriods.
+                merged.add(current)
+                i += 1
             } else if (hasPrev) {
                 val prev = merged.removeAt(merged.size - 1)
                 merged.add(Period(stage = prev.stage, start = prev.start, end = current.end))

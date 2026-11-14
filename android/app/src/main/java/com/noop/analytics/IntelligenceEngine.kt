@@ -678,6 +678,14 @@ object IntelligenceEngine {
             useExperimentalSleepV2 = useExperimentalSleepV2,
         )
         val editsByStart: Map<Long, String?> = editedRows.associate { it.startTs to it.stagesJSON }
+        // The LOCAL day each edited block counts on: the day it ends, keyed like DailyMetric.day (the same
+        // key as WhoopRepository.userEditedDays), so each day folds in only its own edits. Twin of the Swift
+        // `SleepStageTotals.wakeDay(of:)`.
+        val editWakeDayByStart: Map<Long, String> = editedRows.associate {
+            it.startTs to AnalyticsEngine.dayString(
+                it.endTs, (java.util.TimeZone.getDefault().getOffset(it.endTs * 1000) / 1000).toLong(),
+            )
+        }
         // #547 (audit finding C / #8): each edited block's EFFECTIVE onset (startTsAdjusted ?: startTs)
         // keyed by its stable detected startTs, so the seam's main-night pick reads the user-CORRECTED
         // bedtime , a bedtime edit crossing the overnight boundary would otherwise make the seam and the
@@ -701,7 +709,7 @@ object IntelligenceEngine {
             // Substitute an edited block's (reshaped) stages for its detected twin before the daily
             // sleep aggregate feeds Rest + recovery. No edit touching this night → `daily` is unchanged.
             val daily = sleepEditedDaily(
-                res.daily, res.sleepSessions, editsByStart, editOnsetByStart,
+                res.daily, res.sleepSessions, editsByStart, editWakeDayByStart, editOnsetByStart,
                 tzOffsetSeconds, habitualMidsleepSec,
             )
             val recovery = recomputeRecovery(daily, baselines2)
@@ -1331,6 +1339,8 @@ object IntelligenceEngine {
         daily: DailyMetric,
         detected: List<DetectedSleep>,
         editsByStart: Map<Long, String?>,
+        // The local day each edited block ends on (keyed by its startTs), to keep only this day's edits.
+        editWakeDayByStart: Map<Long, String>,
         // Each EDITED block's EFFECTIVE onset (startTsAdjusted ?: startTs) keyed by its stable detected
         // startTs , audit finding C / #8. A detected-but-unedited block isn't in here and falls back to its
         // own detected start (DetectedSleep carries no adjustment). (#547)
@@ -1340,14 +1350,18 @@ object IntelligenceEngine {
         // main night the Sleep tab shows; null = cold-start. (#547)
         habitualMidsleepSec: Long?,
     ): DailyMetric {
-        if (editsByStart.isEmpty()) return daily
+        // `editsByStart` holds every edited block in the scoring window. Keep only this day's: edits of its
+        // own detected blocks and hand-logged blocks that end on it. Another day's edited night passed in
+        // as `manual` joined this day's main-night pick and, when it out-scored the real night, replaced it.
+        val detectedStarts = detected.map { it.start }.toHashSet()
+        val dayEdits = editsByStart.filterKeys { it in detectedStarts || editWakeDayByStart[it] == daily.day }
+        if (dayEdits.isEmpty()) return daily
         // Match the Swift seam: detected blocks keyed by their stable startTs + their re-encoded stages.
         val detectedTuples = detected.map { it.start to AnalyticsEngine.encodeStages(it.stages) }
         // A hand-logged nap is a userEdited row with NO detected twin , pass those twinless rows through
         // the union channel so the seam KNOWS about them (they stay their own session row, shown
         // separately; the main-night pick below decides the headline total). (#518/#508)
-        val detectedStarts = detected.map { it.start }.toHashSet()
-        val manual = editsByStart.filter { it.key !in detectedStarts }.map { it.key to it.value }
+        val manual = dayEdits.filter { it.key !in detectedStarts }.map { it.key to it.value }
         // #525/#547: supply each block's EFFECTIVE onset (audit finding C / #8) keyed by its stable
         // detected startTs, plus the device tz offset + learned habitual midsleep, so the edited recompute
         // picks the SAME MAIN NIGHT the Sleep tab shows. The onset must be the user-CORRECTED bedtime
@@ -1359,7 +1373,7 @@ object IntelligenceEngine {
         val editStarts = detectedTuples.map { it.first } + manual.map { it.first }
         val onsetByStart = editStarts.associateWith { start -> editOnsetByStart[start] ?: start }
         val r = SleepStageTotals.dailyAggregateHonoringEdits(
-            detectedTuples, editsByStart, manual, onsetByStart, tzOffsetSeconds, habitualMidsleepSec,
+            detectedTuples, dayEdits, manual, onsetByStart, tzOffsetSeconds, habitualMidsleepSec,
         ) ?: return daily
         if (!r.editApplied) return daily
         val agg = r.sleep

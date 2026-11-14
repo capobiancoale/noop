@@ -50,15 +50,19 @@ enum PuffinExperiment {
 
     static var continuousHrvOvernightOnlyEnabled: Bool { UserDefaults.standard.bool(forKey: continuousHrvOvernightOnlyKey) }
 
-    /// Opt-in "Experimental sleep staging (V2)": re-stage each detected night with `SleepStagerV2` — a
-    /// transparent cardiorespiratory recipe (reimplemented from contributor PR #600) that recovers deep/REM
-    /// better than the shipped V1 stager on its author's n=1 validation. Pure analysis switch: it changes
-    /// ONLY which staging engine runs over an already-detected sleep window; sleep DETECTION, scoring and the
-    /// default V1 path are all untouched. Default OFF. Read at the staging call site (Repository) to pick
-    /// V1 vs V2. Mirrors the Android `PuffinExperiment.KEY_EXPERIMENTAL_SLEEP_V2`.
+    /// "Sleep staging V2": stage each detected night with `SleepStagerV2` — a transparent cardiorespiratory
+    /// recipe (reimplemented from contributor PR #600), checked and calibrated against polysomnography
+    /// (PhysioNet sleep-accel, 31 nights: kappa 0.34 against 0.10 for V1, deep and REM shares within a
+    /// point of the lab's; see the SleepStagerV2 header). Pure analysis switch: it changes ONLY which staging
+    /// engine runs over an already-detected sleep window; sleep DETECTION is untouched. Default ON since that
+    /// check; a user who turns it off (an explicit `false`) keeps V1. Read at the staging call site
+    /// (Repository) to pick V1 vs V2. The key keeps its old name so an earlier explicit choice still counts.
+    /// Mirrors the Android `PuffinExperiment.KEY_EXPERIMENTAL_SLEEP_V2`.
     static let experimentalSleepV2Key = "noopExperimentalSleepV2"
 
-    static var experimentalSleepV2Enabled: Bool { UserDefaults.standard.bool(forKey: experimentalSleepV2Key) }
+    static var experimentalSleepV2Enabled: Bool {
+        UserDefaults.standard.object(forKey: experimentalSleepV2Key) as? Bool ?? true
+    }
 
     /// Opt-in "Auto-detect workouts": after a sync / on Today appear, scan the last day or two of HR for a
     /// SUSTAINED-ELEVATED window (resting HR + 30 bpm held ≥ 12 min) that doesn't overlap a saved workout,

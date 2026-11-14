@@ -81,10 +81,14 @@ public enum HydrationGoal {
     /// Litres (ml / 1000) for the litre read-outs.
     public static func litres(fromML ml: Double) -> Double { ml / 1000.0 }
 
-    /// "<total> / <goal> L" in litres to 1 dp, e.g. "1.2 / 3.2 L" — the dashboard card value, fixed-locale
-    /// so the string is byte-identical to the Android twin (`String.format(Locale.US, "%.1f / %.1f L")`).
-    public static func cardValueString(totalML: Double, goalML: Int) -> String {
-        String(format: "%.1f / %.1f L", litres(fromML: totalML), litres(fromML: Double(goalML)))
+    /// "<total> / <goal> L" in litres to 1 dp, e.g. "1.2 / 3.2 L" — the dashboard card value. It is read
+    /// off the screen, so it follows the reader's decimal separator ("1,2 / 3,2 L" in Italian). `locale`
+    /// pins one for tests.
+    public static func cardValueString(totalML: Double, goalML: Int,
+                                       locale: Locale = .autoupdatingCurrent) -> String {
+        let total = NumberText.decimal(litres(fromML: totalML), locale: locale)
+        let goal = NumberText.decimal(litres(fromML: Double(goalML)), locale: locale)
+        return "\(total) / \(goal) L"
     }
 
     /// Fraction of the goal met (0…1, clamped) for the progress ring.

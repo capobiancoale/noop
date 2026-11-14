@@ -54,7 +54,7 @@ public struct Sparkline: View {
 
     /// Default value formatting: integer when whole, else one decimal.
     public static func defaultValueString(_ v: Double) -> String {
-        v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v)
+        v == v.rounded() ? String(Int(v)) : GaugeNumber.decimal(v)
     }
 
     private var bounds: (min: Double, max: Double) {
