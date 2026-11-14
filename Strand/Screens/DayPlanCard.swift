@@ -22,11 +22,11 @@ struct DayPlanCard: View {
             VStack(alignment: .leading, spacing: 14) {
                 header
                 trainingRow
-                sleepRow
                 nutritionRow
+                sleepRow
                 focusBlock
                 NoopButton("Ask the Coach", systemImage: "bubble.left.and.text.bubble.right",
-                           kind: .tertiary, action: askCoach)
+                           kind: .secondary, fullWidth: true, action: askCoach)
             }
         }
     }
@@ -105,8 +105,8 @@ struct DayPlanCard: View {
     private var trainingTint: Color {
         switch plan.training {
         case .push: return StrandPalette.statusPositive
-        case .maintain: return StrandPalette.accent
-        case .easy: return StrandPalette.statusWarning
+        case .maintain: return StrandPalette.statusWarning
+        case .easy: return StrandPalette.textSecondary
         }
     }
 
@@ -114,17 +114,44 @@ struct DayPlanCard: View {
         plan.reasons.map(Self.reasonText).joined(separator: " · ")
     }
 
+    /// What to do, as a sentence: the hero's verdict chip already carries the one-word level.
+    private var trainingHeadline: String {
+        switch plan.training {
+        case .push: return String(localized: "Go for a hard session")
+        case .maintain: return String(localized: "Train at normal intensity")
+        case .easy: return String(localized: "Keep it light or rest")
+        }
+    }
+
     private var trainingRow: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            rowTitle("Training")
-            Text(verbatim: trainingWord)
-                .font(StrandFont.number(22))
-                .foregroundStyle(trainingTint)
+        actionRow(symbol: "figure.strengthtraining.traditional", tint: trainingTint) {
+            actionHeadline(trainingHeadline)
             bodyLine(reasonsLine)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: String(localized: "Training: \(trainingWord). \(reasonsLine)")))
+    }
+
+    /// One step of the day: a tinted symbol tile on the left, the action and its detail on the right.
+    private func actionRow<Content: View>(symbol: String, tint: Color,
+                                          @ViewBuilder content: () -> Content) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: symbol)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 36, height: 36)
+                .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) { content() }
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func actionHeadline(_ text: String) -> some View {
+        Text(verbatim: text)
+            .font(StrandFont.headline)
+            .foregroundStyle(StrandPalette.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     static func reasonText(_ reason: DayPlan.Reason) -> String {
@@ -156,15 +183,25 @@ struct DayPlanCard: View {
         return String(localized: "in bed by \(clock)")
     }
 
-    private var sleepRow: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            rowTitle("Sleep")
-            Text(verbatim: tonightLine)
-                .font(StrandFont.headline)
-                .foregroundStyle(StrandPalette.textPrimary)
-            if let bedtimeLine { bodyLine(bedtimeLine) }
+    /// "In bed by 22:30" when the usual wake time is known, else the night's target as the action.
+    private var sleepHeadline: String {
+        if let bed = plan.sleep.bedtimeMinutes {
+            let cal = Calendar.current
+            let date = cal.date(bySettingHour: bed / 60, minute: bed % 60, second: 0, of: Date()) ?? Date()
+            return String(localized: "In bed by \(date.formatted(date: .omitted, time: .shortened))")
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        return String(localized: "Sleep \(Self.duration(plan.sleep.minutes)) tonight")
+    }
+
+    private var sleepDetail: String? {
+        plan.sleep.bedtimeMinutes == nil ? nil : String(localized: "Target \(Self.duration(plan.sleep.minutes))")
+    }
+
+    private var sleepRow: some View {
+        actionRow(symbol: "moon.fill", tint: StrandPalette.restColor) {
+            actionHeadline(sleepHeadline)
+            if let sleepDetail { bodyLine(sleepDetail) }
+        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: [tonightLine, bedtimeLine].compactMap { $0 }.joined(separator: ", ")))
     }
@@ -172,16 +209,15 @@ struct DayPlanCard: View {
     // Nutrition
 
     private var nutritionRow: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            rowTitle("Nutrition")
+        actionRow(symbol: "fork.knife", tint: StrandPalette.statusPositive) {
+            actionHeadline(String(localized: "Eat to match the day"))
             if let n = plan.nutrition {
-                nutritionFigures(n)
-                nutritionCaptions
+                nutritionFigures(n).padding(.top, 4)
+                nutritionCaptions.padding(.top, 2)
             } else {
                 bodyLine(String(localized: "Add your age, weight and height in the profile to see this."))
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func nutritionFigures(_ n: DayPlan.Nutrition) -> some View {
@@ -189,12 +225,12 @@ struct DayPlanCard: View {
         let protein = String(localized: "\(Self.whole(n.proteinG.lowerBound))–\(Self.whole(n.proteinG.upperBound)) g")
         let carbs = String(localized: "\(Self.whole(n.carbsG.lowerBound))–\(Self.whole(n.carbsG.upperBound)) g")
         let fluids = String(localized: "\(DisplayNumber.decimal(Double(n.fluidMl) / 1000, digits: 1)) L")
-        return VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .top, spacing: 12) {
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 8) {
                 figure("Energy", energy)
                 figure("Protein", protein)
             }
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .top, spacing: 8) {
                 figure("Carbs", carbs)
                 figure("Fluids", fluids)
             }
@@ -207,9 +243,13 @@ struct DayPlanCard: View {
             Text(verbatim: value)
                 .font(StrandFont.bodyNumber)
                 .foregroundStyle(StrandPalette.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(StrandPalette.surfaceInset, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 
@@ -233,7 +273,8 @@ struct DayPlanCard: View {
     @ViewBuilder private var focusBlock: some View {
         let items = Array(plan.focus.prefix(3))
         if !items.isEmpty {
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 8) {
+                Rectangle().fill(StrandPalette.hairline).frame(height: 1)
                 rowTitle("Work on")
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                     focusLine(Self.focusText(item))
@@ -246,8 +287,8 @@ struct DayPlanCard: View {
     private func focusLine(_ text: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: "circle.fill")
-                .font(.system(size: 5))
-                .foregroundStyle(StrandPalette.textTertiary)
+                .font(.system(size: 7))
+                .foregroundStyle(StrandPalette.statusWarning)
                 .accessibilityHidden(true)
             Text(verbatim: text)
                 .font(StrandFont.subhead)
