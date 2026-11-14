@@ -132143,7 +132143,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scaled"
+            "value": "Scalato"
           }
         }
       }
@@ -140914,6 +140914,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Record"
+          }
+        }
+      }
+    },
+    "Per WOD": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per WOD"
+          }
+        }
+      }
+    },
+    "All sessions": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutte le sessioni"
           }
         }
       }

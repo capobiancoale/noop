@@ -197,7 +197,7 @@ struct WodLogView: View {
 
     private var bestsSection: some View {
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-            SectionHeader("Bests", overline: "Records")
+            SectionHeader("Bests", overline: "Per WOD")
             NoopCard(padding: 0) {
                 VStack(spacing: 0) {
                     ForEach(Array(benches.enumerated()), id: \.element.id) { idx, b in
@@ -277,7 +277,7 @@ struct WodLogView: View {
 
     private var historySection: some View {
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-            SectionHeader("History", overline: "Log", trailing: "\(wods.count)")
+            SectionHeader("History", overline: "All sessions", trailing: "\(wods.count)")
             NoopCard(padding: 0) {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(wods.enumerated()), id: \.element.id) { idx, w in
