@@ -31,7 +31,7 @@ NOOP_COACH_MODEL=llama3.2:1b bash -c "$(curl -fsSL https://raw.githubusercontent
 
 | Campo | Valore |
 |---|---|
-| Provider | **Personalizzato** |
+| Provider | **Locale** |
 | URL del server | quello stampato dallo script, per esempio `http://MacBook-di-Alessio.local:11434/v1` |
 | Modello | `noop-coach` (tocca **Aggiorna modelli**; se non compare, **Personalizzato…** e scrivi `noop-coach`) |
 | Chiave API (opzionale) | lascia vuoto |

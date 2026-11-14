@@ -1,5 +1,5 @@
 #!/bin/bash
-# NOOP Coach: Ollama on the Mac as the Coach's server (provider "Custom" / "Personalizzato").
+# NOOP Coach: Ollama on the Mac as the Coach's server (provider "Local" / "Locale").
 #
 # Run in the Mac's Terminal:
 #   bash -c "$(curl -fsSL https://raw.githubusercontent.com/capobiancoale/noop/refs/heads/claude/blissful-mayer-0dvnwt/Tools/coach/setup_ollama_mac.sh)"
@@ -146,7 +146,7 @@ esac
 
 # ---------------------------------------------------------------- Summary
 bold "Sull'iPhone: NOOP > Coach"
-info "Provider:        Personalizzato"
+info "Provider:        Locale"
 if [ -n "$HOSTNAME_LOCAL" ]; then
   info "URL del server:  http://$HOSTNAME_LOCAL.local:$PORT/v1"
   [ -n "$IP" ] && info "                 (se non si collega: http://$IP:$PORT/v1)"

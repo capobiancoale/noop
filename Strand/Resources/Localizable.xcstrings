@@ -140797,6 +140797,86 @@
           }
         }
       }
+    },
+    "Go for a hard session": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vai per una sessione intensa"
+          }
+        }
+      }
+    },
+    "Train at normal intensity": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allenati a intensità normale"
+          }
+        }
+      }
+    },
+    "Keep it light or rest": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tienila leggera o riposa"
+          }
+        }
+      }
+    },
+    "Eat to match the day": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mangia in base alla giornata"
+          }
+        }
+      }
+    },
+    "In bed by %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A letto entro le %@"
+          }
+        }
+      }
+    },
+    "Sleep %@ tonight": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dormi %@ stanotte"
+          }
+        }
+      }
+    },
+    "Target %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obiettivo %@"
+          }
+        }
+      }
+    },
+    "Local": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Locale"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

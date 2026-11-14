@@ -27,7 +27,7 @@ enum AIProvider: String, CaseIterable, Identifiable {
         case .openAI:    return "OpenAI"
         case .anthropic: return "Anthropic"
         case .gemini:    return "Gemini"
-        case .custom:    return String(localized: "Custom")
+        case .custom:    return String(localized: "Local")
         }
     }
 
