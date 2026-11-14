@@ -140937,6 +140937,16 @@
           }
         }
       }
+    },
+    "Kilograms lifted in the week: sets × reps × load, added up over every movement. Not calories.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chili sollevati nella settimana: serie × ripetizioni × carico, sommati su tutti i movimenti. Non sono calorie."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

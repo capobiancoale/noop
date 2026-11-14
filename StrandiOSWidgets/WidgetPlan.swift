@@ -68,8 +68,12 @@ struct WidgetPlan: Equatable {
     var reasonText: String? {
         switch reasonKey {
         case "chargeHigh", "chargeMid", "chargeLow":
-            guard let n = reasonValue else { return nil }
-            return String(localized: "Charge \(n.formatted())%")
+            // The ring beside it already shows the number: say what it means.
+            switch reasonKey {
+            case "chargeHigh": return String(localized: "High recovery")
+            case "chargeMid": return String(localized: "Average recovery")
+            default: return String(localized: "Low recovery")
+            }
         case "noCharge": return String(localized: "No Charge yet")
         case "shortSleep": return String(localized: "Short night")
         case "loadSharpRise": return String(localized: "Load well above your usual")
