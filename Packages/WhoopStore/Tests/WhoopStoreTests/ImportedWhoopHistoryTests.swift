@@ -13,6 +13,16 @@ final class ImportedWhoopHistoryTests: XCTestCase {
                     exerciseCount: nil)
     }
 
+    /// The range spans every imported table: the seeded imported sleep (1_783_000_000) is older than the
+    /// daily rows, and SQLite's 'localtime' follows the machine's time zone, so the expectation does too.
+    private var earliestImportedDay: String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: Date(timeIntervalSince1970: 1_783_000_000))
+    }
+
     private func workout(_ start: Int, sport: String, source: String) -> WorkoutRow {
         WorkoutRow(startTs: start, endTs: start + 3600, sport: sport, source: source, durationS: 3600,
                    energyKcal: 300, avgHr: 130, maxHr: 170, strain: 50, distanceM: nil,
@@ -96,7 +106,8 @@ final class ImportedWhoopHistoryTests: XCTestCase {
         XCTAssertEqual(c.journalEntries, 1)
         XCTAssertEqual(c.total, 9)
         XCTAssertFalse(c.isEmpty)
-        XCTAssertEqual(c.firstDay, "2026-07-08")
+        XCTAssertEqual(c.firstDay, earliestImportedDay)   // the oldest imported sleep, not the daily rows
+        XCTAssertEqual(c.lastDay, "2026-07-09")
         // The dry run wrote nothing.
         let again = try await store.countImportedWhoopHistory(deviceId: canon)
         XCTAssertEqual(again, c)
@@ -110,7 +121,8 @@ final class ImportedWhoopHistoryTests: XCTestCase {
         XCTAssertEqual(removed.sleepSessions, 2)
         XCTAssertEqual(removed.workouts, 1)
         XCTAssertEqual(removed.journalEntries, 1)
-        XCTAssertEqual(removed.firstDay, "2026-07-08")
+        XCTAssertEqual(removed.firstDay, earliestImportedDay)   // the oldest imported sleep, not the daily rows
+        XCTAssertEqual(removed.lastDay, "2026-07-09")
 
         let after = try await store.countImportedWhoopHistory(deviceId: canon)
         XCTAssertTrue(after.isEmpty)
