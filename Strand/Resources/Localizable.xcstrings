@@ -139803,7 +139803,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld rip."
+            "value": "%lld ripetizioni"
           }
         }
       }
@@ -141834,6 +141834,466 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossibile recuperare spazio ora. Non è stato cambiato nulla."
+          }
+        }
+      }
+    },
+    "Not enough data for this week": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dati insufficienti per questa settimana"
+          }
+        }
+      }
+    },
+    "Your week": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua settimana"
+          }
+        }
+      }
+    },
+    "Effort matched the plan on %lld of %lld days": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'Effort ha seguito il piano in %lld giorni su %lld"
+          }
+        }
+      }
+    },
+    "A review needs at least 4 days with data. This week has %lld.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per il riepilogo servono almeno 4 giorni con dati. Questa settimana ne ha %lld."
+          }
+        }
+      }
+    },
+    "Nothing moved enough against last week to report.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rispetto alla settimana scorsa nulla è cambiato abbastanza da segnalarlo."
+          }
+        }
+      }
+    },
+    "Went better": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Andato meglio"
+          }
+        }
+      }
+    },
+    "Went worse": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Andato peggio"
+          }
+        }
+      }
+    },
+    "One thing for next week": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una cosa per la prossima settimana"
+          }
+        }
+      }
+    },
+    "What the plan has learned about you": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cosa ha imparato il piano su di te"
+          }
+        }
+      }
+    },
+    "Patterns in your own data, not causes.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schemi nei tuoi dati, non cause."
+          }
+        }
+      }
+    },
+    "Not enough history yet: this fills in after a few weeks.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Storico ancora insufficiente: si completa dopo qualche settimana."
+          }
+        }
+      }
+    },
+    "Talk it through with the Coach": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parlane con il Coach"
+          }
+        }
+      }
+    },
+    "You slept more and lifted stronger": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai dormito di più e sollevato più forte"
+          }
+        }
+      }
+    },
+    "Stronger, but on less sleep": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più forte, ma con meno sonno"
+          }
+        }
+      }
+    },
+    "You recovered better this week": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa settimana hai recuperato meglio"
+          }
+        }
+      }
+    },
+    "A heavy week": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una settimana pesante"
+          }
+        }
+      }
+    },
+    "A quiet week": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una settimana tranquilla"
+          }
+        }
+      }
+    },
+    "A steady week": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una settimana regolare"
+          }
+        }
+      }
+    },
+    "In bed by %@ on %lld evenings": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A letto entro le %@ per %lld sere"
+          }
+        }
+      }
+    },
+    "Get to bed earlier on %lld evenings": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vai a letto prima per %lld sere"
+          }
+        }
+      }
+    },
+    "Keep your wake-up time steady: it moved by about %lld min this week": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantieni costante l'ora della sveglia: questa settimana è variata di circa %lld min"
+          }
+        }
+      }
+    },
+    "Make one day easier: this week's load was well above your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendi più leggero un giorno: il carico di questa settimana era ben sopra il tuo solito"
+          }
+        }
+      }
+    },
+    "Add one more session: this week's load was below your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi una sessione: il carico di questa settimana era sotto il tuo solito"
+          }
+        }
+      }
+    },
+    "Keep going: nothing needs changing": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continua così: non serve cambiare nulla"
+          }
+        }
+      }
+    },
+    "After a night under 7 h your Charge is %@ points lower on average. From %lld nights.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo una notte sotto le 7 h il tuo Charge è in media più basso di %@ punti. Su %lld notti."
+          }
+        }
+      }
+    },
+    "After a night under 7 h your Charge is %@ points higher on average. From %lld nights.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo una notte sotto le 7 h il tuo Charge è in media più alto di %@ punti. Su %lld notti."
+          }
+        }
+      }
+    },
+    "After a hard day on a low Charge, your next-day Charge is %@ points lower than after an easier one. From %lld days.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo un giorno intenso con Charge basso, il Charge del giorno dopo è più basso di %@ punti rispetto a dopo un giorno più leggero. Su %lld giorni."
+          }
+        }
+      }
+    },
+    "After a hard day on a low Charge, your next-day Charge is %@ points higher than after an easier one. From %lld days.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo un giorno intenso con Charge basso, il Charge del giorno dopo è più alto di %@ punti rispetto a dopo un giorno più leggero. Su %lld giorni."
+          }
+        }
+      }
+    },
+    "The day after 2 or more hard days in a row, your Charge is %@ points lower than after a single hard day. From %lld days.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il giorno dopo 2 o più giorni intensi di fila il tuo Charge è più basso di %@ punti rispetto a dopo un solo giorno intenso. Su %lld giorni."
+          }
+        }
+      }
+    },
+    "The day after 2 or more hard days in a row, your Charge is %@ points higher than after a single hard day. From %lld days.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il giorno dopo 2 o più giorni intensi di fila il tuo Charge è più alto di %@ punti rispetto a dopo un solo giorno intenso. Su %lld giorni."
+          }
+        }
+      }
+    },
+    "Record": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record"
+          }
+        }
+      }
+    },
+    "Best yet": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Miglior risultato"
+          }
+        }
+      }
+    },
+    "%@: %@, new record": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %@, nuovo record"
+          }
+        }
+      }
+    },
+    "%@: %@, best yet": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %@, miglior risultato"
+          }
+        }
+      }
+    },
+    "Average sleep": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonno medio"
+          }
+        }
+      }
+    },
+    "Average Charge": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charge medio"
+          }
+        }
+      }
+    },
+    "%@ points": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ punti"
+          }
+        }
+      }
+    },
+    "Average HRV": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HRV media"
+          }
+        }
+      }
+    },
+    "%@ ms": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ms"
+          }
+        }
+      }
+    },
+    "Wake-time spread": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variazione dell'ora di sveglia"
+          }
+        }
+      }
+    },
+    "±%@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "±%@"
+          }
+        }
+      }
+    },
+    "%@: %@, up %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %@, in aumento di %@"
+          }
+        }
+      }
+    },
+    "%@: %@, down %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %@, in calo di %@"
+          }
+        }
+      }
+    },
+    "%@: no Charge": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: nessun Charge"
+          }
+        }
+      }
+    },
+    "%@: Charge %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: Charge %lld"
+          }
+        }
+      }
+    },
+    "Your Week": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua settimana"
           }
         }
       }
