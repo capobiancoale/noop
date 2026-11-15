@@ -41,6 +41,7 @@ struct WodLogView: View {
             }
             if !wods.isEmpty {
                 AnyView(strengthRow)
+                AnyView(glucoseRow)
             }
             if !benches.isEmpty {
                 AnyView(bestsSection)
@@ -175,6 +176,37 @@ struct WodLogView: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: String(localized: "Strength progress") + ", " + String(localized: "Movements tracked: \(strengthCount)")))
+        .accessibilityAddTraits(.isButton)
+    }
+
+    // MARK: Glucose response row
+
+    private var glucoseRow: some View {
+        NavigationLink {
+            GlucoseResponseView()
+        } label: {
+            NoopCard(padding: 14) {
+                HStack(spacing: 12) {
+                    symbolTile("drop.fill", tint: StrandPalette.accent)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("How you respond")
+                            .font(StrandFont.headline)
+                            .foregroundStyle(StrandPalette.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text("Your glucose around training")
+                            .font(StrandFont.subhead)
+                            .foregroundStyle(StrandPalette.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    chevron
+                }
+                .frame(minHeight: 44)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: String(localized: "How you respond") + ", " + String(localized: "Your glucose around training")))
         .accessibilityAddTraits(.isButton)
     }
 

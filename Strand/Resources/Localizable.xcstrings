@@ -141107,6 +141107,306 @@
           }
         }
       }
+    },
+    "How you respond": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Come reagisci"
+          }
+        }
+      }
+    },
+    "Your glucose around training, last 90 days": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua glicemia intorno agli allenamenti, ultimi 90 giorni"
+          }
+        }
+      }
+    },
+    "Metcon": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metcon"
+          }
+        }
+      }
+    },
+    "During": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durante"
+          }
+        }
+      }
+    },
+    "In the 2 h after": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nelle 2 h dopo"
+          }
+        }
+      }
+    },
+    "Night after": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notte dopo"
+          }
+        }
+      }
+    },
+    "Average change, start to end": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variazione media, da inizio a fine"
+          }
+        }
+      }
+    },
+    "Average change from the end": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variazione media dalla fine"
+          }
+        }
+      }
+    },
+    "%lld of %lld with a low": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld su %2$lld con un valore basso"
+          }
+        }
+      }
+    },
+    "Below 70 mg/dL, 23:00 to 07:00": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sotto 70 mg/dL, dalle 23:00 alle 07:00"
+          }
+        }
+      }
+    },
+    "%lld sessions with good glucose data are needed; you have %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servono %1$lld sessioni con buoni dati di glicemia; ne hai %2$lld"
+          }
+        }
+      }
+    },
+    "Around a session": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intorno a una sessione"
+          }
+        }
+      }
+    },
+    "Compared": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confronto"
+          }
+        }
+      }
+    },
+    "Sessions used: %lld.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessioni usate: %lld."
+          }
+        }
+      }
+    },
+    "Sessions used: %lld. Left out for too little glucose data: %lld.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessioni usate: %1$lld. Escluse per pochi dati di glicemia: %2$lld."
+          }
+        }
+      }
+    },
+    "Glucose from Apple Health is only available on iPhone, so there is nothing to show here.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La glicemia di Apple Salute è disponibile solo su iPhone, quindi qui non c'è nulla da mostrare."
+          }
+        }
+      }
+    },
+    "No training sessions in the last 90 days. Log a WOD or a workout and it will appear here.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna sessione di allenamento negli ultimi 90 giorni. Registra un WOD o un allenamento e comparirà qui."
+          }
+        }
+      }
+    },
+    "No glucose readings in Apple Health around your sessions in the last 90 days.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna lettura di glicemia in Apple Salute intorno alle tue sessioni negli ultimi 90 giorni."
+          }
+        }
+      }
+    },
+    "This describes what happened in your data. It is not advice on insulin or carbohydrates: those choices stay with you, your care team and Loop.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo descrive cosa è successo nei tuoi dati. Non è un consiglio su insulina o carboidrati: quelle scelte restano a te, al tuo team di cura e a Loop."
+          }
+        }
+      }
+    },
+    "not enough data": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dati insufficienti"
+          }
+        }
+      }
+    },
+    "The line is the average of your sessions and the light band holds the middle half of them. The green band is 70 to 180 mg/dL; the blue block is the typical length of a session.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La linea è la media delle tue sessioni e la fascia chiara contiene la metà centrale. La fascia verde va da 70 a 180 mg/dL; il blocco blu è la durata tipica di una sessione."
+          }
+        }
+      }
+    },
+    "Hours are counted from the start of the session.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le ore sono contate dall'inizio della sessione."
+          }
+        }
+      }
+    },
+    "Average glucose around a session": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia media intorno a una sessione"
+          }
+        }
+      }
+    },
+    "Over %lld sessions the average glucose stayed between %lld and %lld mg/dL, from one hour before the start to six hours after.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su %1$lld sessioni la glicemia media è rimasta tra %2$lld e %3$lld mg/dL, da un'ora prima dell'inizio a sei ore dopo."
+          }
+        }
+      }
+    },
+    "Not enough sessions yet to compare the kinds.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora poche sessioni per confrontare i tipi."
+          }
+        }
+      }
+    },
+    "%@: not enough sessions yet": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: ancora poche sessioni"
+          }
+        }
+      }
+    },
+    "Average change in glucose from the end of a session to two hours later.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variazione media della glicemia dalla fine di una sessione a due ore dopo."
+          }
+        }
+      }
+    },
+    "Average change in the 2 hours after a session, by kind": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variazione media nelle 2 ore dopo una sessione, per tipo"
+          }
+        }
+      }
+    },
+    "%@ mg/dL": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ mg/dL"
+          }
+        }
+      }
+    },
+    "Your glucose around training": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua glicemia attorno agli allenamenti"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
