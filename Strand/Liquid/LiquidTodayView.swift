@@ -544,13 +544,13 @@ struct LiquidTodayView: View {
                 // Charge reads as the recovery score it is.
                 HeroScoreCell(label: "Charge", caption: Text("recovery"), score: displayDay?.recovery,
                               tint: StrandPalette.chargeColor,
-                              pill: "WHOOP", animated: dataLoaded, onGuide: { guideSection = .charge })
+                              pill: nil, animated: dataLoaded, onGuide: { guideSection = .charge })
                 HeroScoreCell(label: "Effort", caption: Text("strain"), score: displayDay?.strain,
                               tint: StrandPalette.effortColor,
                               pill: nil, animated: dataLoaded, onGuide: { guideSection = .effort })
                 HeroScoreCell(label: "Rest", caption: Text("sleep"), score: restScore,
                               tint: StrandPalette.restColor,
-                              pill: "WHOOP", animated: dataLoaded, onGuide: { guideSection = .rest })
+                              pill: nil, animated: dataLoaded, onGuide: { guideSection = .rest })
             }
             stateVerdict
         }
