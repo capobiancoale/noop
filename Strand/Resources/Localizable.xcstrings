@@ -6690,7 +6690,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$lld di %2$lld giorni"
+            "value": "%lld di %lld giorni"
           }
         },
         "pt-PT": {
@@ -29149,7 +29149,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verifica in corso…"
+            "value": "Controllo in corso…"
           }
         },
         "pt-PT": {
@@ -141554,6 +141554,286 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossibile rimuovere lo storico: %@"
+          }
+        }
+      }
+    },
+    "Old sensor data": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dati vecchi dei sensori"
+          }
+        }
+      }
+    },
+    "The strap records your heart rate every second, and that takes most of the space. You can keep that detail only for recent days. For older days NOOP keeps one heart-rate value per minute.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La fascia registra la frequenza cardiaca ogni secondo e questo occupa la maggior parte dello spazio. Puoi tenere questo dettaglio solo per i giorni recenti. Per i giorni più vecchi NOOP conserva un valore di frequenza cardiaca al minuto."
+          }
+        }
+      }
+    },
+    "Kept: your scores, sleep, workouts, daily values and minute-level heart rate.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resta: i tuoi punteggi, il sonno, gli allenamenti, i valori giornalieri e la frequenza cardiaca al minuto."
+          }
+        }
+      }
+    },
+    "Given up for the older days: second-by-second zoom on the heart-rate timeline, and recalculating those nights when an algorithm improves. This cannot be undone.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si perde per i giorni più vecchi: lo zoom secondo per secondo sulla linea temporale della frequenza cardiaca e il ricalcolo di quelle notti quando un algoritmo migliora. Non si può annullare."
+          }
+        }
+      }
+    },
+    "Keep full detail for": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantieni il dettaglio completo per"
+          }
+        }
+      }
+    },
+    "Compacting is switched off in this version until the scoring engine is updated to leave compacted days alone. You can still preview.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In questa versione la compattazione è disattivata finché il motore dei punteggi non viene aggiornato per non ricalcolare i giorni compattati. L'anteprima resta disponibile."
+          }
+        }
+      }
+    },
+    "Nothing to compact for this setting.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niente da compattare con questa impostazione."
+          }
+        }
+      }
+    },
+    "About %@ rows would be removed, roughly %@. The file only gets smaller after \"Reclaim space\".": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verrebbero rimosse circa %@ righe, più o meno %@. Il file diventa più piccolo solo dopo \"Recupera spazio\"."
+          }
+        }
+      }
+    },
+    "Couldn't read the store for a preview.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile leggere l'archivio per l'anteprima."
+          }
+        }
+      }
+    },
+    "Compact now": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compatta ora"
+          }
+        }
+      }
+    },
+    "Compacting…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compattazione in corso…"
+          }
+        }
+      }
+    },
+    "Compact data older than %lld days?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compattare i dati più vecchi di %lld giorni?"
+          }
+        }
+      }
+    },
+    "Second-by-second heart rate older than %lld days will be replaced by one value per minute. This cannot be undone. Make a backup first.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La frequenza cardiaca secondo per secondo più vecchia di %lld giorni sarà sostituita da un valore al minuto. Non si può annullare. Fai prima un backup."
+          }
+        }
+      }
+    },
+    "Compaction stopped because of an error. Nothing was left half-done; you can try again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La compattazione si è fermata per un errore. Niente è rimasto a metà; puoi riprovare."
+          }
+        }
+      }
+    },
+    "Back up first…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fai prima un backup…"
+          }
+        }
+      }
+    },
+    "Saving backup…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvataggio del backup…"
+          }
+        }
+      }
+    },
+    "Backup saved to %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup salvato in %@."
+          }
+        }
+      }
+    },
+    "Reclaim space": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupera spazio"
+          }
+        }
+      }
+    },
+    "Reclaiming…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupero in corso…"
+          }
+        }
+      }
+    },
+    "Deleted rows leave free room inside the database file (about %@ now). Reclaim space rewrites the file so it shrinks. It needs free storage at least as large as the database, can take a while, and is never run automatically.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le righe eliminate lasciano spazio libero dentro il file del database (circa %@ ora). Recupera spazio riscrive il file così che si riduca. Serve spazio libero almeno pari al database, può richiedere tempo e non parte mai da solo."
+          }
+        }
+      }
+    },
+    "Deleted rows leave free room inside the database file. Reclaim space rewrites the file so it shrinks. It needs free storage at least as large as the database, can take a while, and is never run automatically.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le righe eliminate lasciano spazio libero dentro il file del database. Recupera spazio riscrive il file così che si riduca. Serve spazio libero almeno pari al database, può richiedere tempo e non parte mai da solo."
+          }
+        }
+      }
+    },
+    "Database before: %@, after: %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Database prima: %@, dopo: %@."
+          }
+        }
+      }
+    },
+    "Done: %@ rows removed.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fatto: %@ righe rimosse."
+          }
+        }
+      }
+    },
+    "Stopped early: %@ rows removed so far.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interrotto: finora %@ righe rimosse."
+          }
+        }
+      }
+    },
+    "Database went from %@ to %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il database è passato da %@ a %@."
+          }
+        }
+      }
+    },
+    "Not enough free storage: %@ needed, %@ available. Nothing was changed.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spazio libero insufficiente: servono %@, ne sono disponibili %@. Non è stato cambiato nulla."
+          }
+        }
+      }
+    },
+    "The database did not pass its health check, so nothing was changed.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il database non ha superato il controllo di integrità, quindi non è stato cambiato nulla."
+          }
+        }
+      }
+    },
+    "Couldn't reclaim space right now. Nothing was changed.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile recuperare spazio ora. Non è stato cambiato nulla."
           }
         }
       }
