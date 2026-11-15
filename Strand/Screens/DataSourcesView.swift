@@ -38,6 +38,13 @@ struct DataSourcesView: View {
     @State private var appleHealthDeleting = false
     @State private var confirmDeleteAppleHealth = false
     @State private var appleHealthDeletedSummary: String?
+    // "Imported WHOOP history": history that came from a WHOOP data export (not from the strap over Bluetooth).
+    // The card shows only while a dry run finds such rows (or right after a removal, to say what went).
+    // Removal is a confirmed, irreversible action; it never touches what NOOP recorded from the strap.
+    @State private var importedWhoop: ImportedWhoopHistoryCounts?
+    @State private var removingImportedWhoop = false
+    @State private var confirmRemoveImportedWhoop = false
+    @State private var importedWhoopResult: String?
 
     // "Broadcast heart rate" (opt-in, OFF by default): make NOOP a standard BLE Heart Rate peripheral
     // (0x180D / 0x2A37) so a gym treadmill / Zwift / Peloton can read the live strap HR NOOP receives.
@@ -79,6 +86,7 @@ struct DataSourcesView: View {
                        // built cards — that observation can't be removed here (see the lane-B2 note).
                        lazy: true) {
             VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
+                importedWhoopHistoryCard
                 whoopCard.staggeredAppear(index: 0)
                 appleHealthCard.staggeredAppear(index: 1)
                 xiaomiCard.staggeredAppear(index: 2)
@@ -102,6 +110,21 @@ struct DataSourcesView: View {
             // The broadcast is a foreground convenience tied to this screen's owned object — release the
             // radio when the screen goes away; toggling it back on (or revisiting) re-starts it.
             hrBroadcaster.stop()
+        }
+        // Dry run for the "Imported WHOOP history" card; re-runs after every refresh (import, removal).
+        .task(id: repo.refreshSeq) {
+            importedWhoop = await repo.importedWhoopHistoryCounts()
+        }
+        // Removing imported WHOOP history: explicit, irreversible, backup offered first when a folder is set.
+        .confirmationDialog("Remove imported WHOOP history?", isPresented: $confirmRemoveImportedWhoop,
+                            titleVisibility: .visible) {
+            if FolderBackup.hasFolder {
+                Button("Back up first, then remove", role: .destructive) { removeImportedWhoopHistory(backupFirst: true) }
+            }
+            Button("Remove permanently", role: .destructive) { removeImportedWhoopHistory(backupFirst: false) }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This permanently deletes \(importedWhoop?.total ?? 0) rows imported from a WHOOP export. It can't be undone. Everything NOOP recorded from your strap, your WODs, your edited nights and your manual workouts stay.")
         }
         // A single target-aware importer avoids SwiftUI collapsing competing importers on the same screen.
         .fileImporter(isPresented: $showingImporter,
@@ -143,6 +166,85 @@ struct DataSourcesView: View {
             }
             Text("\(repo.days.count) days · \(repo.sleeps.count) sleeps stored")
                 .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+        }
+    }
+
+    /// Day range label for the card: "yyyy-MM-dd" keys shown as locale dates.
+    private func importedWhoopDayLabel(_ key: String?) -> String {
+        guard let key else { return "" }
+        let p = DateFormatter(); p.locale = Locale(identifier: "en_US_POSIX"); p.dateFormat = "yyyy-MM-dd"
+        guard let d = p.date(from: key) else { return key }
+        return d.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    @ViewBuilder
+    private var importedWhoopHistoryCard: some View {
+        let counts = importedWhoop
+        if (counts?.isEmpty == false) || importedWhoopResult != nil {
+            card(title: String(localized: "Imported WHOOP history"), icon: "clock.arrow.circlepath",
+                 tint: StrandPalette.statusWarning,
+                 subtitle: String(localized: "Scores, nights and workouts that came from a WHOOP data export, not from your strap through NOOP.")) {
+                if let c = counts, !c.isEmpty {
+                    if c.firstDay != nil, c.lastDay != nil {
+                        Text("From \(importedWhoopDayLabel(c.firstDay)) to \(importedWhoopDayLabel(c.lastDay))")
+                            .font(StrandFont.subhead).foregroundStyle(StrandPalette.textPrimary)
+                    }
+                    Text("\(c.dailyMetrics) days · \(c.sleepSessions) nights · \(c.workouts) workouts · \(c.metricSeries + c.journalEntries) other values")
+                        .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+                    Text("Removing it deletes those scores and nights from before NOOP started recording. Everything NOOP recorded from your strap, your WODs, your edited nights and your manual workouts stay.")
+                        .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if !FolderBackup.hasFolder {
+                        Text("No backup folder is set. You can choose one in Backup & Sync before removing.")
+                            .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+                    }
+                    HStack(spacing: NoopMetrics.space3) {
+                        Button(role: .destructive) {
+                            confirmRemoveImportedWhoop = true
+                        } label: {
+                            Label(removingImportedWhoop ? "Removing…" : "Remove imported WHOOP history", systemImage: "trash")
+                        }
+                        .buttonStyle(NoopButtonStyle(.destructive))
+                        .disabled(model.hasActiveImport || removingImportedWhoop)
+                        if removingImportedWhoop { ProgressView().controlSize(.small) }
+                    }
+                }
+                if let r = importedWhoopResult {
+                    Text(r).font(StrandFont.subhead).foregroundStyle(StrandPalette.statusPositive)
+                }
+            }
+        }
+    }
+
+    /// Runs only from the confirmation dialog. With `backupFirst` the folder backup must succeed or nothing is removed.
+    private func removeImportedWhoopHistory(backupFirst: Bool) {
+        guard !removingImportedWhoop else { return }
+        removingImportedWhoop = true
+        importedWhoopResult = nil
+        Task {
+            if backupFirst {
+                let ok = await FolderBackup.backupNow(checkpoint: { await repo.checkpointForBackup() })
+                if !ok {
+                    importedWhoopResult = String(localized: "The backup failed, so nothing was removed.")
+                    removingImportedWhoop = false
+                    return
+                }
+            }
+            do {
+                if let r = try await repo.removeImportedWhoopHistory() {
+                    model.whoopImportSummary = nil
+                    model.whoopImportFailed = false
+                    importedWhoop = await repo.importedWhoopHistoryCounts()
+                    importedWhoopResult = String(localized: "Removed \(r.dailyMetrics) days, \(r.sleepSessions) nights, \(r.workouts) workouts and \(r.metricSeries + r.journalEntries) other values of imported WHOOP history.")
+                    logImport("WHOOP: imported history removed (\(r.total) rows)")
+                } else {
+                    importedWhoopResult = String(localized: "Couldn't open the local store. Nothing was removed.")
+                }
+            } catch {
+                importedWhoopResult = String(localized: "Couldn't remove the history: \(error.localizedDescription)")
+                logImport("WHOOP history removal failed: \(error.localizedDescription)")
+            }
+            removingImportedWhoop = false
         }
     }
 

@@ -86720,7 +86720,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rimozione in corso…"
+            "value": "Rimozione…"
           }
         },
         "pt-PT": {
@@ -141404,6 +141404,156 @@
           "stringUnit": {
             "state": "translated",
             "value": "La tua glicemia attorno agli allenamenti"
+          }
+        }
+      }
+    },
+    "Imported WHOOP history": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Storico WHOOP importato"
+          }
+        }
+      }
+    },
+    "Scores, nights and workouts that came from a WHOOP data export, not from your strap through NOOP.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Punteggi, notti e allenamenti arrivati da un'esportazione dati WHOOP, non dalla tua fascia tramite NOOP."
+          }
+        }
+      }
+    },
+    "From %@ to %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dal %@ al %@"
+          }
+        }
+      }
+    },
+    "%lld days · %lld nights · %lld workouts · %lld other values": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld giorni · %lld notti · %lld allenamenti · %lld altri valori"
+          }
+        }
+      }
+    },
+    "Removing it deletes those scores and nights from before NOOP started recording. Everything NOOP recorded from your strap, your WODs, your edited nights and your manual workouts stay.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuoverlo cancella quei punteggi e quelle notti di prima che NOOP iniziasse a registrare. Tutto ciò che NOOP ha registrato dalla tua fascia, i tuoi WOD, le notti che hai corretto e gli allenamenti manuali restano."
+          }
+        }
+      }
+    },
+    "No backup folder is set. You can choose one in Backup & Sync before removing.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna cartella di backup impostata. Puoi sceglierne una in Backup e sincronizzazione prima di rimuovere."
+          }
+        }
+      }
+    },
+    "Remove imported WHOOP history": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi storico WHOOP importato"
+          }
+        }
+      }
+    },
+    "Remove imported WHOOP history?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovere lo storico WHOOP importato?"
+          }
+        }
+      }
+    },
+    "Back up first, then remove": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prima il backup, poi rimuovi"
+          }
+        }
+      }
+    },
+    "Remove permanently": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi definitivamente"
+          }
+        }
+      }
+    },
+    "This permanently deletes %lld rows imported from a WHOOP export. It can't be undone. Everything NOOP recorded from your strap, your WODs, your edited nights and your manual workouts stay.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo cancella definitivamente %lld righe importate da un'esportazione WHOOP. Non si può annullare. Tutto ciò che NOOP ha registrato dalla tua fascia, i tuoi WOD, le notti corrette e gli allenamenti manuali restano."
+          }
+        }
+      }
+    },
+    "The backup failed, so nothing was removed.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il backup non è riuscito, quindi non è stato rimosso nulla."
+          }
+        }
+      }
+    },
+    "Removed %lld days, %lld nights, %lld workouts and %lld other values of imported WHOOP history.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimossi %lld giorni, %lld notti, %lld allenamenti e %lld altri valori dello storico WHOOP importato."
+          }
+        }
+      }
+    },
+    "Couldn't open the local store. Nothing was removed.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile aprire l'archivio locale. Non è stato rimosso nulla."
+          }
+        }
+      }
+    },
+    "Couldn't remove the history: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile rimuovere lo storico: %@"
           }
         }
       }

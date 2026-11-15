@@ -616,6 +616,33 @@ final class Repository: ObservableObject {
         do { try await store.checkpointWAL(); return true } catch { return false }
     }
 
+    /// Dry run for the Data Sources "Imported WHOOP history" card: how many rows a WHOOP export left under the
+    /// canonical id, counted with the exact predicates `removeImportedWhoopHistory` deletes with. Writes
+    /// nothing. nil when the store can't be opened (the card then stays hidden).
+    func importedWhoopHistoryCounts() async -> ImportedWhoopHistoryCounts? {
+        guard let store = await ensureStore() else { return nil }
+        return try? await store.countImportedWhoopHistory(deviceId: Self.whoopSource)
+    }
+
+    /// Permanently delete the history imported from a WHOOP export (see `ImportedWhoopHistory.swift` in
+    /// WhoopStore for the exact rows). Only ever called from the confirmed "Remove imported WHOOP history"
+    /// action. The canonical id is fixed here ("my-whoop", where the importer writes), never the active strap
+    /// id, and the store refuses a "-noop" id. Never touches the strap's recordings, NOOP's computed scores,
+    /// edited nights, WODs, manual workouts or Apple Health. Afterwards the load-bookkeeping caches that key
+    /// on `refreshSeq` are dropped and `refresh()` re-reads everything, so every screen re-reads (the same
+    /// refresh the WHOOP import ends with). nil when the store can't be opened (nothing was deleted).
+    @discardableResult
+    func removeImportedWhoopHistory() async throws -> ImportedWhoopHistoryCounts? {
+        guard let store = await ensureStore() else { return nil }
+        let removed = try await store.deleteImportedWhoopHistory(deviceId: Self.whoopSource)
+        try? await store.checkpointWAL()   // reclaim the WAL, as the import does (#590)
+        todayHistoryWideLoadedSeq = -1; todayHistoryWideCache = nil
+        insightsLoadedSeq = -1; insightsLoadedDayKey = ""; insightsCache = nil
+        todayDayScopedLoadedSeq = -1; todayDayScopedLoadedDayKey = ""; todayDayScopedCache = nil
+        await refresh()
+        return removed
+    }
+
     /// One refresh's fully-merged dashboard caches, computed OFF the main actor (FIX 3) and applied to the
     /// `@Published` props in a single main-actor batch. Every member is an `Equatable` value type. NOT
     /// marked `Sendable` (its `DailyMetric`/`CachedSleepSession` members aren't formally `Sendable`); it
