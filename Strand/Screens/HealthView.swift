@@ -497,7 +497,7 @@ private struct RecoveryContributorsSection: View {
 
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                SectionHeader("Contributors", overline: "Recovery", trailing: nil)
+                SectionHeader("Contributors", overline: "Recovery", trailing: dayNote(latest?.day))
                 if ready {
                     ScoreStatePill(.solid)
                 } else {
@@ -519,6 +519,12 @@ private struct RecoveryContributorsSection: View {
                 .foregroundStyle(StrandPalette.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    /// Which day the "latest" row is from, when it is not today ("yesterday", "3 days ago", a short date).
+    private func dayNote(_ day: String?) -> String? {
+        guard let day else { return nil }
+        return TodayView.freshnessCaption(dayKey: day, referenceKey: TodayView.freshnessTodayKey)
     }
 
     /// Resolve each contributor from the latest day against the baseline mean of prior nights.
@@ -654,6 +660,8 @@ private struct FitnessAgeSection: View {
 
     /// Latest weekly Fitness Age (years) read from the "fitness_age" metricSeries, nil until loaded/computed.
     @State private var fitnessAge: Double?
+    /// The day key the weekly Fitness Age is banked under, so an old value says how old it is.
+    @State private var fitnessAgeDay: String?
     /// Latest daily estimated VO₂max (ml/kg/min) from "vo2max_est" — only present once a waist is set.
     @State private var vo2max: Double?
     @State private var loaded = false
@@ -777,6 +785,15 @@ private struct FitnessAgeSection: View {
         return max(0.05, min(1, (hi - age) / (hi - lo)))
     }
 
+    /// "As of 3 days ago" for a weekly value banked on an earlier day; nil for today's or the current
+    /// week's own value (a weekly figure is keyed to the week's Saturday, which can be ahead of today).
+    private func weeklyAsOfNote(_ day: String?) -> String? {
+        guard let day else { return nil }
+        let today = TodayView.freshnessTodayKey
+        guard day < today, let when = TodayView.freshnessCaption(dayKey: day, referenceKey: today) else { return nil }
+        return String(localized: "As of \(when)")
+    }
+
     /// The younger/older-than-your-age subtitle as whole-phrase variants per count and direction, so
     /// translators see complete sentences (never a stitched plural or direction fragment).
     private func ageDeltaLine(years: Int, younger: Bool) -> String {
@@ -817,12 +834,16 @@ private struct FitnessAgeSection: View {
                         Text(ageDeltaLine(years: years, younger: younger))
                             .font(StrandFont.subhead)
                             .foregroundStyle(younger ? StrandPalette.statusPositive : StrandPalette.statusWarning)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
+                    .layoutPriority(1)
                     Spacer(minLength: 0)
                     if let vo2 = vo2max {
                         VStack(alignment: .trailing, spacing: 2) {
                             Text("VO₂max at rest").strandOverline()
-                            Text(String(format: "%.0f", vo2))
+                                .lineLimit(2)
+                                .multilineTextAlignment(.trailing)
+                            Text(DisplayNumber.decimal(vo2, digits: 0))
                                 .font(StrandFont.number(30))
                                 .foregroundStyle(StrandPalette.metricCyan)
                             Text("ml/kg/min")
@@ -844,6 +865,9 @@ private struct FitnessAgeSection: View {
             Text("± \(Int(FitnessAgeEngine.displayBandYears)) yr · a fitness comparison, not a biological age")
                 .font(StrandFont.footnote)
                 .foregroundStyle(StrandPalette.textTertiary)
+            if let note = weeklyAsOfNote(fitnessAgeDay) {
+                Text(note).font(StrandFont.footnote).foregroundStyle(StrandPalette.statusWarning)
+            }
 
             Divider().overlay(StrandPalette.hairline)
 
@@ -890,6 +914,7 @@ private struct FitnessAgeSection: View {
         let faPts = await repo.exploreSeries(key: "fitness_age", source: "my-whoop")
         let vo2Pts = await repo.exploreSeries(key: "vo2max_est", source: "my-whoop")
         fitnessAge = faPts.last?.value
+        fitnessAgeDay = faPts.last?.day
         vo2max = vo2Pts.last?.value
         loaded = true
     }
@@ -967,10 +992,10 @@ private struct ReadinessChecklistCard: View {
                 .frame(width: 18)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
-                Text(item.label)
+                Text(itemLabel(item))
                     .font(StrandFont.body)
                     .foregroundStyle(StrandPalette.textPrimary)
-                Text(item.detail)
+                Text(itemDetail(item))
                     .font(StrandFont.footnote)
                     .foregroundStyle(StrandPalette.textTertiary)
             }
@@ -982,7 +1007,7 @@ private struct ReadinessChecklistCard: View {
                         .foregroundStyle(StrandPalette.accent)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("\(item.label): \(item.detail). Fix in Settings.")
+                .accessibilityLabel("\(itemLabel(item)): \(itemDetail(item)). Fix in Settings.")
             }
         }
         // When a Fix button is present keep it as its own VoiceOver stop (.contain); otherwise fold the
@@ -992,7 +1017,43 @@ private struct ReadinessChecklistCard: View {
         } else {
             row
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("\(item.label), \(statusWord(item.status)). \(item.detail)")
+                .accessibilityLabel("\(itemLabel(item)), \(statusWord(item.status)). \(itemDetail(item))")
+        }
+    }
+
+    /// The engine hands back plain English strings; a plain String in `Text` never reaches the string
+    /// catalog, so each row is rebuilt from its stable `key` in the reader's language.
+    private func itemLabel(_ item: FitnessReadinessItem) -> String {
+        switch item.key {
+        case "age":         return String(localized: "Your age")
+        case "sex":         return String(localized: "Biological sex")
+        case "rhr":         return String(localized: "Resting heart rate")
+        case "activity":    return String(localized: "Recent activity")
+        case "bodyMetrics": return String(localized: "Height & weight")
+        case "waist":       return String(localized: "Waist (optional)")
+        default:            return item.label
+        }
+    }
+
+    /// The hint under a row. The two "N of last 7 ..." lines carry a count the engine wrote into the
+    /// string, so it is read back from the front of the detail; anything unrecognised is shown as written.
+    private func itemDetail(_ item: FitnessReadinessItem) -> String {
+        switch item.detail {
+        case "Set":                              return String(localized: "Set")
+        case "Add it in Settings":               return String(localized: "Add it in Settings")
+        case "Unlocks your VO₂max":              return String(localized: "Unlocks your VO₂max")
+        case "Add to also see VO₂max":           return String(localized: "Add to also see VO₂max")
+        case "Sharpens VO₂max":                  return String(localized: "Sharpens VO₂max")
+        case "Optional - sharpens VO₂max":       return String(localized: "Optional - sharpens VO₂max")
+        default:
+            let count = Int(item.detail.prefix { $0.isNumber })
+            if let n = count, item.key == "rhr", item.detail.hasSuffix("of last 7 nights") {
+                return String(localized: "\(n) of last 7 nights")
+            }
+            if let n = count, item.key == "activity", item.detail.hasSuffix("of last 7 days") {
+                return String(localized: "\(n) of last 7 days")
+            }
+            return item.detail
         }
     }
 
@@ -1030,6 +1091,8 @@ private struct VitalitySection: View {
     @EnvironmentObject var profile: ProfileStore
     @State private var vitality: Double?
     @State private var bodyAge: Double?
+    /// The day key the weekly Vitality is banked under, so an old value says how old it is.
+    @State private var vitalityDay: String?
     @State private var loaded = false
 
     private var contributions: [VitalityEngine.Contribution] {
@@ -1122,6 +1185,10 @@ private struct VitalitySection: View {
             }
             Text("A wellness estimate from your habits, not a clinical biological age.")
                 .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+            if let day = vitalityDay, day < TodayView.freshnessTodayKey,
+               let when = TodayView.freshnessCaption(dayKey: day, referenceKey: TodayView.freshnessTodayKey) {
+                Text("As of \(when)").font(StrandFont.footnote).foregroundStyle(StrandPalette.statusWarning)
+            }
         }
         .padding(NoopMetrics.space5)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1163,7 +1230,9 @@ private struct VitalitySection: View {
     }
 
     private func load() async {
-        vitality = (await repo.exploreSeries(key: "vitality", source: "my-whoop")).last?.value
+        let vitLast = (await repo.exploreSeries(key: "vitality", source: "my-whoop")).last
+        vitality = vitLast?.value
+        vitalityDay = vitLast?.day
         bodyAge = (await repo.exploreSeries(key: "body_age", source: "my-whoop")).last?.value
         loaded = true
     }
@@ -1208,6 +1277,19 @@ private struct VitalsSection: View {
                 }
             }
             Text("Once NOOP has 14 nights of history, in-range compares each vital to your own baseline (approximate, not medical advice); until then, typical adult ranges apply.")
+                .font(StrandFont.footnote)
+                .foregroundStyle(StrandPalette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+            skinTempNote(readings)
+        }
+    }
+
+    /// One line under the grid when skin temperature is the on-device CHANGE from the user's usual night:
+    /// it is not a thermometer reading, because wrist temperature follows the surroundings.
+    @ViewBuilder
+    private func skinTempNote(_ readings: [BodyVitalReading]) -> some View {
+        if let v = readings.first(where: { $0.key == "skin" })?.value, !VitalBands.isAbsoluteSkinTemp(v) {
+            Text("Skin temperature is shown as the change from your usual night, not as a temperature: your wrist temperature depends on the surroundings, so the change from your usual is what matters.")
                 .font(StrandFont.footnote)
                 .foregroundStyle(StrandPalette.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1257,7 +1339,7 @@ private struct LiquidVitalTile: View {
                 }
                 #endif
                 Text(reading.stateCaption)
-                    .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary).lineLimit(1)
+                    .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary).lineLimit(2)
                     .padding(.top, 4)
             }
         }
@@ -1278,7 +1360,7 @@ private struct LiquidVitalTile: View {
         case "rhr":        return over(100)
         case "resp_rate":  return over(24)
         case "spo2":       return across(90, 100)
-        case "skin_temp":
+        case "skin_temp", "skin":
             // Absolute skin temp (>= 20 °C) maps across a plausible wrist band; a small ±deviation
             // maps around a half-full centre so a normal night reads mid-gauge, not empty.
             return VitalBands.isAbsoluteSkinTemp(v) ? across(33, 38) : max(0.02, min(1, 0.5 + v / 4))

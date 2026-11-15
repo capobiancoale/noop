@@ -348,7 +348,7 @@ struct SleepView: View {
     private func restHero(_ model: SleepModel) -> some View {
         let score = model.performance.latest
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-            SectionHeader("Sleep performance", overline: "Last night", trailing: String(localized: "Rest"))
+            SectionHeader("Sleep performance", overline: newestNightOverline(model), trailing: String(localized: "Rest"))
             // A subtle night atmosphere sits behind the sleep hero ONLY (the Rest world's whisper:
             // faint indigo wash + crescent moon over the near-black canvas, no glow), clipped to the
             // card. Replaces the now-flat ScenicHeroBackground here.
@@ -393,7 +393,8 @@ struct SleepView: View {
                             font: StrandFont.number(46),
                             color: StrandPalette.restBright
                         )
-                        Text("asleep last night")
+                        Text(olderNightNote(wakeDayKey(model.night.session.endTs)).map { String(localized: "asleep, \($0)") }
+                             ?? String(localized: "asleep last night"))
                             .font(StrandFont.subhead)
                             .foregroundStyle(StrandPalette.textSecondary)
                     }
@@ -1004,11 +1005,15 @@ struct SleepView: View {
                 .font(StrandFont.overline)
                 .tracking(StrandFont.overlineTracking)
                 .foregroundStyle(StrandPalette.textPrimary)
-                .frame(width: 56, alignment: .leading)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .frame(minWidth: 56, alignment: .leading)
             Text("\(percent)%")
                 .font(StrandFont.captionNumber)
                 .foregroundStyle(color)
-                .frame(width: 38, alignment: .leading)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .frame(minWidth: 38, alignment: .leading)
             // The NOOP signature: a segmented PipBar that counts up to the share-of-night fraction,
             // tinted in the stage colour over the canonical inset track. Flat, crisp, no glow.
             PipBar(value: fraction * 100, segments: 20, tint: color, height: 8)
@@ -1418,15 +1423,22 @@ struct SleepView: View {
         let rest  = model.restorative
         let resp  = model.respiratory
         let debt  = model.sleepDebt
+        let days  = tileDays()
 
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             SectionHeader("Night detail", overline: "Metrics", trailing: String(localized: "vs typical"))
+            if let note = olderNightNote(days["perf"] ?? days["eff"]) {
+                Text("These figures are from the \(note), not last night.")
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.statusWarning)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             LazyVGrid(columns: tileColumns, alignment: .leading, spacing: NoopMetrics.gap) {
 
                 StatTile(
                     label: "Rest",
                     value: pctValue(perf.latest),
-                    caption: vsTypical(perf.latest, perf.typical, suffix: "%"),
+                    caption: nightCaption(vsTypical(perf.latest, perf.typical, suffix: "%"), day: days["perf"]),
                     accent: perf.latest.map { StrandPalette.recoveryColor($0) } ?? StrandPalette.textPrimary,
                     sparkline: spark(perf.series),
                     sparkColor: StrandPalette.restColor)
@@ -1434,7 +1446,7 @@ struct SleepView: View {
                 StatTile(
                     label: "Efficiency",
                     value: pctValue(eff.latest),
-                    caption: vsTypical(eff.latest, eff.typical, suffix: "%"),
+                    caption: nightCaption(vsTypical(eff.latest, eff.typical, suffix: "%"), day: days["eff"]),
                     accent: StrandPalette.statusPositive,
                     sparkline: spark(eff.series),
                     sparkColor: StrandPalette.statusPositive)
@@ -1442,7 +1454,7 @@ struct SleepView: View {
                 StatTile(
                     label: "Consistency",
                     value: pctValue(cons.latest),
-                    caption: vsTypical(cons.latest, cons.typical, suffix: "%"),
+                    caption: nightCaption(vsTypical(cons.latest, cons.typical, suffix: "%"), day: days["cons"]),
                     accent: cons.latest.map { StrandPalette.recoveryColor($0) } ?? StrandPalette.textPrimary,
                     sparkline: spark(cons.series),
                     sparkColor: StrandPalette.metricCyan)
@@ -1450,7 +1462,7 @@ struct SleepView: View {
                 StatTile(
                     label: "Hours vs Needed",
                     value: pctValue(need.latest),
-                    caption: vsTypical(need.latest, need.typical, suffix: "%"),
+                    caption: nightCaption(vsTypical(need.latest, need.typical, suffix: "%"), day: days["need"]),
                     accent: need.latest.map { StrandPalette.recoveryColor(min(100, $0)) } ?? StrandPalette.textPrimary,
                     sparkline: spark(need.series),
                     sparkColor: StrandPalette.restColor)
@@ -1458,7 +1470,7 @@ struct SleepView: View {
                 StatTile(
                     label: "Restorative",
                     value: pctValue(rest.latest),
-                    caption: vsTypical(rest.latest, rest.typical, suffix: "%"),
+                    caption: nightCaption(vsTypical(rest.latest, rest.typical, suffix: "%"), day: days["rest"]),
                     accent: StrandPalette.sleepREM,
                     sparkline: spark(rest.series),
                     sparkColor: StrandPalette.sleepREM)
@@ -1466,7 +1478,7 @@ struct SleepView: View {
                 StatTile(
                     label: "Respiratory",
                     value: rrValue(resp.latest),
-                    caption: vsTypical(resp.latest, resp.typical, suffix: " rpm", decimals: 1),
+                    caption: nightCaption(vsTypical(resp.latest, resp.typical, suffix: " rpm", decimals: 1), day: days["resp"]),
                     accent: StrandPalette.metricPurple,
                     sparkline: spark(resp.series),
                     sparkColor: StrandPalette.metricPurple)
@@ -1474,7 +1486,7 @@ struct SleepView: View {
                 StatTile(
                     label: "Sleep Debt",
                     value: debt.latest.map { durationText($0) } ?? "—",
-                    caption: debtCaption(debt.latest),
+                    caption: nightCaption(debtCaption(debt.latest), day: days["debt"]),
                     accent: debtColor(debt.latest),
                     sparkline: spark(debt.series),
                     sparkColor: StrandPalette.metricRose)
@@ -1580,7 +1592,7 @@ struct SleepView: View {
         // Per-stage typical means are computed ONCE in the model build (each a full pass
         // over repo.days) and read here.
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-            SectionHeader("Stages vs typical", overline: "Last night",
+            SectionHeader("Stages vs typical", overline: newestNightOverline(model),
                           trailing: String(localized: "hatch = typical"))
             NoopCard(tint: StrandPalette.restColor) {
                 VStack(alignment: .leading, spacing: NoopMetrics.space4) {
@@ -2047,8 +2059,7 @@ struct SleepView: View {
     @ViewBuilder
     private func nightNavHeader(trailing: String) -> some View {
         let lastIndex = max(navDays.count - 1, 0)
-        let title: LocalizedStringKey = nightOffset == 0 ? "Last night"
-            : (nightOffset == 1 ? "1 night ago" : "\(nightOffset) nights ago")
+        let title = nightTitle()
         VStack(alignment: .leading, spacing: NoopMetrics.cardInnerSpacing) {
             HStack(spacing: NoopMetrics.cardInnerSpacing) {
                 Button { if nightOffset < lastIndex { nightOffset += 1 } } label: {
@@ -2091,6 +2102,88 @@ struct SleepView: View {
     /// Mean of a per-stage minutes column across days with data.
     private func typicalStageMin(_ key: KeyPath<DailyMetric, Double?>) -> Double? {
         mean(repo.days.compactMap { $0[keyPath: key] }.filter { $0 > 0 })
+    }
+
+    // MARK: - Which night is this? (calendar nights, never a stored-row count)
+
+    /// The stored day key (`yyyy-MM-dd`) of a night that woke at `endTs`, in the user's time zone.
+    private func wakeDayKey(_ endTs: Int) -> String {
+        Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval(endTs)))
+    }
+
+    /// "Tue 10 Nov": weekday and date for a stored day key, in the user's language. Built from the key's
+    /// own year/month/day in the local calendar, so a time-zone offset can never move it to the next day.
+    private func nightDateText(_ dayKey: String) -> String {
+        let parts = dayKey.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3,
+              let date = Calendar.current.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
+        else { return dayKey }
+        return date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)
+            .locale(Locale.autoupdatingCurrent))
+    }
+
+    /// Calendar nights between a night's day key and today (0 = last night, 1 = the night before it...).
+    private func nightsAgo(_ dayKey: String) -> Int? {
+        DayFreshness.ageInDays(dayKey: dayKey, referenceKey: Repository.logicalDayKey(Date()))
+    }
+
+    /// nil when the night is last night (or its day cannot be read); else "night of Tue 10 Nov".
+    private func olderNightNote(_ dayKey: String?) -> String? {
+        guard let dayKey, let age = nightsAgo(dayKey), age > 0 else { return nil }
+        return String(localized: "night of \(nightDateText(dayKey))")
+    }
+
+    /// The header for the night the hypnogram shows. "Last night" only when it IS last night; the newest
+    /// banked night, when older, says which night it is (weekday and date); a browsed older night counts
+    /// calendar nights back from today, so a gap in the record never makes "1 night ago" a lie.
+    private func nightTitle() -> LocalizedStringKey {
+        let days = navDays
+        guard nightOffset >= 0, nightOffset < days.count, let block = days[nightOffset].last,
+              let age = nightsAgo(wakeDayKey(block.endTs)) else {
+            return nightOffset == 0 ? "Last night"
+                : (nightOffset == 1 ? "1 night ago" : "\(nightOffset) nights ago")
+        }
+        if age <= 0 { return "Last night" }
+        if nightOffset == 0 {
+            return LocalizedStringKey(String(localized: "Night of \(nightDateText(wakeDayKey(block.endTs)))"))
+        }
+        return age == 1 ? "1 night ago" : "\(age) nights ago"
+    }
+
+    /// The overline for sections that describe the newest night: "Last night" or which night it is.
+    private func newestNightOverline(_ model: SleepModel) -> LocalizedStringKey {
+        let key = wakeDayKey(model.night.session.endTs)
+        guard let age = nightsAgo(key), age > 0 else { return "Last night" }
+        return LocalizedStringKey(String(localized: "Night of \(nightDateText(key))"))
+    }
+
+    /// The day each Night-detail tile's "latest" figure comes from (newest banked day that has it), so a
+    /// tile whose figure is not from last night can say so.
+    private func tileDays() -> [String: String] {
+        let imported = repo.importedSleep
+        func newest(_ present: (DailyMetric) -> Bool) -> String? { repo.days.last(where: present)?.day }
+        var out: [String: String] = [:]
+        out["perf"] = newest { d in
+            if imported[d.day]?.performancePct != nil { return true }
+            return AnalyticsEngine.Rest.composite(daily: d).map { $0.isFinite } ?? false
+        }
+        out["eff"] = newest { $0.efficiency != nil }
+        out["cons"] = repo.days.last(where: { imported[$0.day]?.consistencyPct != nil })?.day
+            ?? repo.sleeps.last.map { wakeDayKey($0.endTs) }
+        out["need"] = newest { ($0.totalSleepMin ?? 0) > 0 }
+        out["rest"] = newest { d in
+            guard d.deepMin != nil, d.remMin != nil, let asleep = d.totalSleepMin else { return false }
+            return asleep > 0
+        }
+        out["resp"] = newest { $0.respRateBpm != nil }
+        out["debt"] = newest { imported[$0.day]?.debtMin != nil || ($0.totalSleepMin ?? 0) > 0 }
+        return out
+    }
+
+    /// A tile caption with the tile's night appended when that figure is not from last night.
+    private func nightCaption(_ base: String, day: String?) -> String {
+        guard let day, let age = nightsAgo(day), age > 0 else { return base }
+        return "\(base) · \(nightDateText(day))"
     }
 
     // MARK: - Per-tile series (latest, typical mean, sparkline history)

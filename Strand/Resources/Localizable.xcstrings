@@ -142297,6 +142297,236 @@
           }
         }
       }
+    },
+    "%lld days ago": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld giorni fa"
+          }
+        }
+      }
+    },
+    "As of %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dato di %@"
+          }
+        }
+      }
+    },
+    "%@ / 3": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ / 3"
+          }
+        }
+      }
+    },
+    "vs your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rispetto al tuo solito"
+          }
+        }
+      }
+    },
+    "%@° vs your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@° rispetto al tuo solito"
+          }
+        }
+      }
+    },
+    "Skin temperature is shown as the change from your usual night, not as a temperature: your wrist temperature depends on the surroundings, so the change from your usual is what matters.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La temperatura cutanea è mostrata come variazione rispetto alla tua notte abituale, non come temperatura: quella del polso dipende dall'ambiente, quindi conta la variazione rispetto al tuo solito."
+          }
+        }
+      }
+    },
+    "Swipe": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scorri"
+          }
+        }
+      }
+    },
+    "Tap": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tocca"
+          }
+        }
+      }
+    },
+    "Your age": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua età"
+          }
+        }
+      }
+    },
+    "Biological sex": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sesso biologico"
+          }
+        }
+      }
+    },
+    "Recent activity": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attività recente"
+          }
+        }
+      }
+    },
+    "Height & weight": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Altezza e peso"
+          }
+        }
+      }
+    },
+    "Set": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impostato"
+          }
+        }
+      }
+    },
+    "Add it in Settings": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungila in Impostazioni"
+          }
+        }
+      }
+    },
+    "Add to also see VO₂max": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungili per vedere anche il VO₂max"
+          }
+        }
+      }
+    },
+    "Sharpens VO₂max": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Affina il VO₂max"
+          }
+        }
+      }
+    },
+    "Optional - sharpens VO₂max": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Facoltativo - affina il VO₂max"
+          }
+        }
+      }
+    },
+    "%lld of last 7 nights": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld delle ultime 7 notti"
+          }
+        }
+      }
+    },
+    "%lld of last 7 days": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld degli ultimi 7 giorni"
+          }
+        }
+      }
+    },
+    "Night of %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notte di %@"
+          }
+        }
+      }
+    },
+    "night of %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "notte di %@"
+          }
+        }
+      }
+    },
+    "asleep, %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dormito, %@"
+          }
+        }
+      }
+    },
+    "These figures are from the %@, not last night.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questi valori si riferiscono alla %@, non a ieri notte."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
