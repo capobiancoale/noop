@@ -86,8 +86,13 @@ struct BodyVitalReading: Identifiable {
         }
     }
 
+    /// "Today", "Yesterday", "3 days ago" or a short date: the day wording comes from the one shared
+    /// freshness helper so every screen says how old a value is the same way.
     static func dayLabel(_ day: String) -> String {
-        if day == BodyVitalSigns.logicalDayKey(Date()) { return String(localized: "Today") }
+        let today = BodyVitalSigns.logicalDayKey(Date())
+        if day == today { return String(localized: "Today") }
+        if DayFreshness.label(dayKey: day, referenceKey: today) == .yesterday { return String(localized: "Yesterday") }
+        if let caption = TodayView.freshnessCaption(dayKey: day, referenceKey: today) { return caption }
         guard let date = BodyVitalSigns.dayParser.date(from: day) else { return day }
         return BodyVitalSigns.dayFormatter.string(from: date)
     }
@@ -178,12 +183,17 @@ enum BodyVitalSigns {
         // Resolve the skin-temp label + converter once, honouring the °C/°F preference. An ABSOLUTE
         // reading uses the full C→F formula (×9/5 + 32); a ±DEVIATION must omit the offset.
         let skinUnitLabel = UnitFormatter.temperatureUnit(temperatureUnit)
+        // The on-device figure is the CHANGE from the user's own usual night, not a temperature: it reads
+        // "+0,1° vs your usual" (signed, with the words), never a bare "0,1 °C" that looks like a reading.
         let skinFormat: (Double) -> String = { c in
-            let full = skinIsAbsolute
-                ? UnitFormatter.temperatureFromCelsius(c, unit: temperatureUnit, decimals: 1)
-                : UnitFormatter.temperatureDeltaFromCelsius(c, unit: temperatureUnit, decimals: 1)
-            return full.replacingOccurrences(of: " " + skinUnitLabel, with: "")
+            if skinIsAbsolute {
+                return UnitFormatter.temperatureFromCelsius(c, unit: temperatureUnit, decimals: 1)
+                    .replacingOccurrences(of: " " + skinUnitLabel, with: "")
+            }
+            let delta = temperatureUnit == .fahrenheit ? c * 9.0 / 5.0 : c
+            return DisplayNumber.signed(delta, digits: 1) + "°"
         }
+        let skinUnitText = skinIsAbsolute ? skinUnitLabel : String(localized: "vs your usual")
 
         return [
             BodyVitalReading(
@@ -263,7 +273,7 @@ enum BodyVitalSigns {
             BodyVitalReading(
                 key: "skin",
                 label: String(localized: "Skin Temp"),
-                unit: skinUnitLabel,
+                unit: skinUnitText,
                 value: skin,
                 format: skinFormat,
                 banding: skinResult,

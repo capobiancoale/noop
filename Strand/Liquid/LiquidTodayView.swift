@@ -41,6 +41,13 @@ struct LiquidTodayView: View {
     @State private var fitnessAge: Double?         // exploreSeries("fitness_age").last
     @State private var vitality: Double?           // exploreSeries("vitality").last
     @State private var stepsEst: Double?           // steps_est, day-keyed to the selected day (fallback)
+    // The day each multi-day-series value actually comes from, so a value that is not the selected day's
+    // is captioned with its own day ("yesterday", "2 days ago", a short date) instead of reading as today's.
+    @State private var stressDay: String?
+    @State private var fitnessAgeDay: String?
+    @State private var vitalityDay: String?
+    @State private var stepsEstDay: String?
+    @State private var restScoreDay: String?
     @State private var hrValues: [Double] = []     // hrBuckets since midnight → 5-min means
     @State private var workouts: [WorkoutRow] = [] // newest-first
     @State private var sparks: [String: [Double]] = [:]  // KEY METRICS 14-day trend series, computed once in load()
@@ -548,7 +555,7 @@ struct LiquidTodayView: View {
                 HeroScoreCell(label: "Effort", caption: Text("strain"), score: displayDay?.strain,
                               tint: StrandPalette.effortColor,
                               pill: nil, animated: dataLoaded, onGuide: { guideSection = .effort })
-                HeroScoreCell(label: "Rest", caption: Text("sleep"), score: restScore,
+                HeroScoreCell(label: "Rest", caption: restCaption, score: restScore,
                               tint: StrandPalette.restColor,
                               pill: nil, animated: dataLoaded, onGuide: { guideSection = .rest })
             }
@@ -851,13 +858,16 @@ struct LiquidTodayView: View {
         switch card {
         case .stress:
             cardLink(dest: StressView(), title: card.title, sub: card.subtitle,
-                     value: stressText, tint: StrandPalette.accent, frac: fracOver(stress, 3))
+                     value: stressText, tint: StrandPalette.accent, frac: fracOver(stress, 3),
+                     note: staleNote(stress == nil ? nil : stressDay))
         case .fitnessAge:
             cardLink(dest: metricDetail("fitness_age"), title: card.title, sub: card.subtitle,
-                     value: unitText(fitnessAge, card.unit), tint: StrandPalette.chargeColor, frac: 0.5)
+                     value: unitText(fitnessAge, card.unit), tint: StrandPalette.chargeColor, frac: 0.5,
+                     note: staleNote(fitnessAge == nil ? nil : fitnessAgeDay))
         case .vitality:
             cardLink(dest: metricDetail("vitality"), title: card.title, sub: card.subtitle,
-                     value: intText(vitality), tint: liquidPurple, frac: frac(vitality))
+                     value: intText(vitality), tint: liquidPurple, frac: frac(vitality),
+                     note: staleNote(vitality == nil ? nil : vitalityDay))
         case .hrv:
             cardLink(dest: metricDetail("hrv"), title: card.title, sub: card.subtitle,
                      value: unitText(displayDay?.avgHrv, card.unit), tint: StrandPalette.metricCyan,
@@ -872,7 +882,8 @@ struct LiquidTodayView: View {
                      tint: StrandPalette.accent, frac: fracOver(displayDay?.respRateBpm, 24))
         case .steps:
             cardLink(dest: metricDetail("steps_est"), title: card.title, sub: card.subtitle,
-                     value: stepsText, tint: StrandPalette.metricCyan, frac: fracOver(stepCount, 10000))
+                     value: stepsText, tint: StrandPalette.metricCyan, frac: fracOver(stepCount, 10000),
+                     note: stepsNote)
         case .bloodOxygen:
             // Not wired to a real read yet — render EMPTY (not half-full) so it doesn't imply a reading.
             cardLink(dest: metricDetail("spo2"), title: card.title, sub: card.subtitle,
@@ -909,14 +920,17 @@ struct LiquidTodayView: View {
     }
 
     private func cardLink<Dest: View>(dest: Dest, title: String, sub: String,
-                                      value: String, tint: Color, frac: Double?) -> some View {
+                                      value: String, tint: Color, frac: Double?,
+                                      note: String? = nil) -> some View {
         NavigationLink { dest } label: {
             HStack(spacing: 12) {
                 LiquidVessel(value: frac, tint: tint, animated: false).frame(width: 30, height: 30)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title.uppercased()).font(StrandFont.overlineScaled(11)).tracking(1.0)
                         .foregroundStyle(StrandPalette.textPrimary)
-                    Text(sub).font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                    Text(note.map { "\(sub) · \($0)" } ?? sub)
+                        .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                        .lineLimit(2)
                 }
                 Spacer(minLength: 8)
                 Text(value).font(StrandFont.number(17)).foregroundStyle(StrandPalette.textPrimary)
@@ -1573,6 +1587,8 @@ struct LiquidTodayView: View {
         // the rollover while Recovery/Strain/Sleep stay strictly today's own (they are scored surfaces).
         let hrv = displayDay?.avgHrv ?? vitalsDay?.avgHrv
         let rhr = (displayDay?.restingHr ?? vitalsDay?.restingHr).map(Double.init)
+        let hrvNote = displayDay?.avgHrv == nil && vitalsDay?.avgHrv != nil ? staleNote(vitalsDay?.day) : nil
+        let rhrNote = displayDay?.restingHr == nil && vitalsDay?.restingHr != nil ? staleNote(vitalsDay?.day) : nil
         return VStack(spacing: 8) {
             sectionHead("KEY METRICS", trailing: Text("14-day trend"))
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
@@ -1581,9 +1597,9 @@ struct LiquidTodayView: View {
                 ktile(Text(verbatim: "Charge"), intText(displayDay?.recovery), "%", StrandPalette.chargeColor, frac(displayDay?.recovery), spark: sparks["recovery"] ?? [], alias: Text("recovery"))
                 ktile(Text(verbatim: "Effort"), intText(displayDay?.strain), "", StrandPalette.effortColor, frac(displayDay?.strain), spark: sparks["strain"] ?? [])
                 ktile(Text("Sleep"), sleepText, "", StrandPalette.restColor, fracOver(displayDay?.totalSleepMin, 480), spark: sparks["sleep"] ?? [])
-                ktile(Text(verbatim: "HRV"), intText(hrv), "ms", StrandPalette.metricCyan, fracOver(hrv, 120), spark: sparks["hrv"] ?? [])
-                ktile(Text("Rest HR"), intText(rhr), "bpm", StrandPalette.metricRose, fracOver(rhr, 100), spark: sparks["rhr"] ?? [])
-                ktile(Text("Steps"), stepsText, "", StrandPalette.chargeColor, fracOver(stepCount, 10000), spark: sparks["steps"] ?? [])
+                ktile(Text(verbatim: "HRV"), intText(hrv), "ms", StrandPalette.metricCyan, fracOver(hrv, 120), spark: sparks["hrv"] ?? [], note: hrvNote)
+                ktile(Text("Rest HR"), intText(rhr), "bpm", StrandPalette.metricRose, fracOver(rhr, 100), spark: sparks["rhr"] ?? [], note: rhrNote)
+                ktile(Text("Steps"), stepsText, "", StrandPalette.chargeColor, fracOver(stepCount, 10000), spark: sparks["steps"] ?? [], note: stepsNote)
             }
             NavigationLink { MetricExplorerView() } label: {
                 Text("Show all metrics").font(StrandFont.subhead).foregroundStyle(StrandPalette.accent)
@@ -1599,7 +1615,8 @@ struct LiquidTodayView: View {
     }
 
     private func ktile(_ label: Text, _ value: String, _ unit: String, _ tint: Color,
-                       _ frac: Double?, spark: [Double] = [], alias: Text? = nil) -> some View {
+                       _ frac: Double?, spark: [Double] = [], alias: Text? = nil,
+                       note: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 3) {
                 label.font(StrandFont.overlineScaled(9)).tracking(1.2)
@@ -1623,6 +1640,11 @@ struct LiquidTodayView: View {
                 .foregroundStyle(StrandPalette.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+            if let note {
+                // Which day this value is from, when it is not the day shown.
+                Text(note).font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+            }
             // A 14-day sparkline when there's enough history (the "14-day trend" the header promises),
             // else the single-value tube for metrics without a series yet.
             if spark.count >= 2 {
@@ -1781,6 +1803,7 @@ struct LiquidTodayView: View {
             todayValue: restByDay[selectedDayKey], lastDay: restSeries.last?.day,
             lastValue: restSeries.last?.value, isTodaySelected: selectedDayOffset == 0,
             todayKey: selectedDayKey)
+        restScoreDay = restScore == nil ? nil : (restByDay[selectedDayKey] != nil ? selectedDayKey : restSeries.last?.day)
         // StressModel loops the full history to build its baseline — run it OFF the main actor so a big
         // history doesn't stutter the UI. Snapshot the inputs (value types) into the detached task.
         let storedStress = await stressA
@@ -1788,14 +1811,20 @@ struct LiquidTodayView: View {
         stress = await Task.detached(priority: .utility) {
             StressModel(days: daysSnapshot, stored: storedStress)?.score
         }.value
-        fitnessAge = (await fitA).last?.value   // history-wide latest banked (not day-scoped)
-        vitality = (await vitA).last?.value
+        let fitLast = (await fitA).last   // history-wide latest banked (not day-scoped)
+        fitnessAge = fitLast?.value
+        fitnessAgeDay = fitLast?.day
+        let vitLast = (await vitA).last
+        vitality = vitLast?.value
+        vitalityDay = vitLast?.day
+        stressDay = daysSnapshot.last?.day
         // Steps is a DAILY metric, so key it to the SELECTED day (like restScore above), not the history-wide
         // latest. Without this, swiping to a past day with no strap step count showed today's estimate (the
         // `.last` value) instead of that day's. Mirrors the classic Today's stepsEstByDay[selectedDayKey].
         let stepsSeries = await stepsA
         let stepsByDay = Dictionary(stepsSeries.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
         stepsEst = stepsByDay[selectedDayKey] ?? (selectedDayOffset == 0 ? stepsSeries.last.flatMap { $0.day >= freshCutoff ? $0.value : nil } : nil)
+        stepsEstDay = stepsEst == nil ? nil : (stepsByDay[selectedDayKey] != nil ? selectedDayKey : stepsSeries.last?.day)
         let hrBucketsDay = await hrA
         hrValues = hrBucketsDay.map { $0.bpm }
         workouts = await wkA
@@ -1934,7 +1963,30 @@ struct LiquidTodayView: View {
         return unit.isEmpty ? n : "\(n) \(unit)"
     }
 
-    private var stressText: String { stress.map { String(Int($0.rounded())) } ?? "Calibrating" }
+    /// Stress is a 0-3 score: one decimal and the scale ("1,4 / 3"), never a rounded integer that turns 0.4 into 0.
+    private var stressText: String {
+        guard let s = stress else { return String(localized: "Calibrating") }
+        return String(localized: "\(DisplayNumber.decimal(s, digits: 1)) / 3")
+    }
+
+    /// Caption for a value read from a multi-day series: nil when it is the selected day's own, else its day
+    /// relative to the real today ("yesterday", "2 days ago", a short date), through the one shared helper.
+    private func staleNote(_ valueDay: String?) -> String? {
+        guard let valueDay else { return nil }
+        return TodayView.valueDayNote(valueDay: valueDay, selectedDay: selectedDayKey)
+    }
+
+    /// The steps caption: only when the number is not the selected day's own strap count (the estimate
+    /// fallback can come from an earlier day).
+    private var stepsNote: String? {
+        displayDay?.steps == nil ? staleNote(stepsEstDay) : nil
+    }
+
+    /// The Rest hero's small caption: "sleep", plus the night's day when the score is carried from another day.
+    private var restCaption: Text {
+        guard let note = staleNote(restScoreDay) else { return Text("sleep") }
+        return Text(verbatim: "\(String(localized: "sleep")) · \(note)")
+    }
 
     private var sleepText: String {
         guard let m = displayDay?.totalSleepMin else { return "–" }
