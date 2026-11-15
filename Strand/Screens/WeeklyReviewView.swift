@@ -400,7 +400,7 @@ struct WeeklyReviewView: View {
 
     static func rangeText(start: String, end: String) -> String {
         guard let a = date(start), let b = date(end), a <= b else { return start }
-        return (a...b).formatted(.interval.month(.abbreviated).day())
+        return (a..<b.addingTimeInterval(1)).formatted(.interval.month(.abbreviated).day())
     }
 
     /// A "yyyy-MM-dd" key as a local date (noon, so a time-zone change cannot move the day).
