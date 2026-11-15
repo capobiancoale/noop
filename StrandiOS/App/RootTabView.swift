@@ -298,6 +298,7 @@ struct RootTabView: View {
                            onRefresh: { await repo.refresh() },
                            topBackground: liquidScaffoldSky()) {
                 moreSection("Insights") {
+                    MoreRow("Your Week", "calendar") { WeeklyReviewView() }
                     MoreRow("What Moves You", "wand.and.sparkles") { InsightsHubView() }
                     MoreRow("Intelligence", "brain.head.profile") { IntelligenceView() }
                     MoreRow("Coach", "sparkles") { CoachView() }
