@@ -394,6 +394,8 @@ final class AppModel: ObservableObject {
             // One-shot full rescores (the edited-night fix, the PSG-calibrated staging): recompute every day
             // with raw data once, so older days get their own night and the calibrated stages.
             await self.intelligence.runPendingFullRescores()
+            // Opt-in old-data compaction: inert unless the user pressed "Compact now" before (see CompactionPrefs).
+            await self.runDailyCompactionIfDue()
             while !Task.isCancelled {
                 // #547 RE-POLLUTION: a sync since the last tick may have armed a re-heal (its ingest gate
                 // dropped bad-clock records). `runTimestampHealIfNeeded` honours the pending flag even after
@@ -1909,6 +1911,60 @@ final class AppModel: ObservableObject {
         Self.purgeImportTemp()
         if let store = await repo.storeHandle() { try? await store.checkpointWAL() }
         return await storageReport()
+    }
+
+    // MARK: - Old sensor data compaction (opt-in, StorageView)
+
+    /// Dry run: how many old heart-rate rows would be removed for `keepDays` and roughly how much space they
+    /// take. Writes nothing. nil when there is no store, no cutoff (Never) or the store refused.
+    func previewCompaction(keepDays: Int) async -> StreamCompactionReport? {
+        guard let cutoff = CompactionPrefs.cutoff(now: Date(), keepDays: keepDays),
+              let store = await repo.storeHandle() else { return nil }
+        return try? await store.compactOldStreams(cutoff: cutoff, dryRun: true)
+    }
+
+    /// The real run, started ONLY by the user's "Compact now" (or the gated daily hook below). Refuses while
+    /// the engine guard is missing. Records the finished cutoff in UserDefaults; returns nil when refused or
+    /// the store threw (an error rolls back only the current day-sized window).
+    func compactOldSensorData(keepDays: Int, manual: Bool, skipBefore: Int? = nil,
+                              progress: (@Sendable (Int, Int) -> Void)? = nil) async -> CompactionRunSummary? {
+        guard CompactionPrefs.engineGuardInstalled,
+              let cutoff = CompactionPrefs.cutoff(now: Date(), keepDays: keepDays),
+              let store = await repo.storeHandle() else { return nil }
+        let before = await store.databaseFileSizeBytes()
+        guard let report = try? await store.compactOldStreams(cutoff: cutoff, skipBefore: skipBefore,
+                                                              progress: progress) else { return nil }
+        if report.finished, let done = report.completedUpTo {
+            CompactionPrefs.recordFinishedRun(cutoff: done)
+        }
+        let after = await store.databaseFileSizeBytes()
+        let reclaimable = await store.reclaimableBytes()
+        return CompactionRunSummary(rowsRemoved: report.rowsRemoved, finished: report.finished,
+                                    dbBefore: before, dbAfter: after, reclaimableAfter: reclaimable)
+    }
+
+    /// Bytes SQLite could hand back to the OS after a VACUUM (free pages).
+    func reclaimableDatabaseBytes() async -> Int64? {
+        await repo.storeHandle()?.reclaimableBytes()
+    }
+
+    /// The explicit "Reclaim space" action (VACUUM). Never automatic.
+    func reclaimDatabaseSpace() async -> ReclaimOutcome? {
+        guard let store = await repo.storeHandle() else { return nil }
+        return try? await store.reclaimSpace()
+    }
+
+    /// The single launch hook: at most one compaction per day, only if the user compacted by hand before and
+    /// left the setting on, and only while the strap is not syncing or an import running. The run itself
+    /// executes on the WhoopStore actor (off the main actor), day by day, and stops between days on
+    /// cancellation. `live.backfilling` (the offload in progress) is how the app knows a sync is running.
+    func runDailyCompactionIfDue() async {
+        let now = Date()
+        guard CompactionPrefs.autoRunDue(now: now),
+              !live.backfilling, !hasActiveImport else { return }
+        CompactionPrefs.markAutoRunAttempt(now: now)
+        _ = await compactOldSensorData(keepDays: CompactionPrefs.keepFullResolutionDays(), manual: false,
+                                       skipBefore: CompactionPrefs.lastCompactedCutoff())
     }
 
     /// Remove NOOP's stranded `noop-*` temp scratch (import copies, the multi-GB `noop-health-*`
