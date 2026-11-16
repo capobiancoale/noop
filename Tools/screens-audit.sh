@@ -50,13 +50,13 @@ launch
 sleep 45
 shot "00-first-launch"
 
-SCREENS="liquidtoday trends sleep workouts wodlog strength coach intelligence insightshub insights explore compare health stress \
+SCREENS="liquidtoday trends sleep workouts wodlog strength progress coach intelligence insightshub insights explore compare health stress \
 applehealth vo2max weeklydigest settings devices datasources fullday scoringguide labbook coupled breathing intervals \
 smartalarm automations storage backup today hraccuracy wodimport"
 
 for appearance in dark light; do
   xcrun simctl ui "$UDID" appearance "$appearance"
-  for tab in 0 1 2 3; do
+  for tab in 0 1 2 3 4; do
     launch --demo-tab "$tab"; sleep 9; shot "$appearance-tab$tab"
   done
   pages="0 1 2 3"
