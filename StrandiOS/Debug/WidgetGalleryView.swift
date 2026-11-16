@@ -132,12 +132,11 @@ struct WidgetGalleryView: View {
     private func content(_ family: WidgetFamily, entry: NOOPEntry, plan: Bool) -> some View {
         Group {
             if plan {
-                NOOPPlanWidgetView(entry: entry)
+                NOOPPlanWidgetView(entry: entry, familyOverride: family)
             } else {
-                NOOPWidgetView(entry: entry)
+                NOOPWidgetView(entry: entry, familyOverride: family)
             }
         }
-        .environment(\.widgetFamily, family)
     }
 
     /// A Home Screen widget: a rounded card of the real point size with the usual 16 pt content margin.
