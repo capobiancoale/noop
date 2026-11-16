@@ -41,9 +41,12 @@ public enum CoachContext {
     }
 
     /// "Profile: age 35, male, 80.0 kg, 180 cm, max heart rate 190 bpm, goal: performance." Unknown (<= 0) parts
-    /// are left out; the goal is always there. `sex` is written as given (empty is left out).
+    /// are left out; the goal is always there. `sex` is written as given (empty is left out). With a `schedule`
+    /// the line ends with how the athlete trains, e.g. ", trains Monday, Wednesday, Friday (learned from his
+    /// last 8 weeks), usually at 19:00 (his setting), about 60 min per session (learned)".
     public static func profileLine(age: Int, sex: String, weightKg: Double, heightCm: Double,
-                                   maxHR: Int, goal: DayPlan.Goal) -> String? {
+                                   maxHR: Int, goal: DayPlan.Goal,
+                                   schedule: TrainingPattern.Schedule? = nil) -> String? {
         var parts: [String] = []
         if age > 0 { parts.append("age \(age)") }
         let s = sex.trimmingCharacters(in: .whitespaces)
@@ -52,7 +55,24 @@ public enum CoachContext {
         if heightCm > 0 { parts.append("\(f0(heightCm)) cm") }
         if maxHR > 0 { parts.append("max heart rate \(maxHR) bpm") }
         parts.append("goal: \(goalName(goal))")
+        if let schedule { parts.append(contentsOf: scheduleParts(schedule)) }
         return "Profile: " + parts.joined(separator: ", ") + "."
+    }
+
+    static let weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+
+    static func scheduleParts(_ s: TrainingPattern.Schedule) -> [String] {
+        func source(_ learned: Bool) -> String { learned ? "learned from his last 8 weeks" : "his own setting" }
+        var parts: [String] = []
+        if let days = s.weekdays, !days.isEmpty {
+            let names = days.filter { (1...7).contains($0) }.sorted().map { weekdayNames[$0 - 1] }
+            parts.append("trains \(names.joined(separator: ", ")) (\(source(s.daysLearned)))")
+        } else {
+            parts.append("trains \(s.daysPerWeek) days a week (\(source(false)); which days is not known)")
+        }
+        if let start = s.startMinutes { parts.append("usually at \(hhmm(start)) (\(source(s.startLearned)))") }
+        if let len = s.sessionMinutes { parts.append("about \(len) min per session (\(source(s.durationLearned)))") }
+        return parts
     }
 
     static func goalName(_ g: DayPlan.Goal) -> String {
@@ -78,10 +98,36 @@ public enum CoachContext {
         var t = "Training: \(level)."
         let reasons = plan.reasons.map(reasonText)
         if !reasons.isEmpty { t += " Because: " + reasons.joined(separator: "; ") + "." }
+        if plan.isRestDay {
+            t += " BUT today is a rest day by the athlete's own schedule, so this level only applies if he trains anyway."
+        }
         lines.append(t)
+
+        if let schedule = plan.schedule {
+            lines.append("Schedule: " + scheduleParts(schedule).joined(separator: ", ") + ".")
+        }
+        if let pre = plan.preSession {
+            lines.append("Session today at \(hhmm(pre.startMinutes)): main meal by \(hhmm(pre.mealFromMinutes))-\(hhmm(pre.mealToMinutes))"
+                + " (about 3 h before is general sports-nutrition guidance; carbohydrate amounts stay the daily range below, never insulin).")
+        }
+        if let tomorrow = plan.trainsTomorrow {
+            if tomorrow {
+                var l = "Tomorrow: a training session is planned"
+                if let start = plan.sessionStartMinutes { l += " (usually around \(hhmm(start)))" }
+                lines.append(l + ".")
+            } else {
+                lines.append("Tomorrow: rest day by the athlete's schedule.")
+            }
+        }
 
         var sleep = "Sleep tonight: \(hours(Double(plan.sleep.minutes))) h (\(plan.sleep.minutes) min)"
         if let b = plan.sleep.bedtimeMinutes { sleep += ", bedtime around \(hhmm(b))" }
+        for r in plan.sleep.reasons {
+            switch r {
+            case .trainingTomorrow(let added):
+                sleep += ", including \(added) min extra because he trains tomorrow and today's Charge is below his own median"
+            }
+        }
         lines.append(sleep + ".")
 
         if let n = plan.nutrition {
@@ -94,7 +140,23 @@ public enum CoachContext {
         if !plan.focus.isEmpty {
             lines.append("Focus: " + plan.focus.map(focusText).joined(separator: "; ") + ".")
         }
+        if let line = thresholdsLine(plan.thresholds) { lines.append(line) }
         return lines.joined(separator: "\n")
+    }
+
+    /// Whether the training level came from the athlete's own thresholds or the standard ones.
+    static func thresholdsLine(_ t: DayPlan.ThresholdInfo?) -> String? {
+        guard let t else { return nil }
+        var parts: [String]
+        if t.isPersonal, let push = t.pushAbove, let easy = t.easyBelow {
+            parts = ["personal, from \(t.chargeDays) days of his own Charge (push above \(f0(push)), easy below \(f0(easy)))"]
+        } else {
+            parts = ["standard (push from Charge 67, easy under 34); personal ones in about \(t.daysUntilPersonal) days"
+                + " (\(t.chargeDays) days of Charge so far)"]
+        }
+        if let m = t.shortNightMinutes { parts.append("short night = under \(hours(Double(m))) h (his own)") }
+        else { parts.append("short night = under 6 h or 70% of the need (standard)") }
+        return "Thresholds: " + parts.joined(separator: "; ") + "."
     }
 
     static func reasonText(_ r: DayPlan.Reason) -> String {

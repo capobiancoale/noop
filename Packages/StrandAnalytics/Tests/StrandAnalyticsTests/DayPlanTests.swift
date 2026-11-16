@@ -353,4 +353,170 @@ final class DayPlanTests: XCTestCase {
         if case .hrvDown = rest[1] {} else { XCTFail("\(rest)") }
         if case .restingHrUp = rest[2] {} else { XCTFail("\(rest)") }
     }
+
+    // MARK: Schedule
+
+    /// 20 earlier days with Charge 60, then today with `charge`: the user's own median is 60.
+    func historyDays(todayCharge: Double?, back: ClosedRange<Int> = 1...20) -> [DailyMetric] {
+        back.map { row($0, charge: 60) } + [row(0, charge: todayCharge, sleep: 480)]
+    }
+
+    func scheduled(days: [DailyMetric], debt: Double? = 0, today t: Bool? = nil, tomorrow: Bool? = nil,
+                   start: Int? = nil, thresholds: PersonalThresholds.Result? = nil,
+                   wakeTarget: Int? = nil) -> DayPlan.Plan {
+        var i = inputs(days: days, debt: debt, wakeTarget: wakeTarget)
+        i.trainsToday = t; i.trainsTomorrow = tomorrow; i.sessionStartMinutes = start; i.thresholds = thresholds
+        return DayPlan.make(i)
+    }
+
+    func testRestDayKeepsLevelButFlagsIt() {
+        let p = scheduled(days: [row(0, charge: 80, sleep: 480)], today: false)
+        XCTAssertTrue(p.isRestDay)
+        XCTAssertEqual(p.training, .push)
+        XCTAssertEqual(p.reasons, [.chargeHigh(80)])
+        XCTAssertNil(p.preSession)
+        // fed as an easy day: same ranges as a real easy day with the same profile
+        let easy = scheduled(days: [row(0, charge: 20, sleep: 480)])
+        XCTAssertEqual(p.nutrition, easy.nutrition)
+        XCTAssertNotEqual(p.nutrition, scheduled(days: [row(0, charge: 80, sleep: 480)]).nutrition)
+    }
+
+    func testNoScheduleBehavesAsBefore() {
+        for t in [nil, true] as [Bool?] {
+            let p = scheduled(days: [row(0, charge: 80, sleep: 480)], today: t)
+            XCTAssertFalse(p.isRestDay)
+            XCTAssertEqual(p.training, .push)
+        }
+        let p = scheduled(days: [row(0, charge: 80, sleep: 480)])
+        XCTAssertNil(p.preSession); XCTAssertNil(p.trainsTomorrow); XCTAssertNil(p.thresholds)
+        XCTAssertEqual(p.sleep.reasons, [])
+    }
+
+    func testPreSessionMealWindow() {
+        let d = [row(0, charge: 50, sleep: 480)]
+        let at19 = scheduled(days: d, today: true, start: 19 * 60)
+        XCTAssertEqual(at19.preSession, DayPlan.PreSession(startMinutes: 1140, mealFromMinutes: 960, mealToMinutes: 990))
+        XCTAssertEqual(at19.sessionStartMinutes, 1140)
+        let at20 = scheduled(days: d, today: true, start: 20 * 60)
+        XCTAssertEqual(at20.preSession, DayPlan.PreSession(startMinutes: 1200, mealFromMinutes: 1020, mealToMinutes: 1050))
+        let early = scheduled(days: d, today: true, start: 60)
+        XCTAssertEqual(early.preSession?.mealFromMinutes, 1320)
+        XCTAssertEqual(early.preSession?.mealToMinutes, 1350)
+        XCTAssertNil(scheduled(days: d, today: true, start: nil).preSession)
+        XCTAssertNil(scheduled(days: d, today: false, start: 19 * 60).preSession)
+        XCTAssertNil(scheduled(days: d, today: nil, start: 19 * 60).preSession)
+        XCTAssertNil(scheduled(days: d, today: true, start: 1440).preSession)
+    }
+
+    func testTrainingTomorrowAddsThirtyWhenChargeBelowOwnMedian() {
+        let p = scheduled(days: historyDays(todayCharge: 50), tomorrow: true)
+        XCTAssertEqual(p.sleep.minutes, 510)
+        XCTAssertEqual(p.sleep.reasons, [.trainingTomorrow(addedMinutes: 30)])
+        XCTAssertEqual(p.trainsTomorrow, true)
+        // with a wake target the bedtime moves 30 min earlier too
+        let withWake = scheduled(days: historyDays(todayCharge: 50), tomorrow: true, wakeTarget: 7 * 60)
+        let without = scheduled(days: historyDays(todayCharge: 50), tomorrow: false, wakeTarget: 7 * 60)
+        XCTAssertEqual(without.sleep.bedtimeMinutes, 7 * 60 - 480 - 15 + 1440)
+        XCTAssertEqual(withWake.sleep.bedtimeMinutes, without.sleep.bedtimeMinutes! - 30)
+    }
+
+    func testTrainingTomorrowIsCappedWithTheDebtRule() {
+        let some = scheduled(days: historyDays(todayCharge: 50), debt: 45, tomorrow: true)
+        XCTAssertEqual(some.sleep.minutes, 540)                      // 480 + 60, not 480 + 75
+        XCTAssertEqual(some.sleep.reasons, [.trainingTomorrow(addedMinutes: 15)])
+        let full = scheduled(days: historyDays(todayCharge: 50), debt: 60, tomorrow: true)
+        XCTAssertEqual(full.sleep.minutes, 540)
+        XCTAssertEqual(full.sleep.reasons, [])                       // nothing added: no reason
+        let huge = scheduled(days: historyDays(todayCharge: 50), debt: 300, tomorrow: true)
+        XCTAssertEqual(huge.sleep.minutes, 540)
+        let thirty = scheduled(days: historyDays(todayCharge: 50), debt: 30, tomorrow: true)
+        XCTAssertEqual(thirty.sleep.minutes, 540)
+        XCTAssertEqual(thirty.sleep.reasons, [.trainingTomorrow(addedMinutes: 30)])
+    }
+
+    func testTrainingTomorrowNeedsAllItsConditions() {
+        // Charge equal to / above the median
+        XCTAssertEqual(scheduled(days: historyDays(todayCharge: 60), tomorrow: true).sleep.minutes, 480)
+        XCTAssertEqual(scheduled(days: historyDays(todayCharge: 75), tomorrow: true).sleep.minutes, 480)
+        // not training tomorrow, or unknown
+        XCTAssertEqual(scheduled(days: historyDays(todayCharge: 50), tomorrow: false).sleep.minutes, 480)
+        XCTAssertEqual(scheduled(days: historyDays(todayCharge: 50), tomorrow: nil).sleep.minutes, 480)
+        // today's Charge unknown
+        XCTAssertEqual(scheduled(days: historyDays(todayCharge: nil), tomorrow: true).sleep.minutes, 480)
+        // fewer than 14 days of history: no own median
+        XCTAssertEqual(scheduled(days: historyDays(todayCharge: 50, back: 1...13), tomorrow: true).sleep.minutes, 480)
+        XCTAssertEqual(scheduled(days: historyDays(todayCharge: 50, back: 1...14), tomorrow: true).sleep.minutes, 510)
+    }
+
+    // MARK: Personal thresholds
+
+    /// Charge 1 ... 40 on the 40 days before today: p67 = 27.13, p33 = 13.87.
+    func ladderDays(todayCharge: Double) -> [DailyMetric] {
+        (1...40).map { row($0, charge: Double(41 - $0)) } + [row(0, charge: todayCharge, sleep: 480)]
+    }
+
+    func testPersonalThresholdsReplaceTheFixedCharge() {
+        let t = PersonalThresholds.compute(days: ladderDays(todayCharge: 0), today: today)
+        XCTAssertTrue(t.hasPersonalCharge)
+        func level(_ c: Double) -> DayPlan.Training {
+            scheduled(days: ladderDays(todayCharge: c), thresholds: t).training
+        }
+        XCTAssertEqual(level(28), .push)        // standard rules: easy
+        XCTAssertEqual(level(27), .maintain)
+        XCTAssertEqual(level(14), .maintain)
+        XCTAssertEqual(level(13), .easy)
+        XCTAssertEqual(scheduled(days: ladderDays(todayCharge: 28)).training, .easy)
+        let p = scheduled(days: ladderDays(todayCharge: 28), thresholds: t)
+        XCTAssertEqual(p.reasons, [.chargeHigh(28)])
+        XCTAssertEqual(p.thresholds?.isPersonal, true)
+        XCTAssertEqual(p.thresholds?.chargeDays, 40)
+    }
+
+    func testPersonalThresholdsAreStrictlyAboveAndBelow() {
+        let t = PersonalThresholds.Result(pushAbove: 70, easyBelow: 40, chargeDays: 50, shortNightMinutes: nil)
+        func level(_ c: Double) -> DayPlan.Training {
+            scheduled(days: [row(0, charge: c, sleep: 480)], thresholds: t).training
+        }
+        XCTAssertEqual(level(70), .maintain)
+        XCTAssertEqual(level(70.5), .push)
+        XCTAssertEqual(level(40), .maintain)
+        XCTAssertEqual(level(39.5), .easy)
+    }
+
+    func testStandardThresholdsWhenNotEnoughDays() {
+        let t = PersonalThresholds.Result(pushAbove: nil, easyBelow: nil, chargeDays: 10, shortNightMinutes: nil)
+        func level(_ c: Double) -> DayPlan.Training {
+            scheduled(days: [row(0, charge: c, sleep: 480)], thresholds: t).training
+        }
+        XCTAssertEqual(level(67), .push)
+        XCTAssertEqual(level(66), .maintain)
+        XCTAssertEqual(level(34), .maintain)
+        XCTAssertEqual(level(33), .easy)
+        let info = scheduled(days: [row(0, charge: 50, sleep: 480)], thresholds: t).thresholds
+        XCTAssertEqual(info?.isPersonal, false)
+        XCTAssertEqual(info?.chargeDays, 10)
+        XCTAssertEqual(info?.daysUntilPersonal, 20)
+    }
+
+    func testDaysUntilPersonal() {
+        XCTAssertEqual(DayPlan.ThresholdInfo(isPersonal: false, chargeDays: 0).daysUntilPersonal, 30)
+        XCTAssertEqual(DayPlan.ThresholdInfo(isPersonal: false, chargeDays: 29).daysUntilPersonal, 1)
+        XCTAssertEqual(DayPlan.ThresholdInfo(isPersonal: true, chargeDays: 64).daysUntilPersonal, 1)
+    }
+
+    func testPersonalShortNightThreshold() {
+        let t = PersonalThresholds.Result(pushAbove: nil, easyBelow: nil, chargeDays: 10, shortNightMinutes: 420)
+        // 400 min: not short under the fixed 6 h, short under the athlete's own 7 h
+        XCTAssertFalse(scheduled(days: [row(0, charge: 80, sleep: 400)]).reasons.contains(.shortSleep(minutes: 400, needMinutes: 480)))
+        let p = scheduled(days: [row(0, charge: 80, sleep: 400)], thresholds: t)
+        XCTAssertEqual(p.training, .maintain)
+        XCTAssertTrue(p.reasons.contains(.shortSleep(minutes: 400, needMinutes: 480)))
+        XCTAssertEqual(p.thresholds?.shortNightMinutes, 420)
+        // 420 itself is not short (strictly under)
+        XCTAssertEqual(scheduled(days: [row(0, charge: 80, sleep: 420)], thresholds: t).training, .push)
+        // the 70 % of need rule stays: need 700 -> 490 min
+        var i = inputs(days: [row(0, charge: 80, sleep: 450)], need: 700)
+        i.thresholds = PersonalThresholds.Result(pushAbove: nil, easyBelow: nil, chargeDays: 0, shortNightMinutes: 400)
+        XCTAssertEqual(DayPlan.make(i).training, .maintain)
+    }
 }

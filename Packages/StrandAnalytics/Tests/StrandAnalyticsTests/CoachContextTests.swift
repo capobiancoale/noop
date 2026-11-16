@@ -205,4 +205,70 @@ final class CoachContextTests: XCTestCase {
         XCTAssertEqual(CoachContext.dayDifference(from: "2025-12-31", to: "2026-01-01"), 1)
         XCTAssertNil(CoachContext.dayDifference(from: "nope", to: "2026-01-01"))
     }
+
+    // MARK: schedule, rest day, tomorrow, thresholds
+
+    func testProfileLineWithLearnedSchedule() {
+        let schedule = TrainingPattern.Schedule(weekdays: [6, 2, 4], daysPerWeek: 3, startMinutes: 19 * 60 + 5,
+                                                sessionMinutes: 60, daysLearned: true, startLearned: true,
+                                                durationLearned: false)
+        XCTAssertEqual(
+            CoachContext.profileLine(age: 35, sex: "male", weightKg: 80.5, heightCm: 180, maxHR: 190, goal: .strength,
+                                     schedule: schedule),
+            "Profile: age 35, male, 80.5 kg, 180 cm, max heart rate 190 bpm, goal: strength, "
+            + "trains Monday, Wednesday, Friday (learned from his last 8 weeks), "
+            + "usually at 19:05 (learned from his last 8 weeks), about 60 min per session (his own setting).")
+    }
+
+    func testProfileLineWithProfileOnlySchedule() {
+        let schedule = TrainingPattern.Schedule(weekdays: nil, daysPerWeek: 5, startMinutes: 19 * 60,
+                                                sessionMinutes: 60, daysLearned: false, startLearned: false,
+                                                durationLearned: false)
+        let line = CoachContext.profileLine(age: 0, sex: "", weightKg: 0, heightCm: 0, maxHR: 0, goal: .health,
+                                            schedule: schedule)
+        XCTAssertEqual(line, "Profile: goal: general health, trains 5 days a week (his own setting; which days is not known), "
+                       + "usually at 19:00 (his own setting), about 60 min per session (his own setting).")
+        // no schedule: unchanged
+        XCTAssertEqual(CoachContext.profileLine(age: 0, sex: "", weightKg: 0, heightCm: 0, maxHR: 0, goal: .fatLoss),
+                       "Profile: goal: fat loss.")
+    }
+
+    func testPlanBlockRestDayTomorrowSessionAndPersonalThresholds() {
+        let plan = DayPlan.Plan(
+            training: .push, reasons: [.chargeHigh(80)],
+            sleep: DayPlan.SleepTarget(minutes: 510, bedtimeMinutes: 1290, reasons: [.trainingTomorrow(addedMinutes: 30)]),
+            nutrition: nil, focus: [], isRestDay: true, trainsTomorrow: true, sessionStartMinutes: 19 * 60,
+            preSession: nil,
+            thresholds: DayPlan.ThresholdInfo(isPersonal: true, chargeDays: 64, pushAbove: 71.4, easyBelow: 47.6,
+                                              shortNightMinutes: 420),
+            schedule: TrainingPattern.Schedule(weekdays: [2, 4, 6], daysPerWeek: 3, startMinutes: 1140,
+                                               sessionMinutes: 60, daysLearned: true, startLearned: true,
+                                               durationLearned: true))
+        XCTAssertEqual(CoachContext.planBlock(plan), """
+        TODAY'S PLAN (computed by the app; explain and build on it, do not contradict it without a reason):
+        Training: push (a hard session is fine). Because: Charge 80 (high). BUT today is a rest day by the athlete's own schedule, so this level only applies if he trains anyway.
+        Schedule: trains Monday, Wednesday, Friday (learned from his last 8 weeks), usually at 19:00 (learned from his last 8 weeks), about 60 min per session (learned from his last 8 weeks).
+        Tomorrow: a training session is planned (usually around 19:00).
+        Sleep tonight: 8.5 h (510 min), bedtime around 21:30, including 30 min extra because he trains tomorrow and today's Charge is below his own median.
+        Thresholds: personal, from 64 days of his own Charge (push above 71, easy below 48); short night = under 7.0 h (his own).
+        """)
+    }
+
+    func testPlanBlockPreSessionAndStandardThresholds() {
+        let plan = DayPlan.Plan(
+            training: .maintain, reasons: [.chargeMid(50)],
+            sleep: DayPlan.SleepTarget(minutes: 480, bedtimeMinutes: nil),
+            nutrition: nil, focus: [], isRestDay: false, trainsTomorrow: false, sessionStartMinutes: 19 * 60,
+            preSession: DayPlan.PreSession(startMinutes: 1140, mealFromMinutes: 960, mealToMinutes: 990),
+            thresholds: DayPlan.ThresholdInfo(isPersonal: false, chargeDays: 10))
+        XCTAssertEqual(CoachContext.planBlock(plan), """
+        TODAY'S PLAN (computed by the app; explain and build on it, do not contradict it without a reason):
+        Training: maintain (a normal session). Because: Charge 50 (middle).
+        Session today at 19:00: main meal by 16:00-16:30 (about 3 h before is general sports-nutrition guidance; carbohydrate amounts stay the daily range below, never insulin).
+        Tomorrow: rest day by the athlete's schedule.
+        Sleep tonight: 8.0 h (480 min).
+        Thresholds: standard (push from Charge 67, easy under 34); personal ones in about 20 days (10 days of Charge so far); short night = under 6 h or 70% of the need (standard).
+        """)
+    }
 }
+

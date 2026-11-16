@@ -366,6 +366,38 @@ struct SettingsView: View {
                     WakeTimeField(minutes: $profile.wakeTimeMinutes, autoLabel: "Automatic")
                 }
                 rowDivider
+                // Training schedule: the plan learns the real days, time and length from the last 8 weeks of
+                // workouts once there are enough, and uses these answers until then.
+                FormRow(label: "Training days per week") {
+                    HStack(spacing: 12) {
+                        Text("\(profile.trainingDaysPerWeek)")
+                            .font(StrandFont.bodyNumber)
+                            .foregroundStyle(StrandPalette.textPrimary)
+                            .frame(minWidth: 28, alignment: .trailing)
+                        Stepper("Training days per week", value: $profile.trainingDaysPerWeek, in: 1...7)
+                            .labelsHidden()
+                            .accessibilityLabel("Training days per week, \(profile.trainingDaysPerWeek)")
+                    }
+                }
+                rowDivider
+                FormRow(label: "Usual training time") {
+                    DatePicker("Usual training time", selection: usualTrainingTime, displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                        .accessibilityLabel("Usual training time")
+                }
+                rowDivider
+                FormRow(label: "Usual session length") {
+                    HStack(spacing: 12) {
+                        Text("\(profile.usualSessionMinutes) min")
+                            .font(StrandFont.bodyNumber)
+                            .foregroundStyle(StrandPalette.textPrimary)
+                            .frame(minWidth: 64, alignment: .trailing)
+                        Stepper("Usual session length", value: $profile.usualSessionMinutes, in: 15...240, step: 15)
+                            .labelsHidden()
+                            .accessibilityLabel("Usual session length, \(profile.usualSessionMinutes) minutes")
+                    }
+                }
+                rowDivider
                 // Waist (optional). Unlike the rows above it, an empty waist is valid (0 = unset) —
                 // it's the ONE measurement that ADDS the VO₂max estimate alongside Fitness Age. It does
                 // NOT sharpen the Fitness Age itself (the body term cancels in the Nes model), so it sits
@@ -482,6 +514,20 @@ struct SettingsView: View {
             return String(localized: "Auto · \(StepsCalibrationFormat.confidenceLabel(profile.stepsCalibrationConfidence)) confidence")
         }
         return String(localized: "Not calibrated")
+    }
+
+    /// The usual training start as a time picker: `profile.usualTrainingMinutes` (minutes after local midnight)
+    /// on today's date.
+    private var usualTrainingTime: Binding<Date> {
+        Binding(
+            get: {
+                let m = profile.usualTrainingMinutes
+                return Calendar.current.date(bySettingHour: m / 60, minute: m % 60, second: 0, of: Date()) ?? Date()
+            },
+            set: { date in
+                let c = Calendar.current.dateComponents([.hour, .minute], from: date)
+                profile.usualTrainingMinutes = (c.hour ?? 0) * 60 + (c.minute ?? 0)
+            })
     }
 
     /// Numeric weight/height field: tabular value + small +/- stepper.

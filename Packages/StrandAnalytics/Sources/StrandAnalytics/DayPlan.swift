@@ -48,6 +48,20 @@ import WhoopStore
 //     (ratio < 0.8); hrvDown (7-day mean `avgHrv`, >= 4 values, more than 10 % under the mean of the 30 days
 //     before those 7, >= 10 values); restingHrUp (7-day mean `restingHr` >= 5 bpm above the same 30-day
 //     reference, same value counts).
+//  5. Schedule (all optional inputs; nil = no schedule known, behaviour as before).
+//     `trainsToday == false`: the level is still computed but `isRestDay = true`, the level reads "if you train
+//     anyway", and the nutrition ranges use the easy-day factor (nobody eats for a hard session on a rest day).
+//     `trainsToday == true` with `sessionStartMinutes`: `preSession` = main meal from 3 h to 2.5 h before the start
+//     (general sports-nutrition guidance on a meal 3-4 h before; carbohydrate amounts stay the daily range, never
+//     insulin).
+//     `trainsTomorrow == true`, today's Charge known and below the athlete's own median of the 90 days before
+//     (`PersonalThresholds.medianCharge`, needs >= 14 days): the sleep target adds 30 min, so that debt part and
+//     this part together never exceed 60 min; reason `.trainingTomorrow(addedMinutes:)` only when something was
+//     really added.
+//  6. Personal thresholds (`Inputs.thresholds`, nil = the fixed rules above). With personal Charge cut-offs push
+//     is Charge > `pushAbove`, easy is Charge < `easyBelow`, else maintain; with personal short-night minutes the
+//     rule (a) uses them instead of 360 (the 70 %-of-need part stays). `Plan.thresholds` records which were used
+//     and how many days of Charge they rest on.
 public enum DayPlan {
 
     // MARK: - Types
@@ -82,6 +96,45 @@ public enum DayPlan {
         case hardStreak(days: Int)
     }
 
+    /// Why tonight's sleep target is what it is, beyond the need and the debt.
+    public enum SleepReason: Sendable, Equatable {
+        /// A session is planned tomorrow and today's Charge is under the athlete's own median: this many minutes were added.
+        case trainingTomorrow(addedMinutes: Int)
+    }
+
+    /// The pre-session meal window for today's session. Minutes after local midnight, wrapped into 0 ..< 1440.
+    public struct PreSession: Sendable, Equatable {
+        public let startMinutes: Int
+        /// 3 h before the start.
+        public let mealFromMinutes: Int
+        /// 2.5 h before the start.
+        public let mealToMinutes: Int
+        public init(startMinutes: Int, mealFromMinutes: Int, mealToMinutes: Int) {
+            self.startMinutes = startMinutes; self.mealFromMinutes = mealFromMinutes
+            self.mealToMinutes = mealToMinutes
+        }
+    }
+
+    /// Which thresholds the plan was made with.
+    public struct ThresholdInfo: Sendable, Equatable {
+        /// True when the Charge cut-offs are the athlete's own (push above the 67th percentile, easy below the 33rd).
+        public let isPersonal: Bool
+        /// Days with a Charge that the personal cut-offs rest on (or would rest on).
+        public let chargeDays: Int
+        /// The athlete's own Charge cut-offs when personal.
+        public let pushAbove: Double?
+        public let easyBelow: Double?
+        /// The athlete's own short-night minutes when `PlanLearning` found one; nil = the standard 6 h.
+        public let shortNightMinutes: Int?
+        public init(isPersonal: Bool, chargeDays: Int, pushAbove: Double? = nil, easyBelow: Double? = nil,
+                    shortNightMinutes: Int? = nil) {
+            self.isPersonal = isPersonal; self.chargeDays = chargeDays
+            self.pushAbove = pushAbove; self.easyBelow = easyBelow; self.shortNightMinutes = shortNightMinutes
+        }
+        /// Days still to wait for personal Charge cut-offs: 30 minus the days available, at least 1.
+        public var daysUntilPersonal: Int { max(1, PersonalThresholds.minChargeDays - chargeDays) }
+    }
+
     public enum Focus: Sendable, Equatable {
         case sleepDebt(minutes: Int)
         case lowSleepAverage(avgMinutes: Int, needMinutes: Int)
@@ -101,9 +154,13 @@ public enum DayPlan {
         public let wakeMinutes: Int?
         /// True when `wakeMinutes` is the user's own target rather than the median of recorded nights.
         public let wakeIsUserSet: Bool
-        public init(minutes: Int, bedtimeMinutes: Int?, wakeMinutes: Int? = nil, wakeIsUserSet: Bool = false) {
+        /// Extra reasons for the target (empty = need plus debt only).
+        public let reasons: [SleepReason]
+        public init(minutes: Int, bedtimeMinutes: Int?, wakeMinutes: Int? = nil, wakeIsUserSet: Bool = false,
+                    reasons: [SleepReason] = []) {
             self.minutes = minutes; self.bedtimeMinutes = bedtimeMinutes
             self.wakeMinutes = wakeMinutes; self.wakeIsUserSet = wakeIsUserSet
+            self.reasons = reasons
         }
     }
 
@@ -135,9 +192,24 @@ public enum DayPlan {
         /// The wake-up time the user wants, minutes after local midnight (0 ..< 1440); nil = derive it from the
         /// recorded wake times.
         public var wakeTargetMinutes: Int?
+        /// Whether the athlete trains today / tomorrow by his schedule; nil = unknown.
+        public var trainsToday: Bool?
+        public var trainsTomorrow: Bool?
+        /// His usual session start, minutes after local midnight; nil = unknown.
+        public var sessionStartMinutes: Int?
+        /// His own thresholds (`PersonalThresholds.compute`); nil = the fixed standard rules.
+        public var thresholds: PersonalThresholds.Result?
+        /// The schedule the flags above came from (learned or the profile's); only carried through to the plan so
+        /// the Coach can quote it. Does not change any rule.
+        public var schedule: TrainingPattern.Schedule?
         public init(days: [DailyMetric], today: String, sleepNeedMin: Double?, sleepDebtMin: Double?,
                     wakeMinutes: [Int], load: TrainingLoad.Summary?, age: Int, sex: Sex,
-                    weightKg: Double, heightCm: Double, goal: Goal, wakeTargetMinutes: Int? = nil) {
+                    weightKg: Double, heightCm: Double, goal: Goal, wakeTargetMinutes: Int? = nil,
+                    trainsToday: Bool? = nil, trainsTomorrow: Bool? = nil, sessionStartMinutes: Int? = nil,
+                    thresholds: PersonalThresholds.Result? = nil, schedule: TrainingPattern.Schedule? = nil) {
+            self.schedule = schedule
+            self.trainsToday = trainsToday; self.trainsTomorrow = trainsTomorrow
+            self.sessionStartMinutes = sessionStartMinutes; self.thresholds = thresholds
             self.wakeTargetMinutes = wakeTargetMinutes
             self.days = days; self.today = today; self.sleepNeedMin = sleepNeedMin
             self.sleepDebtMin = sleepDebtMin; self.wakeMinutes = wakeMinutes; self.load = load
@@ -152,10 +224,27 @@ public enum DayPlan {
         public let sleep: SleepTarget
         public let nutrition: Nutrition?
         public let focus: [Focus]
+        /// True when the schedule says today is not a training day; `training` then reads "if you train anyway".
+        public let isRestDay: Bool
+        /// Whether a session is planned tomorrow; nil = unknown.
+        public let trainsTomorrow: Bool?
+        /// His usual session start, when known.
+        public let sessionStartMinutes: Int?
+        /// The meal window before today's session; only when he trains today and the start is known.
+        public let preSession: PreSession?
+        /// nil when the plan was made without thresholds input (the fixed rules).
+        public let thresholds: ThresholdInfo?
+        /// The training schedule the plan was made with (for the Coach); nil when none was given.
+        public let schedule: TrainingPattern.Schedule?
         public init(training: Training, reasons: [Reason], sleep: SleepTarget,
-                    nutrition: Nutrition?, focus: [Focus]) {
+                    nutrition: Nutrition?, focus: [Focus], isRestDay: Bool = false, trainsTomorrow: Bool? = nil,
+                    sessionStartMinutes: Int? = nil, preSession: PreSession? = nil,
+                    thresholds: ThresholdInfo? = nil, schedule: TrainingPattern.Schedule? = nil) {
+            self.schedule = schedule
             self.training = training; self.reasons = reasons; self.sleep = sleep
-            self.nutrition = nutrition; self.focus = focus
+            self.nutrition = nutrition; self.focus = focus; self.isRestDay = isRestDay
+            self.trainsTomorrow = trainsTomorrow; self.sessionStartMinutes = sessionStartMinutes
+            self.preSession = preSession; self.thresholds = thresholds
         }
     }
 
@@ -163,6 +252,8 @@ public enum DayPlan {
 
     static let defaultNeedMin = 480.0
     static let maxFocus = 3
+    /// Extra sleep when a session is planned tomorrow and today's Charge is under the athlete's own median.
+    static let trainingTomorrowMinutes = 30.0
 
     // MARK: - Entry point
 
@@ -170,9 +261,29 @@ public enum DayPlan {
         let need = inputs.sleepNeedMin ?? defaultNeedMin
         let (training, reasons) = trainingDecision(inputs, need: need)
         let sleep = sleepTarget(inputs, need: need)
-        let nutrition = nutrition(inputs, training: training)
+        let isRestDay = inputs.trainsToday == false
+        // A rest day is fed as an easy day whatever the level would read "if you train anyway".
+        let nutrition = nutrition(inputs, training: isRestDay ? .easy : training)
         let focus = focusList(inputs, need: need)
-        return Plan(training: training, reasons: reasons, sleep: sleep, nutrition: nutrition, focus: focus)
+        return Plan(training: training, reasons: reasons, sleep: sleep, nutrition: nutrition, focus: focus,
+                    isRestDay: isRestDay, trainsTomorrow: inputs.trainsTomorrow,
+                    sessionStartMinutes: inputs.sessionStartMinutes,
+                    preSession: preSession(inputs), thresholds: thresholdInfo(inputs),
+                    schedule: inputs.schedule)
+    }
+
+    // MARK: - Schedule and thresholds
+
+    static func preSession(_ i: Inputs) -> PreSession? {
+        guard i.trainsToday == true, let start = i.sessionStartMinutes, (0..<1440).contains(start) else { return nil }
+        func wrap(_ m: Int) -> Int { ((m % 1440) + 1440) % 1440 }
+        return PreSession(startMinutes: start, mealFromMinutes: wrap(start - 180), mealToMinutes: wrap(start - 150))
+    }
+
+    static func thresholdInfo(_ i: Inputs) -> ThresholdInfo? {
+        guard let t = i.thresholds else { return nil }
+        return ThresholdInfo(isPersonal: t.hasPersonalCharge, chargeDays: t.chargeDays,
+                             pushAbove: t.pushAbove, easyBelow: t.easyBelow, shortNightMinutes: t.shortNightMinutes)
     }
 
     // MARK: - 1. Training
@@ -183,8 +294,14 @@ public enum DayPlan {
         var reasons: [Reason] = []
         if let c = todayRow?.recovery, c.isFinite {
             let shown = Int(c.rounded())
-            if c >= 67 { level = .push; reasons.append(.chargeHigh(shown)) }
-            else if c >= 34 { level = .maintain; reasons.append(.chargeMid(shown)) }
+            let isPush: Bool, isEasy: Bool
+            if let push = i.thresholds?.pushAbove, let easy = i.thresholds?.easyBelow {
+                isPush = c > push; isEasy = c < easy
+            } else {
+                isPush = c >= 67; isEasy = c < 34
+            }
+            if isPush { level = .push; reasons.append(.chargeHigh(shown)) }
+            else if !isEasy { level = .maintain; reasons.append(.chargeMid(shown)) }
             else { level = .easy; reasons.append(.chargeLow(shown)) }
         } else {
             level = .maintain
@@ -192,7 +309,8 @@ public enum DayPlan {
         }
 
         // (a) short night
-        if let sleep = todayRow?.totalSleepMin, sleep.isFinite, sleep < 360 || sleep < 0.7 * need {
+        let shortCut = Double(i.thresholds?.shortNightMinutes ?? 360)
+        if let sleep = todayRow?.totalSleepMin, sleep.isFinite, sleep < shortCut || sleep < 0.7 * need {
             level = stepDown(level)
             reasons.append(.shortSleep(minutes: Int(sleep.rounded()), needMinutes: Int(need.rounded())))
         }
@@ -252,14 +370,23 @@ public enum DayPlan {
     static func roundTo(_ x: Double, _ step: Double) -> Int { Int((x / step).rounded() * step) }
 
     static func sleepTarget(_ i: Inputs, need: Double) -> SleepTarget {
-        let extra = min(max(i.sleepDebtMin ?? 0, 0), 60)
+        let debtExtra = min(max(i.sleepDebtMin ?? 0, 0), 60)
+        // A session tomorrow after a below-median Charge today: +30 min, the debt part and this one together <= 60.
+        var extra = debtExtra
+        var reasons: [SleepReason] = []
+        if i.trainsTomorrow == true,
+           let c = i.days.last(where: { $0.day == i.today })?.recovery, c.isFinite,
+           let median = PersonalThresholds.medianCharge(days: i.days, today: i.today), c < median {
+            extra = min(debtExtra + trainingTomorrowMinutes, 60)
+            if extra > debtExtra { reasons.append(.trainingTomorrow(addedMinutes: Int(extra - debtExtra))) }
+        }
         let minutes = roundTo(need + extra, 5)
         let wakes = Array(i.wakeMinutes.suffix(14))
         if let target = i.wakeTargetMinutes {
             let wake = ((target % 1440) + 1440) % 1440
             let raw = wake - minutes - 15
             return SleepTarget(minutes: minutes, bedtimeMinutes: ((raw % 1440) + 1440) % 1440,
-                               wakeMinutes: wake, wakeIsUserSet: true)
+                               wakeMinutes: wake, wakeIsUserSet: true, reasons: reasons)
         }
         var bed: Int?
         var wake: Int?
@@ -269,7 +396,8 @@ public enum DayPlan {
             let raw = Int(med.rounded()) - minutes - 15
             bed = ((raw % 1440) + 1440) % 1440
         }
-        return SleepTarget(minutes: minutes, bedtimeMinutes: bed, wakeMinutes: wake, wakeIsUserSet: false)
+        return SleepTarget(minutes: minutes, bedtimeMinutes: bed, wakeMinutes: wake, wakeIsUserSet: false,
+                           reasons: reasons)
     }
 
     static func median(_ v: [Double]) -> Double {

@@ -110,6 +110,7 @@ struct DayPlanCard: View {
     }
 
     private var trainingTint: Color {
+        if plan.isRestDay { return StrandPalette.textSecondary }
         switch plan.training {
         case .push: return StrandPalette.statusPositive
         case .maintain: return StrandPalette.statusWarning
@@ -123,6 +124,7 @@ struct DayPlanCard: View {
 
     /// What to do, as a sentence: the hero's verdict chip already carries the one-word level.
     private var trainingHeadline: String {
+        if plan.isRestDay { return String(localized: "Rest day by your schedule") }
         switch plan.training {
         case .push: return String(localized: "Go for a hard session")
         case .maintain: return String(localized: "Train at normal intensity")
@@ -130,13 +132,52 @@ struct DayPlanCard: View {
         }
     }
 
+    /// On a rest day by schedule the level is still computed, but it reads as what the data would allow.
+    private var restDayLine: String? {
+        plan.isRestDay ? String(localized: "If you train anyway: \(trainingWord.lowercased())") : nil
+    }
+
+    /// "Session at 19:00: eat your main meal by 16:00–16:30" (about 3 h before; general sports-nutrition guidance).
+    private var preSessionLine: String? {
+        guard let pre = plan.preSession else { return nil }
+        return String(localized: "Session at \(Self.clock(pre.startMinutes)): eat your main meal by \(Self.clock(pre.mealFromMinutes))–\(Self.clock(pre.mealToMinutes))")
+    }
+
+    /// "Your thresholds, from 64 days" or "Standard thresholds: yours in about 12 days"; nil when the plan was
+    /// made without thresholds input.
+    private var thresholdsLine: String? {
+        guard let t = plan.thresholds else { return nil }
+        if t.isPersonal { return String(localized: "Your thresholds, from \(t.chargeDays) days") }
+        return String(localized: "Standard thresholds: yours in about \(t.daysUntilPersonal) days")
+    }
+
     private var trainingRow: some View {
         actionRow(symbol: "figure.strengthtraining.traditional", tint: trainingTint) {
             actionHeadline(trainingHeadline)
+            if let restDayLine { bodyLine(restDayLine) }
             bodyLine(reasonsLine)
+            if let thresholdsLine {
+                Text(verbatim: thresholdsLine)
+                    .font(StrandFont.caption)
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let preSessionLine {
+                bodyLine(preSessionLine).padding(.top, 2)
+            }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: String(localized: "Training: \(trainingWord). \(reasonsLine)")))
+        .accessibilityLabel(Text(verbatim: trainingAccessibility))
+    }
+
+    private var trainingAccessibility: String {
+        var parts: [String] = []
+        if plan.isRestDay { parts.append(trainingHeadline) }
+        if let restDayLine { parts.append(restDayLine) }
+        parts.append(String(localized: "Training: \(trainingWord). \(reasonsLine)"))
+        if let thresholdsLine { parts.append(thresholdsLine) }
+        if let preSessionLine { parts.append(preSessionLine) }
+        return parts.joined(separator: ". ")
     }
 
     /// One step of the day: a tinted symbol tile on the left, the action and its detail on the right.
@@ -208,12 +249,23 @@ struct DayPlanCard: View {
         return String(localized: "Wake-up \(Self.clock(wake)) · target \(Self.duration(plan.sleep.minutes))")
     }
 
+    /// "Includes 30 min more: you train tomorrow and today's Charge is below your usual".
+    private var sleepReasonLines: [String] {
+        plan.sleep.reasons.map { reason in
+            switch reason {
+            case .trainingTomorrow(let added):
+                return String(localized: "Includes \(added) min more: you train tomorrow and today's Charge is below your usual")
+            }
+        }
+    }
+
     private var sleepRow: some View {
         Button { showWakeSheet = true } label: {
             HStack(alignment: .center, spacing: 8) {
                 actionRow(symbol: "moon.fill", tint: StrandPalette.restColor) {
                     actionHeadline(sleepHeadline)
                     if let sleepDetail { bodyLine(sleepDetail) }
+                    ForEach(Array(sleepReasonLines.enumerated()), id: \.offset) { _, line in bodyLine(line) }
                 }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
@@ -224,7 +276,7 @@ struct DayPlanCard: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: [tonightLine, bedtimeLine, sleepDetail].compactMap { $0 }.joined(separator: ", ")))
+        .accessibilityLabel(Text(verbatim: ([tonightLine, bedtimeLine, sleepDetail].compactMap { $0 } + sleepReasonLines).joined(separator: ", ")))
         .accessibilityHint(Text("Opens the wake-up time setting"))
         .accessibilityAddTraits(.isButton)
     }
