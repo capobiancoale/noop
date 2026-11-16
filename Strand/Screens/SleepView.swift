@@ -800,12 +800,22 @@ struct SleepView: View {
                 .frame(maxWidth: .infinity)
                 // Time awake in bed before sleep: "Asleep" is where sleep began, so name the bed time too
                 // (it's what the pencil corrects) instead of silently hiding it.
-                if let latency = night.onsetLatencyMin {
-                    Text("In bed at \(night.onsetText) · \(durationText(Double(latency))) to fall asleep")
-                        .font(StrandFont.footnote)
-                        .foregroundStyle(StrandPalette.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                // Always name the bed time next to the asleep time (users read both), with the time it
+                // took to fall asleep when that was at least a few minutes.
+                HStack(spacing: 6) {
+                    Image(systemName: "bed.double.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(StrandPalette.restColor)
+                        .accessibilityHidden(true)
+                    if let latency = night.onsetLatencyMin {
+                        Text("In bed at \(night.onsetText) · \(durationText(Double(latency))) to fall asleep")
+                    } else {
+                        Text("In bed at \(night.onsetText) · asleep within a few minutes")
+                    }
                 }
+                .font(StrandFont.subhead)
+                .foregroundStyle(StrandPalette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
                 // Provenance (C4) + the "why this is your main sleep" explainer (C1). The badge names the
                 // REAL per-day merge winner; the info button reveals the foundation reason for the pick.
                 Divider().overlay(StrandPalette.hairline)
