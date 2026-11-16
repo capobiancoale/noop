@@ -44,8 +44,10 @@ struct NOOPPlanWidgetView: View {
 
     /// The Charge ring as a gauge with the level's glyph inside; the Charge number when there is no plan.
     private var circular: some View {
+        // Capacity style: the ring with only the centre label. The plain circular style printed "Charge"
+        // under the glyph, which the 76 pt face truncated to "Char…".
         Gauge(value: Double(min(max(snap.recovery ?? 0, 0), 100)), in: 0...100) {
-            Text("Charge")
+            EmptyView()
         } currentValueLabel: {
             if let plan {
                 Image(systemName: plan.circularSymbol)
@@ -53,7 +55,7 @@ struct NOOPPlanWidgetView: View {
                 Text(verbatim: snap.recovery.map { $0.formatted() } ?? "–")
             }
         }
-        .gaugeStyle(.accessoryCircular)
+        .gaugeStyle(.accessoryCircularCapacity)
         .tint(WidgetColors.charge(snap.recovery))
     }
 
@@ -188,6 +190,14 @@ struct NOOPPlanWidgetView: View {
         if let plan {
             VStack(alignment: .leading, spacing: 6) {
                 PlanWord(plan: plan, size: WidgetSize.big, lines: 2)
+                // Tonight's bedtime fills the middle that stood empty between the word and the ring.
+                if let bed = plan.shortBedLine {
+                    Text(verbatim: bed.prefix(1).uppercased() + bed.dropFirst())
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(StrandPalette.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
                 Spacer(minLength: 0)
                 HStack(spacing: 8) {
                     chargeRing

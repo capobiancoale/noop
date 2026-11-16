@@ -143187,6 +143187,16 @@
           }
         }
       }
+    },
+    "nothing earlier to compare": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "niente di prima per confrontare"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

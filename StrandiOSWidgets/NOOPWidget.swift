@@ -171,7 +171,7 @@ struct NOOPWidgetView: View {
 
     private var large: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 20) {
+            HStack(alignment: .top, spacing: 20) {
                 VStack(spacing: 6) {
                     ring
                     Text("Charge")
@@ -182,8 +182,9 @@ struct NOOPWidgetView: View {
                     effortCell
                     restCell
                 }
+                // No maxHeight here: an infinite height made this row take half the widget.
                 BondDot(bonded: snap.bonded)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .frame(maxWidth: .infinity, alignment: .topTrailing)
             }
             Divider()
             HStack(spacing: 8) {
