@@ -29,6 +29,13 @@ final class ProfileStore: ObservableObject {
     /// The wake-up time the user wants, minutes after local midnight (0 ..< 1440); -1 = automatic, from the
     /// usual wake time (or NOOP's smart alarm when it is on). Feeds the bedtime in "Today's plan".
     @Published var wakeTimeMinutes: Int { didSet { d.set(wakeTimeMinutes, forKey: K.wakeTime) } }
+    /// How many days a week he trains (1...7). His own answer; the plan prefers the weekdays learned from his
+    /// last 8 weeks of workouts when there are enough (`TrainingPattern`).
+    @Published var trainingDaysPerWeek: Int { didSet { d.set(trainingDaysPerWeek, forKey: K.trainingDays) } }
+    /// When a session usually starts, minutes after local midnight (0 ..< 1440). Default 19:00.
+    @Published var usualTrainingMinutes: Int { didSet { d.set(usualTrainingMinutes, forKey: K.trainingTime) } }
+    /// How long a session usually lasts, minutes (15-minute steps, 15...240). Default 60.
+    @Published var usualSessionMinutes: Int { didSet { d.set(usualSessionMinutes, forKey: K.sessionMinutes) } }
     /// 0 = auto-estimate from age.
     @Published var hrMaxOverride: Int { didSet { d.set(hrMaxOverride, forKey: K.hrMax) } }
     /// Step-calibration divisor (#139/#132): counter ticks per real step for the @57 motion
@@ -81,6 +88,9 @@ final class ProfileStore: ObservableObject {
         static let avatar = "profile.avatarImageData"
         static let goal = DayPlanBuilder.goalKey
         static let wakeTime = DayPlanBuilder.wakeTimeKey
+        static let trainingDays = DayPlanBuilder.trainingDaysKey
+        static let trainingTime = DayPlanBuilder.trainingTimeKey
+        static let sessionMinutes = DayPlanBuilder.sessionMinutesKey
     }
 
     // Key names for code that reads the persisted profile without a live store (`DayPlanBuilder.ProfileValues.stored`).
@@ -105,6 +115,9 @@ final class ProfileStore: ObservableObject {
         avatarImageData = d.data(forKey: K.avatar)
         goal = d.string(forKey: K.goal) ?? "performance"
         wakeTimeMinutes = DayPlanBuilder.validWakeMinutes(d.object(forKey: K.wakeTime) as? Int)
+        trainingDaysPerWeek = DayPlanBuilder.validTrainingDays(d.object(forKey: K.trainingDays) as? Int)
+        usualTrainingMinutes = DayPlanBuilder.validTrainingMinutes(d.object(forKey: K.trainingTime) as? Int)
+        usualSessionMinutes = DayPlanBuilder.validSessionMinutes(d.object(forKey: K.sessionMinutes) as? Int)
     }
 
     // MARK: - Profile picture

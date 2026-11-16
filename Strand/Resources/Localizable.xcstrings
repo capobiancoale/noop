@@ -142787,6 +142787,116 @@
           }
         }
       }
+    },
+    "Training days per week": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giorni di allenamento a settimana"
+          }
+        }
+      }
+    },
+    "Training days per week, %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giorni di allenamento a settimana: %lld"
+          }
+        }
+      }
+    },
+    "Usual training time": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orario abituale di allenamento"
+          }
+        }
+      }
+    },
+    "Usual session length": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durata abituale della sessione"
+          }
+        }
+      }
+    },
+    "Usual session length, %lld minutes": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durata abituale della sessione: %lld minuti"
+          }
+        }
+      }
+    },
+    "Rest day by your schedule": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giorno di riposo secondo il tuo programma"
+          }
+        }
+      }
+    },
+    "If you train anyway: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se ti alleni comunque: %@"
+          }
+        }
+      }
+    },
+    "Session at %@: eat your main meal by %@–%@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessione alle %@: fai il pasto principale tra le %@ e le %@"
+          }
+        }
+      }
+    },
+    "Your thresholds, from %lld days": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le tue soglie, calcolate su %lld giorni"
+          }
+        }
+      }
+    },
+    "Standard thresholds: yours in about %lld days": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Soglie standard: le tue tra circa %lld giorni"
+          }
+        }
+      }
+    },
+    "Includes %lld min more: you train tomorrow and today's Charge is below your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Include %lld min in più: domani ti alleni e il Charge di oggi è sotto il tuo solito"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
