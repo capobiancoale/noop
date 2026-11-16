@@ -284,6 +284,7 @@ enum DemoScreens {
         switch args[i + 1].lowercased() {
         case "today":    return AnyView(TodayView())
         case "trends":   return AnyView(TrendsView())
+        case "progress": return AnyView(ProgressOverviewView())
         case "sleep":    return AnyView(SleepView())
         case "live":     return AnyView(LiveView())
         case "stress":   return AnyView(StressView())
