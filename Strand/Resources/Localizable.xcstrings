@@ -142537,6 +142537,256 @@
           }
         }
       }
+    },
+    "Progress": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Progressi"
+          }
+        }
+      }
+    },
+    "Are you improving? All in one place": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stai migliorando? Tutto in un posto"
+          }
+        }
+      }
+    },
+    "4 weeks": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4 settimane"
+          }
+        }
+      }
+    },
+    "12 weeks": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "12 settimane"
+          }
+        }
+      }
+    },
+    "Each number is the average of the period, compared with the period of the same length before it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni numero è la media del periodo, confrontata con il periodo di uguale durata che lo precede."
+          }
+        }
+      }
+    },
+    "Strength · estimated 1RM": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forza · 1RM stimato"
+          }
+        }
+      }
+    },
+    "Strength · %@, estimated 1RM": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forza · %@, 1RM stimato"
+          }
+        }
+      }
+    },
+    "Engine · estimated VO₂max": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motore · VO₂max stimato"
+          }
+        }
+      }
+    },
+    "Sleep · average per night": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonno · media a notte"
+          }
+        }
+      }
+    },
+    "Recovery · average Charge": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupero · Charge medio"
+          }
+        }
+      }
+    },
+    "Glucose · time in range": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glicemia · tempo in range"
+          }
+        }
+      }
+    },
+    "Recent records": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record recenti"
+          }
+        }
+      }
+    },
+    "No records in this period.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun record in questo periodo."
+          }
+        }
+      }
+    },
+    "In short": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In sintesi"
+          }
+        }
+      }
+    },
+    "Keep logging: there is not enough data yet to compare.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continua a registrare: non ci sono ancora abbastanza dati per un confronto."
+          }
+        }
+      }
+    },
+    "Everything you track is going the right way.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutto ciò che monitori va nella direzione giusta."
+          }
+        }
+      }
+    },
+    "Everything you track is a bit lower than before.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutto ciò che monitori è un po' più basso di prima."
+          }
+        }
+      }
+    },
+    "Steady: nothing has moved much.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stabile: nulla è cambiato di molto."
+          }
+        }
+      }
+    },
+    "Improving: %@. The rest is steady.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In miglioramento: %@. Il resto è stabile."
+          }
+        }
+      }
+    },
+    "Lower than before: %@. The rest is steady.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più basso di prima: %@. Il resto è stabile."
+          }
+        }
+      }
+    },
+    "Improving: %@. Lower than before: %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In miglioramento: %@. Più basso di prima: %@."
+          }
+        }
+      }
+    },
+    "strength": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "forza"
+          }
+        }
+      }
+    },
+    "fitness (VO₂max)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "fiato (VO₂max)"
+          }
+        }
+      }
+    },
+    "glucose": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "glicemia"
+          }
+        }
+      }
+    },
+    "Training log": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diario"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
