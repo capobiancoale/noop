@@ -198,6 +198,17 @@ targets:
           - "Resources/Info.plist"
           - "Resources/NOOP.entitlements"
       - path: StrandiOSShared
+      # The widget VIEW code also compiles into the app, so the DEBUG widget gallery (StrandiOS/Debug/
+      # WidgetGalleryView.swift, `--demo-screen widgets`) can render the real widgets at their real sizes.
+      # Not the @main bundle, the Live Activity (its attributes are already in StrandiOSShared), the plist,
+      # the entitlements or the widget's own string catalog (the app catalog carries the same keys).
+      - path: StrandiOSWidgets
+        excludes:
+          - "Info.plist"
+          - "NOOPWidgets.entitlements"
+          - "Localizable.xcstrings"
+          - "NOOPWidgetBundle.swift"
+          - "NOOPLiveActivity.swift"
     info:
       path: StrandiOS/Resources/Info.plist
       properties:

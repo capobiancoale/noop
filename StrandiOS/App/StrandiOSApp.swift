@@ -341,6 +341,8 @@ enum DemoScreens {
         case "howitworks": return AnyView(HowNoopWorksView(onClose: {}))
         case "hraccuracy": return AnyView(HeartRateAccuracyView())
         case "wodimport": return AnyView(WodImportView(onSaved: {}))
+        // Widget gallery: both widgets in every family at their real point size, three sample snapshots.
+        case "widgets": return AnyView(WidgetGalleryView())
         default:         return nil
         }
     }
