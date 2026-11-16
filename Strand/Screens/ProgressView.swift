@@ -34,6 +34,8 @@ struct ProgressOverviewView: View {
     @State private var windowDays = 84
     @State private var inputs = Inputs()
     @State private var rows: [ProgressSummary.Metric: ProgressSummary.Row] = [:]
+    /// Metrics with enough values in the window but none in the period before: a value, no comparison.
+    @State private var currents: [ProgressSummary.Metric: (value: Double, series: [Double])] = [:]
     @State private var records: [RecordItem] = []
     @State private var loaded = false
 
@@ -111,7 +113,8 @@ struct ProgressOverviewView: View {
         NavigationLink {
             destination(for: metric)
         } label: {
-            ProgressMetricRow(title: title(for: metric), row: rows[metric], metric: metric)
+            ProgressMetricRow(title: title(for: metric), row: rows[metric], metric: metric,
+                              current: currents[metric])
         }
         .buttonStyle(.plain)
     }
@@ -302,9 +305,13 @@ struct ProgressOverviewView: View {
     private func recompute() {
         let today = Repository.localDayKey(Date())
         var next: [ProgressSummary.Metric: ProgressSummary.Row] = [:]
+        var nextCurrent: [ProgressSummary.Metric: (value: Double, series: [Double])] = [:]
         func put(_ m: ProgressSummary.Metric, _ pts: [ProgressSummary.Point]) {
             if let r = ProgressSummary.row(metric: m, points: pts, today: today, windowDays: windowDays) {
                 next[m] = r
+            } else if let c = ProgressSummary.currentOnly(metric: m, points: pts, today: today,
+                                                          windowDays: windowDays) {
+                nextCurrent[m] = c
             }
         }
         put(.strength, inputs.strength)
@@ -313,6 +320,7 @@ struct ProgressOverviewView: View {
         put(.recovery, inputs.charge)
         put(.glucose, inputs.tir)
         rows = next
+        currents = nextCurrent
         let cutoffDate = Calendar.current.date(byAdding: .day, value: -windowDays, to: Date()) ?? Date()
         let cutoff = Repository.localDayKey(cutoffDate)
         records = allRecords.filter { $0.item.day >= cutoff }.prefix(5).map { $0.item }
@@ -325,6 +333,7 @@ private struct ProgressMetricRow: View {
     let title: String
     let row: ProgressSummary.Row?
     let metric: ProgressSummary.Metric
+    var current: (value: Double, series: [Double])? = nil
 
     private var tint: Color {
         guard let r = row else { return StrandPalette.textTertiary }
@@ -344,13 +353,24 @@ private struct ProgressMetricRow: View {
                     .fixedSize(horizontal: false, vertical: true)
                 if let r = row {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(verbatim: valueText(r))
+                        Text(verbatim: valueText(r.value))
                             .font(StrandFont.number(22))
                             .foregroundStyle(StrandPalette.textPrimary)
                             .lineLimit(1).minimumScaleFactor(0.7)
                         Text(verbatim: changeText(r))
                             .font(StrandFont.subhead.weight(.semibold))
                             .foregroundStyle(tint)
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                    }
+                } else if let c = current {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(verbatim: valueText(c.value))
+                            .font(StrandFont.number(22))
+                            .foregroundStyle(StrandPalette.textPrimary)
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                        Text("nothing earlier to compare")
+                            .font(StrandFont.footnote)
+                            .foregroundStyle(StrandPalette.textTertiary)
                             .lineLimit(1).minimumScaleFactor(0.7)
                     }
                 } else {
@@ -360,8 +380,8 @@ private struct ProgressMetricRow: View {
                 }
             }
             Spacer(minLength: 4)
-            if let r = row, r.series.count > 1 {
-                ProgressSparkline(values: r.series, tint: tint)
+            if let series = row?.series ?? current?.series, series.count > 1 {
+                ProgressSparkline(values: series, tint: tint)
                     .frame(width: 96, height: 40)
                     .accessibilityHidden(true)
             }
@@ -380,18 +400,18 @@ private struct ProgressMetricRow: View {
         v.formatted(.number.precision(.fractionLength(digits)))
     }
 
-    private func valueText(_ r: ProgressSummary.Row) -> String {
+    private func valueText(_ value: Double) -> String {
         switch metric {
         case .strength:
-            let n = num(r.value, 0...1)
+            let n = num(value, 0...1)
             return String(localized: "\(n) kg")
-        case .engine: return num(r.value, 1...1)
+        case .engine: return num(value, 1...1)
         case .sleep:
-            let total = Int(r.value.rounded())
+            let total = Int(value.rounded())
             let h = total / 60, m = total % 60
             return String(localized: "\(h) h \(m) min")
-        case .recovery: return num(r.value, 0...0)
-        case .glucose: return num(r.value, 0...0) + "%"
+        case .recovery: return num(value, 0...0)
+        case .glucose: return num(value, 0...0) + "%"
         }
     }
 

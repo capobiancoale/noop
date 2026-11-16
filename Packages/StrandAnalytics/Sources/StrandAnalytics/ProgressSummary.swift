@@ -93,6 +93,24 @@ public enum ProgressSummary {
                    currentCount: current.count, previousCount: previous.count)
     }
 
+    /// The window's own mean and sparkline when the window has enough values but the period before it does
+    /// not (a metric that only started recently): shown as a value with no comparison. nil when the window
+    /// itself is short, or when `row` would succeed (use `row` then).
+    public static func currentOnly(metric: Metric, points: [Point], today: String,
+                                   windowDays: Int) -> (value: Double, series: [Double])? {
+        guard windowDays > 0, let t = dayNumber(today) else { return nil }
+        var perDay: [Int: (sum: Double, n: Int)] = [:]
+        for p in points where p.value.isFinite {
+            guard let d = dayNumber(p.day), d > t - windowDays, d <= t else { continue }
+            let old = perDay[d] ?? (0, 0)
+            perDay[d] = (old.sum + p.value, old.n + 1)
+        }
+        let current = perDay.keys.sorted().compactMap { perDay[$0].map { $0.sum / Double($0.n) } }
+        guard current.count >= metric.minimumValues,
+              row(metric: metric, points: points, today: today, windowDays: windowDays) == nil else { return nil }
+        return (mean(current), thin(current, to: maxSeriesPoints))
+    }
+
     /// Better / worse / stable for a change: within the metric's band (strictly smaller) is stable.
     public static func direction(metric: Metric, change: Double) -> Direction {
         if abs(change) < metric.stabilityBand { return .stable }

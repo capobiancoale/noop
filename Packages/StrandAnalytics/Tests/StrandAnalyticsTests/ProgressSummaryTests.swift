@@ -104,4 +104,16 @@ final class ProgressSummaryTests: XCTestCase {
         XCTAssertEqual(ProgressSummary.summaryKey([row(.sleep, .worse), row(.strength, .better), row(.engine, .better)]),
                        .mixed(better: [.strength, .engine], worse: [.sleep]))
     }
+
+    func testCurrentOnlyWhenThePeriodBeforeIsEmpty() {
+        // Two strength entries in the last 28 days, nothing before: no comparison, but a value.
+        let pts = [ProgressSummary.Point(day: "2026-11-01", value: 100),
+                   ProgressSummary.Point(day: "2026-11-10", value: 110)]
+        XCTAssertNil(ProgressSummary.row(metric: .strength, points: pts, today: "2026-11-16", windowDays: 28))
+        let c = ProgressSummary.currentOnly(metric: .strength, points: pts, today: "2026-11-16", windowDays: 28)
+        XCTAssertEqual(c?.value, 105)
+        // One entry is below the strength minimum of two: nothing.
+        XCTAssertNil(ProgressSummary.currentOnly(metric: .strength, points: [pts[0]], today: "2026-11-16",
+                                                 windowDays: 28))
+    }
 }
