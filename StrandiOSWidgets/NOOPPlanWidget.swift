@@ -9,8 +9,16 @@ import StrandDesign
 /// Sizes: hero word `WidgetSize.big`, figures and the large rows `WidgetSize.mid`, everything else
 /// `WidgetSize.caption`. One Charge ring size per family (`ringSize`).
 struct NOOPPlanWidgetView: View {
-    @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetFamily) private var environmentFamily
     let entry: NOOPEntry
+    /// Set only by the debug widget gallery, which cannot write `widgetFamily` (it is read-only).
+    var familyOverride: WidgetFamily? = nil
+    private var family: WidgetFamily { familyOverride ?? environmentFamily }
+
+    init(entry: NOOPEntry, familyOverride: WidgetFamily? = nil) {
+        self.entry = entry
+        self.familyOverride = familyOverride
+    }
 
     private var snap: WidgetSnapshot { entry.snapshot }
     private var plan: WidgetPlan? { WidgetPlan(snap, at: entry.date) }
