@@ -319,13 +319,25 @@ final class IntelligenceEngine: ObservableObject {
     /// Compute on-device scores for each of the last `maxDays` that actually has raw HR data.
     /// Personal baselines (HRV / resting HR) are folded from the imported history, so even the first
     /// live night can be scored against your norm.
-    func analyzeRecent(maxDays: Int = 21, force: Bool = true) async {
+    func analyzeRecent(maxDays requestedMaxDays: Int = 21, force: Bool = true) async {
         // #899-A: a concurrent pass already holds the lock. A NON-forced idle tick is safe to drop (the
         // in-flight pass already covers the same window). But a FORCED call is a real update path (a
         // post-backfill rescore after a sync) , dropping it would leave a freshly-synced night unscored
         // until the next cycle. Re-arm instead: flag it so the running pass's `defer` re-invokes once.
         guard !computing else { if force { pendingForcedRescore = true }; return }
         guard let store = await repo.storeHandle() else { note = String(localized: "No on-device store yet."); return }
+        // COMPACTION GUARD: heart rate older than the last compaction cutoff was thinned to one row per minute and
+        // cannot be re-scored, and the reconcile steps below delete what they do not re-detect inside their window.
+        // Clamp the scanned window ONCE here so every window derived from `maxDays` further down (the per-day scan,
+        // `windowStart`, `oldestDay`, the habitual-midsleep read, the stale-day / session / workout reconciles)
+        // stops short of every compacted day. With no compaction ever run this is exactly `requestedMaxDays`.
+        let window = Self.scanWindow(requested: requestedMaxDays,
+                                     now: Int(Date().timeIntervalSince1970),
+                                     tzOffset: TimeZone.current.secondsFromGMT(),
+                                     lastCutoff: CompactionPrefs.engineCutoff())
+        let maxDays = window.maxDays
+        // The cutoff reaches the very last days: nothing safe to score (also keeps `oldestDay...newestDay` valid).
+        if window.clamped && maxDays <= 0 { return }
         guard let hrvCfg = Baselines.metricCfg["hrv"],
               let rhrCfg = Baselines.metricCfg["resting_hr"],
               let respCfg = Baselines.metricCfg["resp"],
@@ -757,7 +769,14 @@ final class IntelligenceEngine: ObservableObject {
         // re-labelled rows (both written under `deviceId`), and apple-health carries Health imports ,
         // a detected bout overlapping ANY of them is skipped below. Port of the Android dedup block.
         // (`computedId` is bound once above, before the off-actor scan loop.)
-        let windowStart = now - maxDays * 86_400 - 30 * 3_600
+        // Reaches 30 h to 54 h before the oldest scanned day's midnight (`now` is mid-day, not midnight, and the
+        // 30 h look-back), and it also bounds the detected-workout delete and the session reads below. Unclamped
+        // that is the long-standing behaviour. When the compaction clamp is in force it is floored at the oldest
+        // scanned day's local midnight, so no delete / re-stage / session read reaches a compacted day.
+        let rawWindowStart = now - maxDays * 86_400 - 30 * 3_600
+        let windowStart = window.clamped
+            ? max(rawWindowStart, nowLocalMidnight - (maxDays - 1) * 86_400)
+            : rawWindowStart
         var realWorkouts = (try? await store.workouts(deviceId: deviceId, from: windowStart,
                                                        to: now, limit: 100_000)) ?? []
         realWorkouts += (try? await store.workouts(deviceId: "apple-health", from: windowStart,
@@ -1823,6 +1842,19 @@ final class IntelligenceEngine: ObservableObject {
     /// Floor a unix-seconds timestamp to 00:00:00 of its UTC calendar day. Mirrors the Android
     /// IntelligenceEngine.midnightUtc; the floorMod form is correct for any sign.
     nonisolated static func midnightUtc(_ ts: Int) -> Int { ts - floorMod(ts, 86_400) }
+
+    /// The scoring window `analyzeRecent` may use: `requested` days, clamped so the scan never reaches a day at
+    /// or before the last compaction cutoff (see `CompactionPrefs.clampedMaxDays`). One extra day of margin is
+    /// kept (`nowLocalMidnight - 86_400` is passed to the clamp) because each scanned day also reads a 30 h
+    /// look-back: the oldest scanned day then starts a full day after the cutoff and its look-back reads only
+    /// uncompacted rows. `clamped` is true only when the clamp shortened the window. With `lastCutoff == nil`
+    /// the result is `(requested, false)`. Pure, so it is unit-testable.
+    nonisolated static func scanWindow(requested: Int, now: Int, tzOffset: Int,
+                                       lastCutoff: Int?) -> (maxDays: Int, clamped: Bool) {
+        let mid = midnightLocal(now, offsetSec: tzOffset)
+        let days = CompactionPrefs.clampedMaxDays(requested, nowLocalMidnight: mid - 86_400, lastCutoff: lastCutoff)
+        return (days, days < requested)
+    }
 
     /// Floor a unix-seconds timestamp to 00:00:00 of its LOCAL calendar day (#277). `offsetSec` is
     /// seconds EAST of UTC. Shift into local time, floor to the local day, shift back:
