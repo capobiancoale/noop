@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import WidgetKit
 import StrandDesign
 
 /// Colours shared by both widgets. Charge / Effort / Rest reuse what the widget always used.
@@ -98,18 +99,48 @@ struct StatCell: View {
     }
 }
 
-/// The training word (Push / Maintain / Easy day), coloured. Never truncated: it shrinks instead.
+/// The headline word (Push / Maintain / Easy day, or Rest day), coloured. Never truncated: it shrinks instead.
 struct PlanWord: View {
     let plan: WidgetPlan
     let size: CGFloat
+    var lines: Int = 1
 
     var body: some View {
-        Text(verbatim: plan.word)
+        Text(verbatim: plan.headlineWord)
             .font(.system(size: size, weight: .bold, design: .rounded))
-            .foregroundStyle(WidgetColors.training(plan.training))
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
+            .foregroundStyle(plan.headlineTint)
+            .lineLimit(lines)
+            .minimumScaleFactor(lines > 1 ? 0.7 : 0.5)
             .widgetAccentable()
+    }
+}
+
+/// A row with a tinted rounded symbol tile on the left (bedtime, session, focus) and its text on the right.
+struct WidgetIconRow<Content: View>: View {
+    let symbol: String
+    let tint: Color
+    let tile: CGFloat
+    let content: Content
+
+    init(symbol: String, tint: Color, tile: CGFloat = 30, @ViewBuilder content: () -> Content) {
+        self.symbol = symbol
+        self.tint = tint
+        self.tile = tile
+        self.content = content()
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: tile > 26 ? 10 : 8) {
+            Image(systemName: symbol)
+                .font(.system(size: tile * 0.43, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: tile, height: tile)
+                .background(tint.opacity(0.18), in: RoundedRectangle(cornerRadius: tile * 0.3, style: .continuous))
+                .widgetAccentable()
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) { content }
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 

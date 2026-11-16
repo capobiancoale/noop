@@ -29,6 +29,24 @@ final class WidgetPlanSnapshotTests: XCTestCase {
         XCTAssertNil(snap.planTraining)
         XCTAssertNil(snap.planDay)
         XCTAssertFalse(snap.planIsCurrent(at: Date()))
+        // The schedule fields came later: an older snapshot has none of them.
+        XCTAssertNil(snap.planRestDay)
+        XCTAssertNil(snap.planSessionStartMinutes)
+        XCTAssertNil(snap.planMealFromMinutes)
+        XCTAssertNil(snap.planMealToMinutes)
+        XCTAssertNil(snap.planWakeMinutes)
+        XCTAssertNil(snap.planThresholdsPersonal)
+    }
+
+    func testScheduleFieldsRoundTrip() throws {
+        var snap = base()
+        snap.planTraining = "push"; snap.planDay = "2026-11-13"
+        snap.planRestDay = false; snap.planSessionStartMinutes = 1_140
+        snap.planMealFromMinutes = 960; snap.planMealToMinutes = 990
+        snap.planWakeMinutes = 420; snap.planThresholdsPersonal = true
+        let back = try JSONDecoder().decode(WidgetSnapshot.self, from: JSONEncoder().encode(snap))
+        XCTAssertEqual(back, snap)
+        XCTAssertEqual(back.planMealToMinutes, 990)
     }
 
     func testPlanFieldsRoundTrip() throws {
@@ -135,6 +153,34 @@ final class WidgetPlanSnapshotTests: XCTestCase {
         XCTAssertNil(s.planEnergyLow)
         XCTAssertNil(s.planFocus)
         XCTAssertNil(s.planFocusValue)
+    }
+
+    func testScheduleFieldsMapFromThePlan() {
+        let sleep = DayPlan.SleepTarget(minutes: 480, bedtimeMinutes: 1_365, wakeMinutes: 420, wakeIsUserSet: true)
+        let p = DayPlan.Plan(training: .push, reasons: [.chargeHigh(72)], sleep: sleep, nutrition: nil, focus: [],
+                             isRestDay: false, trainsTomorrow: true, sessionStartMinutes: 1_140,
+                             preSession: DayPlan.PreSession(startMinutes: 1_140, mealFromMinutes: 960, mealToMinutes: 990),
+                             thresholds: DayPlan.ThresholdInfo(isPersonal: true, chargeDays: 64))
+        let s = WidgetSnapshot.withPlan(base(), plan: p, day: "d")
+        XCTAssertEqual(s.planRestDay, false)
+        XCTAssertEqual(s.planSessionStartMinutes, 1_140)
+        XCTAssertEqual(s.planMealFromMinutes, 960)
+        XCTAssertEqual(s.planMealToMinutes, 990)
+        XCTAssertEqual(s.planWakeMinutes, 420)
+        XCTAssertEqual(s.planThresholdsPersonal, true)
+    }
+
+    func testRestDayAndMissingScheduleStayEmpty() {
+        let p = DayPlan.Plan(training: .maintain, reasons: [.chargeMid(50)],
+                             sleep: DayPlan.SleepTarget(minutes: 480, bedtimeMinutes: nil),
+                             nutrition: nil, focus: [], isRestDay: true)
+        let s = WidgetSnapshot.withPlan(base(), plan: p, day: "d")
+        XCTAssertEqual(s.planRestDay, true)
+        XCTAssertNil(s.planSessionStartMinutes)
+        XCTAssertNil(s.planMealFromMinutes)
+        XCTAssertNil(s.planMealToMinutes)
+        XCTAssertNil(s.planWakeMinutes)
+        XCTAssertNil(s.planThresholdsPersonal)
     }
 
     func testFocusValues() {

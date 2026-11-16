@@ -29,6 +29,12 @@ extension WidgetSnapshot {
         snap.planFocus = focus?.key
         snap.planFocusValue = focus?.value
         snap.planDay = day
+        snap.planRestDay = plan.isRestDay
+        snap.planSessionStartMinutes = plan.sessionStartMinutes
+        snap.planMealFromMinutes = plan.preSession?.mealFromMinutes
+        snap.planMealToMinutes = plan.preSession?.mealToMinutes
+        snap.planWakeMinutes = plan.sleep.wakeMinutes
+        snap.planThresholdsPersonal = plan.thresholds?.isPersonal
         return snap
     }
 
