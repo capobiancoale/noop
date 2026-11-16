@@ -38,8 +38,16 @@ struct NOOPProvider: TimelineProvider {
 /// The glanceable Charge widget: Charge ring, Effort, Rest, heart rate and strap battery. The large size
 /// also carries today's training word when a plan for today is stored.
 struct NOOPWidgetView: View {
-    @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetFamily) private var environmentFamily
     let entry: NOOPEntry
+    /// Set only by the debug widget gallery, which cannot write `widgetFamily` (it is read-only).
+    var familyOverride: WidgetFamily? = nil
+    private var family: WidgetFamily { familyOverride ?? environmentFamily }
+
+    init(entry: NOOPEntry, familyOverride: WidgetFamily? = nil) {
+        self.entry = entry
+        self.familyOverride = familyOverride
+    }
 
     private var snap: WidgetSnapshot { entry.snapshot }
 
