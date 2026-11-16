@@ -142527,6 +142527,16 @@
           }
         }
       }
+    },
+    "In bed at %@ · asleep within a few minutes": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A letto alle %@ · addormentato in pochi minuti"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
