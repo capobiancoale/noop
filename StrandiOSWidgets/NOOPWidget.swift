@@ -115,7 +115,7 @@ struct NOOPWidgetView: View {
     }
 
     private var restCell: some View {
-        StatCell(label: "Rest", value: widgetPercent(snap.rest), tint: WidgetColors.rest(snap.rest))
+        StatCell(label: "Rest", value: snap.rest.map { $0.formatted() }, tint: WidgetColors.rest(snap.rest))
     }
 
     private var hrCell: some View {
@@ -190,17 +190,13 @@ struct NOOPWidgetView: View {
         }
     }
 
-    /// Today's training word and its reason, at the foot of the large Charge widget.
+    /// Today's training word (or "Rest day") and its reason, or "if you train: ..." on a rest day, at the foot of
+    /// the large Charge widget.
     private func planLine(_ plan: WidgetPlan) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(verbatim: plan.word)
-                .font(.system(size: WidgetSize.mid, weight: .bold, design: .rounded))
-                .foregroundStyle(WidgetColors.training(plan.training))
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .widgetAccentable()
-            if let reason = plan.reasonText {
-                CaptionText(text: reason, lines: 1)
+            PlanWord(plan: plan, size: WidgetSize.mid)
+            if let caption = plan.subLine {
+                CaptionText(text: caption, lines: 1)
             }
         }
     }

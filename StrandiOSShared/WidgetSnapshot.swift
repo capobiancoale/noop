@@ -34,6 +34,13 @@ public struct WidgetSnapshot: Codable, Equatable {
     public var planFocus: String?           // "sleepDebt" | "lowSleepAverage" | "irregularWake" | "loadHigh" | "loadLow" | "hrvDown" | "restingHrUp"
     public var planFocusValue: Int?         // minutes, bpm, pct, or ratio x 100 (see planFocus)
     public var planDay: String?             // yyyy-MM-dd of the (logical) day the plan is for
+    // Schedule-aware plan fields (all optional: an older snapshot lacks them and simply decodes to nil).
+    public var planRestDay: Bool?               // true: a rest day by his schedule (the level reads "if you train")
+    public var planSessionStartMinutes: Int?    // usual session start, minutes after local midnight
+    public var planMealFromMinutes: Int?        // pre-session meal window start (3 h before), minutes after midnight
+    public var planMealToMinutes: Int?          // pre-session meal window end (2.5 h before)
+    public var planWakeMinutes: Int?            // the wake time tonight's bedtime was computed for
+    public var planThresholdsPersonal: Bool?    // true when the plan used his own Charge thresholds
 
     public init(recovery: Int?, bpm: Int?, batteryPct: Int?, bonded: Bool, updated: Date,
                 effort: Int? = nil, rest: Int? = nil, hrv: Int? = nil, restingHr: Int? = nil,
@@ -42,7 +49,10 @@ public struct WidgetSnapshot: Codable, Equatable {
                 planEnergyLow: Int? = nil, planEnergyHigh: Int? = nil,
                 planProteinLow: Int? = nil, planProteinHigh: Int? = nil,
                 planCarbsLow: Int? = nil, planCarbsHigh: Int? = nil,
-                planFocus: String? = nil, planFocusValue: Int? = nil, planDay: String? = nil) {
+                planFocus: String? = nil, planFocusValue: Int? = nil, planDay: String? = nil,
+                planRestDay: Bool? = nil, planSessionStartMinutes: Int? = nil,
+                planMealFromMinutes: Int? = nil, planMealToMinutes: Int? = nil,
+                planWakeMinutes: Int? = nil, planThresholdsPersonal: Bool? = nil) {
         self.recovery = recovery
         self.bpm = bpm
         self.batteryPct = batteryPct
@@ -66,6 +76,12 @@ public struct WidgetSnapshot: Codable, Equatable {
         self.planFocus = planFocus
         self.planFocusValue = planFocusValue
         self.planDay = planDay
+        self.planRestDay = planRestDay
+        self.planSessionStartMinutes = planSessionStartMinutes
+        self.planMealFromMinutes = planMealFromMinutes
+        self.planMealToMinutes = planMealToMinutes
+        self.planWakeMinutes = planWakeMinutes
+        self.planThresholdsPersonal = planThresholdsPersonal
     }
 
     /// The app's LOGICAL day rolls at 04:00 local (`Repository.logicalDayRolloverHour`), and the plan is
@@ -120,7 +136,10 @@ public struct WidgetSnapshot: Codable, Equatable {
                        planProteinLow: 130, planProteinHigh: 180,
                        planCarbsLow: 380, planCarbsHigh: 520,
                        planFocus: "sleepDebt", planFocusValue: 75,
-                       planDay: planDayKey(at: Date()))
+                       planDay: planDayKey(at: Date()),
+                       planRestDay: false, planSessionStartMinutes: 19 * 60,
+                       planMealFromMinutes: 16 * 60, planMealToMinutes: 16 * 60 + 30,
+                       planWakeMinutes: 7 * 60, planThresholdsPersonal: false)
     }
 
     /// Read the last-published snapshot from the shared suite, if any.

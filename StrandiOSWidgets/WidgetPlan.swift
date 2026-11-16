@@ -22,6 +22,12 @@ struct WidgetPlan: Equatable {
     let carbs: ClosedRange<Int>?
     let focusKey: String?
     let focusValue: Int?
+    /// True on a rest day by the schedule: the level is still computed, but reads as "if you train".
+    let restDay: Bool
+    let sessionStartMinutes: Int?
+    let mealToMinutes: Int?
+    let wakeMinutes: Int?
+    let thresholdsPersonal: Bool
 
     /// `date` is the entry date: a plan whose day is not the logical today of that date is treated as
     /// absent, so yesterday's advice is never shown as today's.
@@ -39,6 +45,11 @@ struct WidgetPlan: Equatable {
         self.carbs = WidgetPlan.range(snap.planCarbsLow, snap.planCarbsHigh)
         self.focusKey = snap.planFocus
         self.focusValue = snap.planFocusValue
+        self.restDay = snap.planRestDay ?? false
+        self.sessionStartMinutes = snap.planSessionStartMinutes
+        self.mealToMinutes = snap.planMealToMinutes
+        self.wakeMinutes = snap.planWakeMinutes
+        self.thresholdsPersonal = snap.planThresholdsPersonal ?? false
     }
 
     private static func range(_ low: Int?, _ high: Int?) -> ClosedRange<Int>? {
@@ -54,6 +65,58 @@ struct WidgetPlan: Equatable {
         case .maintain: return String(localized: "Maintain")
         case .easy: return String(localized: "Easy day")
         }
+    }
+
+    /// What the headline says: the training word, or "Rest day" on a rest day by schedule.
+    var headlineWord: String {
+        restDay ? String(localized: "Rest day") : word
+    }
+
+    /// The headline's colour: neutral blue-grey on a rest day, else the training colour.
+    var headlineTint: Color {
+        restDay ? WidgetColors.easy : WidgetColors.training(training)
+    }
+
+    /// Symbol beside the headline on the Lock Screen.
+    var headlineSymbol: String {
+        restDay ? "moon.zzz.fill" : symbol
+    }
+
+    /// Short glyph for the circular Lock Screen gauge.
+    var circularSymbol: String {
+        if restDay { return "moon.zzz.fill" }
+        switch training {
+        case .push: return "bolt.fill"
+        case .maintain: return "equal"
+        case .easy: return "leaf.fill"
+        }
+    }
+
+    /// "if you train: Maintain" on a rest day; nil otherwise.
+    var ifYouTrainLine: String? {
+        restDay ? String(localized: "if you train: \(word)") : nil
+    }
+
+    /// Under the headline: the rest-day note, else the reason.
+    var subLine: String? {
+        ifYouTrainLine ?? reasonText
+    }
+
+    /// "Session 19:00 · eat by 16:30" on a training day with a known session time; the meal part needs its window.
+    var sessionLine: String? {
+        guard !restDay, let start = sessionStartMinutes else { return nil }
+        if let to = mealToMinutes {
+            return String(localized: "Session \(WidgetPlan.clock(start)) · eat by \(WidgetPlan.clock(to))")
+        }
+        return String(localized: "Session \(WidgetPlan.clock(start))")
+    }
+
+    /// Up to two Lock Screen caption lines under the headline: the session (or rest-day note) and the bedtime;
+    /// the reason when neither exists.
+    var lockLines: [String] {
+        let lines = [ifYouTrainLine ?? sessionLine, shortBedLine].compactMap { $0 }
+        if !lines.isEmpty { return lines }
+        return reasonText.map { [$0] } ?? []
     }
 
     var symbol: String {
@@ -82,9 +145,13 @@ struct WidgetPlan: Equatable {
         }
     }
 
-    /// "Tonight in bed by 22:45", or the sleep target when there is no bedtime.
+    /// "In bed by 22:45 · wake 07:00" when the wake time is known, else "Tonight in bed by 22:45"; the sleep
+    /// target when there is no bedtime.
     var sleepLine: String? {
         if let bed = bedtimeMinutes {
+            if let wake = wakeMinutes {
+                return String(localized: "In bed by \(WidgetPlan.clock(bed)) · wake \(WidgetPlan.clock(wake))")
+            }
             return String(localized: "Tonight in bed by \(WidgetPlan.clock(bed))")
         }
         if let m = sleepMinutes {
@@ -110,10 +177,10 @@ struct WidgetPlan: Equatable {
         return String(localized: "Sleep target \(WidgetPlan.duration(m))")
     }
 
-    /// "Push · bed 22:45" for the inline accessory; just the word when there is no bedtime.
+    /// "Push · bed 22:45" for the inline accessory; just the headline word when there is no bedtime.
     var inlineText: String {
-        guard let bed = bedtimeMinutes else { return word }
-        return String(localized: "\(word) · bed \(WidgetPlan.clock(bed))")
+        guard let bed = bedtimeMinutes else { return headlineWord }
+        return String(localized: "\(headlineWord) · bed \(WidgetPlan.clock(bed))")
     }
 
     var focusText: String? {

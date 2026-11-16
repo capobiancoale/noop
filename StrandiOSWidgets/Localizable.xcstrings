@@ -420,6 +420,56 @@
           }
         }
       }
+    },
+    "Rest day" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giorno di riposo"
+          }
+        }
+      }
+    },
+    "if you train: %@" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "se ti alleni: %@"
+          }
+        }
+      }
+    },
+    "Session %@ · eat by %@" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessione %1$@ · mangia entro le %2$@"
+          }
+        }
+      }
+    },
+    "Session %@" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessione %@"
+          }
+        }
+      }
+    },
+    "In bed by %@ · wake %@" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A letto entro le %1$@ · sveglia %2$@"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

@@ -142897,6 +142897,296 @@
           }
         }
       }
+    },
+    "%@ · bed %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · letto %2$@"
+          }
+        }
+      }
+    },
+    "Carbs (g)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carboidrati (g)"
+          }
+        }
+      }
+    },
+    "Energy (kcal)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Energia (kcal)"
+          }
+        }
+      }
+    },
+    "HR": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FC"
+          }
+        }
+      }
+    },
+    "HRV %@%% below your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HRV %@%% sotto il tuo solito"
+          }
+        }
+      }
+    },
+    "Load high: %@× your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carico alto: %@× il tuo solito"
+          }
+        }
+      }
+    },
+    "Load low: %@× your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carico basso: %@× il tuo solito"
+          }
+        }
+      }
+    },
+    "Load well above your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carico ben sopra il tuo solito"
+          }
+        }
+      }
+    },
+    "NOOP Today's plan": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Piano di oggi NOOP"
+          }
+        }
+      }
+    },
+    "Open NOOP to build today's plan": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri NOOP per creare il piano di oggi"
+          }
+        }
+      }
+    },
+    "Protein (g)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proteine (g)"
+          }
+        }
+      }
+    },
+    "Resting HR %@ bpm above your usual": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FC a riposo %@ bpm sopra il tuo solito"
+          }
+        }
+      }
+    },
+    "Several hard days in a row": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più giorni intensi di fila"
+          }
+        }
+      }
+    },
+    "Short night": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notte corta"
+          }
+        }
+      }
+    },
+    "Sleep debt %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Debito di sonno %@"
+          }
+        }
+      }
+    },
+    "Sleep target %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obiettivo di sonno %@"
+          }
+        }
+      }
+    },
+    "Sleeps %@ a night on average": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dormi in media %@ a notte"
+          }
+        }
+      }
+    },
+    "Today's training advice, tonight's bedtime and what to work on, next to Charge, Effort and Rest.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il consiglio di allenamento di oggi, l'ora a cui andare a letto stasera e su cosa lavorare, accanto a Charge, Effort e Rest."
+          }
+        }
+      }
+    },
+    "Tonight in bed by %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stasera a letto entro le %@"
+          }
+        }
+      }
+    },
+    "Updated %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiornato alle %@"
+          }
+        }
+      }
+    },
+    "Wake time varies by about %@ min": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il risveglio varia di circa %@ min"
+          }
+        }
+      }
+    },
+    "High recovery": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupero alto"
+          }
+        }
+      }
+    },
+    "Average recovery": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupero nella media"
+          }
+        }
+      }
+    },
+    "Low recovery": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupero basso"
+          }
+        }
+      }
+    },
+    "Rest day": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giorno di riposo"
+          }
+        }
+      }
+    },
+    "if you train: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "se ti alleni: %@"
+          }
+        }
+      }
+    },
+    "Session %@ · eat by %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessione %1$@ · mangia entro le %2$@"
+          }
+        }
+      }
+    },
+    "Session %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessione %@"
+          }
+        }
+      }
+    },
+    "In bed by %@ · wake %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A letto entro le %1$@ · sveglia %2$@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
