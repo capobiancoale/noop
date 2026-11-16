@@ -1497,7 +1497,11 @@ final class Repository: ObservableObject {
                 let points = await Task.detached(priority: .utility) {
                     Self.dedupSortRawHr(perId)
                 }.value
-                return TimelineSeries(points: points, isRaw: true, bucketSeconds: 1)
+                // Honest label: a zoom that asks for raw points over heart rate stored one row per minute
+                // (compacted old data) is a 1-minute series, not "per second".
+                let res = Self.rawTimelineResolution(
+                    medianSpacingSeconds: Self.medianSpacingSeconds(points.map { Int($0.date.timeIntervalSince1970) }))
+                return TimelineSeries(points: points, isRaw: res.isRaw, bucketSeconds: res.bucketSeconds)
             }
             var byStart: [Int: HRBucket] = [:]
             for id in unionIds {
@@ -1527,6 +1531,27 @@ final class Repository: ObservableObject {
         }.value
         guard !points.isEmpty else { return TimelineSeries(points: [], isRaw: isRaw, bucketSeconds: bucket) }
         return TimelineSeries(points: points, isRaw: isRaw, bucketSeconds: isRaw ? 1 : bucket)
+    }
+
+    /// Median gap in seconds between consecutive timestamps (ascending, as the timeline hands them); nil
+    /// with fewer than two. Pure, so the Deep-Timeline resolution label is unit-testable.
+    nonisolated static func medianSpacingSeconds(_ ts: [Int]) -> Double? {
+        guard ts.count >= 2 else { return nil }
+        var gaps: [Int] = []
+        gaps.reserveCapacity(ts.count - 1)
+        for i in 1..<ts.count { gaps.append(abs(ts[i] - ts[i - 1])) }
+        gaps.sort()
+        let n = gaps.count
+        return n % 2 == 1 ? Double(gaps[n / 2]) : Double(gaps[n / 2 - 1] + gaps[n / 2]) / 2.0
+    }
+
+    /// What a zoom that asked for RAW heart-rate points (bucket <= 1 s) really is: per-second only while the
+    /// stored rows are about 1 Hz. Rows spaced a minute or more (median >= 50 s, i.e. data thinned by the
+    /// opt-in compaction, or minute-only imports) are a 1-minute series, so the labels must not say "per
+    /// second". No spacing (empty or one point) keeps the raw label. Pure.
+    nonisolated static func rawTimelineResolution(medianSpacingSeconds: Double?) -> (isRaw: Bool, bucketSeconds: Int) {
+        if let m = medianSpacingSeconds, m >= 50 { return (false, 60) }
+        return (true, 1)
     }
 
     /// Map each device id to the strap family that wrote its rows (#938), for the family-aware skin-temp

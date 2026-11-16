@@ -1932,6 +1932,8 @@ final class AppModel: ObservableObject {
               let cutoff = CompactionPrefs.cutoff(now: Date(), keepDays: keepDays),
               let store = await repo.storeHandle() else { return nil }
         let before = await store.databaseFileSizeBytes()
+        // Fence the engine off these days before the first row changes (a cancel leaves the fence up).
+        CompactionPrefs.markRunStarting(cutoff: cutoff)
         guard let report = try? await store.compactOldStreams(cutoff: cutoff, skipBefore: skipBefore,
                                                               progress: progress) else { return nil }
         if report.finished, let done = report.completedUpTo {

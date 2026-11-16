@@ -132,12 +132,26 @@ public enum StrainScorer {
 
     // MARK: - TRIMP accumulation
 
-    /// Infer per-sample duration (minutes) from the first two timestamps. Falls
-    /// back to 1 s when fewer than two samples or coincident timestamps.
+    /// Infer per-sample duration (minutes) from the MEDIAN spacing of consecutive timestamps, so a gap
+    /// between the first two samples (a strap reconnect, the first record of a window far from the next) can
+    /// no longer set the weight of the whole day. Zero spacings (duplicate timestamps) are ignored. Evenly
+    /// spaced input gives exactly the old first-two-samples value (1 Hz → 1/60 min). Falls back to 1 s when
+    /// fewer than two samples or no positive spacing.
     static func sampleDurationMinutes(_ hr: [HRSample]) -> Double {
         guard hr.count >= 2 else { return fallbackSampleMin }
-        let deltaS = abs(Double(hr[1].ts - hr[0].ts))
-        return deltaS > 0 ? deltaS / 60.0 : fallbackSampleMin
+        var deltas: [Int] = []
+        deltas.reserveCapacity(hr.count - 1)
+        for i in 1..<hr.count {
+            let d = abs(hr[i].ts - hr[i - 1].ts)
+            if d > 0 { deltas.append(d) }
+        }
+        guard !deltas.isEmpty else { return fallbackSampleMin }
+        deltas.sort()
+        let n = deltas.count
+        let median = n % 2 == 1
+            ? Double(deltas[n / 2])
+            : Double(deltas[n / 2 - 1] + deltas[n / 2]) / 2.0
+        return median / 60.0
     }
 
     static func edwardsTRIMP(_ hr: [HRSample], restingHR: Double, hrReserve: Double,

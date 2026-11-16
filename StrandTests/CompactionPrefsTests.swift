@@ -29,6 +29,19 @@ final class CompactionPrefsTests: XCTestCase {
         XCTAssertNil(CompactionPrefs.cutoff(now: now, keepDays: 7, calendar: cal))
     }
 
+    func testAStartedRunFencesTheEngineButNotTheDailySkip() {
+        let d = freshDefaults()
+        XCTAssertNil(CompactionPrefs.engineCutoff(defaults: d))
+        CompactionPrefs.markRunStarting(cutoff: 3_000, defaults: d)
+        // Cancelled before finishing: the engine is fenced, the finished cutoff (daily skipBefore) is not moved.
+        XCTAssertEqual(CompactionPrefs.engineCutoff(defaults: d), 3_000)
+        XCTAssertNil(CompactionPrefs.lastCompactedCutoff(defaults: d))
+        CompactionPrefs.recordFinishedRun(cutoff: 4_000, defaults: d)
+        XCTAssertEqual(CompactionPrefs.engineCutoff(defaults: d), 4_000)
+        CompactionPrefs.markRunStarting(cutoff: 1_000, defaults: d)
+        XCTAssertEqual(CompactionPrefs.engineCutoff(defaults: d), 4_000)
+    }
+
     func testRecordFinishedRunNeverMovesBackwards() {
         let d = freshDefaults()
         XCTAssertNil(CompactionPrefs.lastCompactedCutoff(defaults: d))

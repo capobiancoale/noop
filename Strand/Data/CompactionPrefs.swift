@@ -17,13 +17,16 @@ enum CompactionPrefs {
     /// Choices for `keepFullResolutionDays`; 0 means "Never".
     static let choices: [Int] = [0, 30, 60, 90, 180]
 
-    /// SAFETY SWITCH. The scoring engine (`IntelligenceEngine.analyzeRecent`) must NOT re-score days that were
-    /// compacted: a full-history pass (the one-shot `maxDays: 4000` rescores, the #547 timestamp re-heal)
-    /// would rebuild old days from minute heart rate and no re-stageable data, and its reconcile steps delete
-    /// stored sessions / detected workouts / daily rows it no longer "detects". Until the engine clamps its
-    /// scan with `clampedMaxDays` below, this stays `false` and the UI refuses to compact (Preview still
-    /// works). Flip it to `true` ONLY in the same change that adds that clamp.
-    static let engineGuardInstalled = false
+    /// SAFETY SWITCH, now `true`. A full-history rescore (the one-shot `maxDays: 4000` passes, the #547
+    /// timestamp re-heal) would rebuild compacted days from minute heart rate and its reconcile steps would
+    /// delete stored sessions / detected workouts / daily rows it no longer "detects". What made it safe:
+    /// `IntelligenceEngine.analyzeRecent` now clamps its window ONCE, at entry, with `clampedMaxDays` below
+    /// (via `IntelligenceEngine.scanWindow`, one day of margin for the 30 h look-back) against
+    /// `lastCompactedCutoff()`, and every window it derives (per-day scan, `oldestDay`, session / workout /
+    /// daily-row reconciles, `windowStart`) comes from that clamped value, `windowStart` additionally floored
+    /// at the oldest scanned day. With no compaction ever run the window is unchanged. Pinned by
+    /// `CompactionEngineGuardTests`; keep it `true` only while that clamp stays in place.
+    static let engineGuardInstalled = true
 
     // MARK: Setting
 
@@ -52,6 +55,22 @@ enum CompactionPrefs {
 
     static func lastCompactedCutoff(defaults: UserDefaults = .standard) -> Int? {
         let v = defaults.integer(forKey: lastCompactedCutoffKey)
+        return v > 0 ? v : nil
+    }
+
+    /// Raised BEFORE a real run touches any row, so a run that is cancelled or still going is already
+    /// fenced off from the engine's full rescores (`engineCutoff`). Kept apart from the finished cutoff,
+    /// which the daily run uses as `skipBefore` and must not move past days a cancelled run never reached.
+    static let startedCutoffKey = "compaction.startedCutoff"
+
+    static func markRunStarting(cutoff: Int, defaults: UserDefaults = .standard) {
+        let prev = defaults.integer(forKey: startedCutoffKey)
+        defaults.set(max(prev, cutoff), forKey: startedCutoffKey)
+    }
+
+    /// The newest cutoff any real run has started or finished: the fence for the engine's rescores.
+    static func engineCutoff(defaults: UserDefaults = .standard) -> Int? {
+        let v = max(defaults.integer(forKey: startedCutoffKey), lastCompactedCutoff(defaults: defaults) ?? 0)
         return v > 0 ? v : nil
     }
 
