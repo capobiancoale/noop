@@ -427,17 +427,17 @@ struct RhythmView: View {
             SectionHeader("The numbers", overline: "DESCRIPTIVE STATS")
             HStack(spacing: NoopMetrics.gap) {
                 StatTile(label: "SHORT AXIS",
-                         value: fmt(headlineWindow?.sd1, "%.0f"),
+                         value: fmt(headlineWindow?.sd1, digits: 0),
                          caption: String(localized: "SD1 · ms"),
                          accent: StrandPalette.restBright)
                 StatTile(label: "LONG AXIS",
-                         value: fmt(headlineWindow?.sd2, "%.0f"),
+                         value: fmt(headlineWindow?.sd2, digits: 0),
                          caption: String(localized: "SD2 · ms"),
                          accent: StrandPalette.restColor)
             }
             HStack(spacing: NoopMetrics.gap) {
                 StatTile(label: "CLOUD SHAPE",
-                         value: fmt(headlineWindow?.sd1sd2, "%.2f"),
+                         value: fmt(headlineWindow?.sd1sd2, digits: 2),
                          caption: String(localized: "SD1:SD2 ratio"),
                          accent: StrandPalette.metricCyan)
                 StatTile(label: "BEAT-TO-BEAT",
@@ -529,9 +529,9 @@ struct RhythmView: View {
 
     // MARK: - Formatting
 
-    private func fmt(_ value: Double?, _ format: String) -> String {
+    private func fmt(_ value: Double?, digits: Int) -> String {
         guard let value else { return "—" }
-        return String(format: format, value)
+        return DisplayNumber.decimal(value, digits: digits)
     }
 
     /// A 0…1 fraction rendered as a whole-number percent (normalised RMSSD / ectopic fraction).

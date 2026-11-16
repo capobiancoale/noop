@@ -237,6 +237,8 @@ targets:
         # are unaffected, so cloud providers stay TLS. Mirrors the macOS target.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+        # Coach > Custom talks to a server on the LAN (Ollama on a Mac); iOS asks for Local Network access.
+        NSLocalNetworkUsageDescription: "NOOP connects to the Ollama or other local AI server on your network that you choose for the Coach. Nothing is sent anywhere else."
         # #155: expose the app's Documents folder to Files/Shortcuts so the user's Siri Shortcut can
         # read the opt-in noop_sync.txt drop file (Apple-Health-free export for sideloaded installs).
         # Both keys are required for the folder to actually appear in Files.

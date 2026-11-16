@@ -335,8 +335,14 @@ private fun decodeWhoop5Historical(frame: ByteArray): Map<String, Any?>? {
         out["wake_quality"] = (it shr 2) and 3
         out["onwrist"] = it and 3
     }
-    // @82 a single raw byte adjacent to the flag byte; carried raw, meaning not pinned.
-    frame.histU8(82)?.let { out["aux_byte_82"] = it }
+    // @82 is the strap's own SpO2 channel: 0 nearly always; while the band scores the wearer asleep it
+    // holds, for 30 s about every 20 min, either a percentage (70..100) or a status code. The raw byte is
+    // kept as aux_byte_82; the in-range values are also surfaced as spo2_candidate_82 (same name and range
+    // as the iOS decoder).
+    frame.histU8(82)?.let {
+        out["aux_byte_82"] = it
+        if (it in 70..100) out["spo2_candidate_82"] = it
+    }
     // @113 a float32 (observed range ~ -5.3..0, 0 = unset); purpose unknown, carried raw. EMPIRICAL.
     frame.histF32(113)?.let { if (it.isFinite()) out["unknown_f32_113"] = it }
     // PROVENANCE / lossless-tail note (A10): this decoder maps only the fields above; bytes past @113
@@ -346,7 +352,7 @@ private fun decodeWhoop5Historical(frame: ByteArray): Map<String, Any?>? {
     // bytes survive on disk for a future re-decode. The `frame` ByteArray itself is never truncated by
     // this function, so a caller that retains it keeps the full record. VERIFIED fields (physiologically
     // cross-checked vs the strap's live 2A37 HR / |gravity|~1g): unix, heart_rate, rr, gravity, skin_temp.
-    // EMPIRICAL / not-pinned: status words, aux bytes, unknown_f32_113.
+    // COMMUNITY-VALIDATED: the SpO2 byte @82. EMPIRICAL / not-pinned: status words, unknown_f32_113.
     return out
 }
 

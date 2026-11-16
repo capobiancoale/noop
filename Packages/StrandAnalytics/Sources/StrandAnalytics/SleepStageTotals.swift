@@ -1,4 +1,5 @@
 import Foundation
+import WhoopStore
 
 /// Decode a sleep session's `stagesJSON` (either the on-device segment array `[{start,end,stage}]` or
 /// the imported minute dict `{light,deep,rem,awake}`) into stage MINUTE totals, and aggregate a night's
@@ -440,6 +441,27 @@ public enum SleepStageTotals {
             if bonus > meaningfulBonusEpsilon { return .longestNearUsual }
         }
         return .longest
+    }
+
+    /// The LOCAL calendar day a sleep block counts on: the day it ENDS, keyed like `DailyMetric.day`,
+    /// with the UTC offset in force at that moment (the key `Repository.userEditedDays` and the dashboard
+    /// merge use).
+    public static func wakeDay(of block: CachedSleepSession, timeZone: TimeZone = .current) -> String {
+        let offsetSec = timeZone.secondsFromGMT(for: Date(timeIntervalSince1970: TimeInterval(block.endTs)))
+        return AnalyticsEngine.dayString(block.endTs, offsetSec: offsetSec)
+    }
+
+    /// The hand-edited blocks that belong to ONE day's sleep, out of every edited block in a scoring
+    /// window: an edit of one of the day's own detected blocks (same stable startTs, it substitutes that
+    /// block) and a twinless, hand-logged block that ENDS on the day. Any other edited block belongs to
+    /// another day and must stay out: fed to `dailyAggregateHonoringEdits` as `manual`, it joins the
+    /// day's main-night pick and, whenever it out-scores the day's own night, replaces it, so one edited
+    /// night was copied onto every day of the window (same total, deep and REM night after night).
+    public static func editsForDay(_ edits: [Int: CachedSleepSession], detectedStarts: Set<Int>,
+                                   day: String, timeZone: TimeZone = .current) -> [Int: CachedSleepSession] {
+        edits.filter { start, block in
+            detectedStarts.contains(start) || wakeDay(of: block, timeZone: timeZone) == day
+        }
     }
 
     /// The night's daily sleep aggregate, substituting any USER-EDITED block for its detected twin

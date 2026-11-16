@@ -3,11 +3,12 @@ import Foundation
 // Spo2ReTrace.swift - the Connection-mode SpO2 reverse-engineering dump (PR #945, reimplemented).
 //
 // WHOOP 4.0 has the Blood O2 sensor and the historical decode already maps the raw red/IR PPG channels
-// (spo2_red@68 / spo2_ir@70 on the v24 layout), but NOOP nulls spo2Pct for WHOOP on purpose: computing a
+// (spo2_red@68 / spo2_ir@70 on the v24 layout), but NOOP nulls spo2Pct for a WHOOP 4.0 on purpose: computing a
 // calibrated % from the raw ADC needs the dense dual-wavelength waveform plus WHOOP's proprietary
 // calibration curve, and guessing it would manufacture a plausible-but-wrong health number - the exact
 // trap that withdrew the #194 PPG->HR attempt. The ONLY honest path to a reliable value is to find out
-// whether the strap already BANKS a computed SpO2 in a record field we have not mapped.
+// whether the strap already BANKS a computed SpO2 in a record field we have not mapped. (A 5.0/MG does:
+// v18 byte 82, aggregated into a night's value by StrapSpo2.)
 //
 // So this dumps a handful of FULL historical records (hex) alongside their mapped SpO2 channels, log-only
 // and gated behind the Test Centre Connection mode, so an offline pass can correlate a byte (or the

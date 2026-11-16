@@ -43,6 +43,21 @@ public struct AppleDailyAggregate: Equatable, Sendable {
     public let awakeMin: Double?
     public let inBedMin: Double?
 
+    // Diabetes (read-only, from an AID app like Loop via Apple Health). Glucose in mg/dL
+    // (daily mean/low/high); insulin is the day's total delivered dose in IU; carbs in grams.
+    public let glucoseAvg: Double?
+    public let glucoseMin: Double?
+    public let glucoseMax: Double?
+    public let insulinTotal: Double?
+    public let carbsG: Double?
+
+    // Body / vitals extras useful to a diabetic athlete (read-only). Blood pressure in mmHg,
+    // hydration in litres, waist circumference in cm.
+    public let bpSystolic: Double?
+    public let bpDiastolic: Double?
+    public let waterL: Double?
+    public let waistCm: Double?
+
     public init(
         day: String,
         restingHr: Double? = nil,
@@ -65,7 +80,16 @@ public struct AppleDailyAggregate: Equatable, Sendable {
         remMin: Double? = nil,
         coreMin: Double? = nil,
         awakeMin: Double? = nil,
-        inBedMin: Double? = nil
+        inBedMin: Double? = nil,
+        glucoseAvg: Double? = nil,
+        glucoseMin: Double? = nil,
+        glucoseMax: Double? = nil,
+        insulinTotal: Double? = nil,
+        carbsG: Double? = nil,
+        bpSystolic: Double? = nil,
+        bpDiastolic: Double? = nil,
+        waterL: Double? = nil,
+        waistCm: Double? = nil
     ) {
         self.day = day
         self.restingHr = restingHr
@@ -89,6 +113,15 @@ public struct AppleDailyAggregate: Equatable, Sendable {
         self.coreMin = coreMin
         self.awakeMin = awakeMin
         self.inBedMin = inBedMin
+        self.glucoseAvg = glucoseAvg
+        self.glucoseMin = glucoseMin
+        self.glucoseMax = glucoseMax
+        self.insulinTotal = insulinTotal
+        self.carbsG = carbsG
+        self.bpSystolic = bpSystolic
+        self.bpDiastolic = bpDiastolic
+        self.waterL = waterL
+        self.waistCm = waistCm
     }
 }
 
@@ -296,6 +329,15 @@ public enum AppleHealthAggregator {
             add("core_min", d.coreMin)
             add("awake_min", d.awakeMin)
             add("in_bed_min", d.inBedMin)
+            add("glucose_avg", d.glucoseAvg)
+            add("glucose_min", d.glucoseMin)
+            add("glucose_max", d.glucoseMax)
+            add("insulin_total", d.insulinTotal)
+            add("carbs_g", d.carbsG)
+            add("bp_systolic", d.bpSystolic)
+            add("bp_diastolic", d.bpDiastolic)
+            add("water", d.waterL)
+            add("waist", d.waistCm)
         }
         return out
     }

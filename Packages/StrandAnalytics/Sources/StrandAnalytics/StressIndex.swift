@@ -47,7 +47,7 @@ public enum StressIndex {
         }
     }
 
-    /// Baevsky Stress Index from R-R intervals (cleaned with the shared range + Malik ectopic pipeline).
+    /// Baevsky Stress Index from R-R intervals (cleaned with the shared Lipponen–Tarvainen pipeline).
     /// Returns nil when too few clean beats survive or the variation range is degenerate (all-equal beats,
     /// MxDMn == 0, would divide by zero, an honest nil, not Infinity).
     public static func stressIndex(rr: [RRInterval]) -> Double? {

@@ -75,6 +75,10 @@ struct WorkoutsView: View {
     /// solid/building ActivityCost entry — "Sessions like this usually …" (#439). Auto-clears.
     @State private var postLogNote: String?
 
+    /// This week's training load against the usual (see `TrainingLoad`), computed from the daily Effort
+    /// history once per data refresh in `.task`, never in `body`. nil until the first refresh.
+    @State private var trainingLoad: TrainingLoad.Summary?
+
     // MARK: - Filters + selection (#64)
 
     /// Filter beyond the time range: a displayed-sport key (nil = all), an origin class (nil = all), and
@@ -154,19 +158,32 @@ struct WorkoutsView: View {
                 let groups = sportGroups(from: windowRows)
                 let zonesSummary = WorkoutZones.summary(from: windowRows)
 
-                HStack { startLiveWorkoutButton; Spacer() }
-                rangeBar(rows: windowRows, effectiveRange: resolved)
-                if let postLogNote { postLogBanner(postLogNote) }
-                effortHero(rows: windowRows, effectiveRange: resolved, groups: groups)
-                summarySection(rows: windowRows, effectiveRange: resolved, groups: groups)
-                breakdownSection(groups: groups, rows: windowRows)
-                if let z = zonesSummary {
-                    zonesSection(z, totalSessions: windowRows.count)
+                // Sections type-erased: in the optimised build a column of `some View` sections becomes one deeply nested type whose
+                // metadata lookup overflowed the main thread's stack at launch (see LiquidTodayView). AnyView keeps types shallow.
+                AnyView(HStack { startLiveWorkoutButton; Spacer() })
+                // Above the range control on purpose: it always reads the last 7 days against the four
+                // weeks before them, whatever range or filter the list below is showing.
+                if let load = trainingLoad, load.weeks.contains(where: { $0.daysWithData > 0 }) {
+                    AnyView(TrainingLoadCard(summary: load))
                 }
-                sessionsSection(rows: windowRows)
+                AnyView(rangeBar(rows: windowRows, effectiveRange: resolved))
+                if let postLogNote { AnyView(postLogBanner(postLogNote)) }
+                if windowRows.isEmpty {
+                    // A sport / source / search that matches nothing: say so, with a way out.
+                    AnyView(noMatchCard)
+                } else {
+                    AnyView(effortHero(rows: windowRows, effectiveRange: resolved, groups: groups))
+                    AnyView(summarySection(rows: windowRows, effectiveRange: resolved, groups: groups))
+                    AnyView(breakdownSection(groups: groups, rows: windowRows))
+                    if let z = zonesSummary {
+                        AnyView(zonesSection(z, totalSessions: windowRows.count))
+                    }
+                    AnyView(sessionsSection(rows: windowRows))
+                }
             }
         }
         .task(id: repo.refreshSeq) {
+            refreshTrainingLoad()
             guard !usesPreviewRows else { return }
             // #797: read only the currently-loaded window (bounded on first paint), not the whole history.
             let r = await repo.workoutRows(days: loadedWindowDays ?? 4000)
@@ -253,6 +270,13 @@ struct WorkoutsView: View {
     /// secondary path for edit/relabel/delete.
     private func openDetail(_ row: WorkoutRow) { detail = WorkoutDetailTarget(row: row) }
 
+    /// Recompute the training-load comparison from the daily Effort history. The day key is the same
+    /// logical day Today uses (it rolls at 04:00), so the small hours still count as the day before.
+    private func refreshTrainingLoad() {
+        let efforts: [(day: String, effort: Double?)] = repo.days.map { (day: $0.day, effort: $0.strain) }
+        trainingLoad = TrainingLoad.summary(days: efforts, today: Repository.logicalDayKey(Date()))
+    }
+
     /// Re-read every source after a mutation so the screen reflects the new state immediately.
     /// Keeps the user's current range — only the initial load picks a default — and the auto-widen
     /// (`effectiveRange`) still covers a now-empty window.
@@ -284,7 +308,7 @@ struct WorkoutsView: View {
             await MainActor.run { postLogNote = nil }
             return
         }
-        let sentence = match.sentence()
+        let sentence = InsightsCopy.activityCostSentence(match)
         await MainActor.run { withAnimation(.easeOut(duration: 0.2)) { postLogNote = sentence } }
         // Auto-dismiss after a few seconds (transient caption, not a permanent card).
         try? await Task.sleep(nanoseconds: 7_000_000_000)
@@ -340,8 +364,8 @@ struct WorkoutsView: View {
     }
 
     /// Common sports offered when re-labelling a detected bout (keeps the menu short and honest —
-    /// the user can fine-tune via Edit afterwards).
-    private static let relabelSports = ["Running", "Walking", "Cycling", "Strength Training",
+    /// the user can fine-tune via Edit afterwards). Today's workout block offers the same list.
+    static let relabelSports = ["Running", "Walking", "Cycling", "Strength Training",
                                         "Swimming", "Rowing", "Yoga", "HIIT",
                                         "CrossFit", "Hiking", "Tennis"]
 
@@ -384,14 +408,14 @@ struct WorkoutsView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 filterMenu(
-                    title: sportFilter ?? String(localized: "All sports"),
+                    title: sportFilter.map(WorkoutSource.localizedSport) ?? String(localized: "All sports"),
                     active: sportFilter != nil,
                     a11y: String(localized: "Filter by sport")
                 ) {
                     Button(String(localized: "All sports")) { sportFilter = nil }
                     Divider()
                     ForEach(availableSports, id: \.self) { s in
-                        Button(s) { sportFilter = s }
+                        Button(WorkoutSource.localizedSport(s)) { sportFilter = s }
                     }
                 }
                 filterMenu(
@@ -407,9 +431,7 @@ struct WorkoutsView: View {
                 }
                 if filter.isActive {
                     Button {
-                        withAnimation(.easeOut(duration: 0.15)) {
-                            sportFilter = nil; sourceFilter = nil; searchText = ""
-                        }
+                        clearFilters()
                     } label: {
                         Label(String(localized: "Clear"), systemImage: "xmark.circle.fill")
                             .font(StrandFont.footnote)
@@ -445,6 +467,33 @@ struct WorkoutsView: View {
             .padding(.vertical, 7)
             .background(StrandPalette.surfaceInset.opacity(0.6),
                         in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+    }
+
+    /// Reset the sport, source and search filters.
+    private func clearFilters() {
+        withAnimation(.easeOut(duration: 0.15)) {
+            sportFilter = nil; sourceFilter = nil; searchText = ""
+        }
+    }
+
+    /// Shown instead of the cards when the filters match no session at all.
+    private var noMatchCard: some View {
+        NoopCard(tint: StrandPalette.effortColor) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("No sessions match these filters")
+                    .font(StrandFont.headline)
+                    .foregroundStyle(StrandPalette.textPrimary)
+                Text("Try another sport, source or search word, or clear the filters to see every session.")
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button { clearFilters() } label: {
+                    Label(String(localized: "Clear filters"), systemImage: "xmark.circle.fill")
+                        .font(StrandFont.subhead)
+                        .foregroundStyle(StrandPalette.effortColor)
+                }
+            }
         }
     }
 
@@ -513,9 +562,16 @@ struct WorkoutsView: View {
         .accessibilityLabel(model.activeWorkout == nil ? "Start a workout" : "View the active workout")
     }
 
-    /// The latest session start (anchors every window — windows are relative to the
-    /// most recent session, not "now", so an old log still resolves).
-    private var latestTs: Int? { allRows.map(\.startTs).max() }
+    /// First second of a trailing window of `days` calendar days that ends today: today and the days - 1
+    /// before it, from the start of the phone's local day (the same window TrendsView uses, issue #23).
+    /// Windows are anchored to TODAY, not to the newest session, so after a break "7D" is the real last
+    /// week (and empty) rather than an old one; an empty window auto-widens (`effectiveRange`).
+    private func windowStart(days: Int) -> Int {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let start = cal.date(byAdding: .day, value: -(days - 1), to: today) ?? today
+        return Int(start.timeIntervalSince1970)
+    }
 
     /// The active filter (#64), composed once. Sport / source / search all apply AFTER the window cut,
     /// so the effort hero, tiles, breakdown, zones and list all read one filtered set.
@@ -523,14 +579,12 @@ struct WorkoutsView: View {
         WorkoutFilter(sport: sportFilter, sourceClass: sourceFilter, search: searchText)
     }
 
-    /// Sessions inside a given range, RELATIVE TO THE LATEST session, then passed through the active
-    /// filter. `.all` = all. The window anchor (`latestTs`) is the newest of ALL loaded rows so the
-    /// window doesn't shift when a filter narrows the set.
+    /// Sessions inside a given range, counted back from TODAY, then passed through the active filter.
+    /// `.all` = all. The window doesn't depend on the filter, so it doesn't shift when one narrows the set.
     private func sessions(for r: Range) -> [WorkoutRow] {
         let windowed: [WorkoutRow]
         if let days = r.days {
-            guard let last = latestTs else { return [] }
-            let cutoff = last - days * 86_400
+            let cutoff = windowStart(days: days)
             windowed = allRows.filter { $0.startTs >= cutoff }
         } else {
             windowed = allRows
@@ -548,11 +602,12 @@ struct WorkoutsView: View {
 
     /// The range actually shown: the SELECTED range when it holds ≥1 session, else
     /// the smallest LARGER range that does — so switching ranges stays visibly
-    /// distinct and only an empty window widens.
+    /// distinct and only an empty window widens. When even "all" is empty (a filter that matches
+    /// nothing) nothing is widened: the selected range stays.
     private var effectiveRange: Range {
         guard !allRows.isEmpty else { return range }
         for r in range.widening where !sessions(for: r).isEmpty { return r }
-        return .all
+        return range
     }
 
     /// "N sessions · <range>" near the control, flagging an auto-widen. Appends "· filtered" (#64) when a
@@ -572,11 +627,11 @@ struct WorkoutsView: View {
             : String(localized: "\(n) sessions · \(effectiveRange.caption)")) + suffix
     }
 
-    /// Pick the tightest range that still holds ≥2 sessions; otherwise show All.
+    /// Pick the tightest range (counted back from today) that still holds ≥2 sessions; otherwise show All.
     private func defaultRange(for source: [WorkoutRow]) -> Range {
-        guard let last = source.map(\.startTs).max() else { return .all }
-        for r in Range.allCases where r.days != nil {
-            let cutoff = last - (r.days ?? 0) * 86_400
+        for r in Range.allCases {
+            guard let days = r.days else { continue }
+            let cutoff = windowStart(days: days)
             if source.filter({ $0.startTs >= cutoff }).count >= 2 { return r }
         }
         return .all
@@ -637,7 +692,7 @@ struct WorkoutsView: View {
                         // interpolates it straight to one decimal — no re-scaling in the format closure.
                         CountUpText(
                             value: displayValue,
-                            format: { String(format: "%.1f", $0) },
+                            format: { DisplayNumber.decimal($0) },
                             font: StrandFont.rounded(46),
                             color: StrandPalette.textPrimary
                         )
@@ -675,7 +730,7 @@ struct WorkoutsView: View {
                                  groups: [SportGroup], totalTimeH: Double) -> some View {
         let modal = modalSport(from: groups)
         VStack(alignment: .leading, spacing: 12) {
-            Text("Effort this \(effectiveRange.heroWord)")
+            Text(effectiveRange.heroTitle)
                 .font(StrandFont.headline)
                 .foregroundStyle(StrandPalette.textPrimary)
             HStack(spacing: NoopMetrics.gap) {
@@ -686,7 +741,7 @@ struct WorkoutsView: View {
                          tint: StrandPalette.effortBright)
             }
             Text(modal.count > 0
-                 ? "Mostly \(WorkoutSource.displaySport(modal.sport)) (\(effectiveRange.caption))."
+                 ? "Mostly \(WorkoutSource.localizedSport(modal.sport)) (\(effectiveRange.caption))."
                  : "Logged sessions across \(effectiveRange.caption).")
                 .font(StrandFont.footnote)
                 .foregroundStyle(StrandPalette.textTertiary)
@@ -726,6 +781,9 @@ struct WorkoutsView: View {
         let totalTimeH = rows.compactMap(\.durationS).reduce(0, +) / 3600.0
         let totalKcal = rows.compactMap(\.energyKcal).reduce(0, +)
         let totalKmRaw = rows.compactMap(\.distanceM).reduce(0, +) / 1000.0
+        // A total of nothing (no row carries calories / distance, e.g. only CrossFit) is a dash, not "0".
+        let kcalText = totalKcal > 0 ? grouped(totalKcal) : "–"
+        let distanceText = totalKmRaw > 0 ? UnitFormatter.distanceFromKilometers(totalKmRaw, system: unitSystem) : "–"
         let modal = modalSport(from: groups)
 
         return LazyVGrid(columns: tileColumns, alignment: .leading, spacing: NoopMetrics.gap) {
@@ -738,15 +796,15 @@ struct WorkoutsView: View {
                      caption: String(localized: "active"),
                      accent: StrandPalette.textPrimary)
             StatTile(label: "Total Calories",
-                     value: grouped(totalKcal),
+                     value: kcalText,
                      caption: "kcal",
                      accent: StrandPalette.metricAmber)
             StatTile(label: "Total Distance",
-                     value: UnitFormatter.distanceFromKilometers(totalKmRaw, system: unitSystem),
+                     value: distanceText,
                      caption: String(localized: "covered"),
                      accent: StrandPalette.metricCyan)
             StatTile(label: "Most Active",
-                     value: modal.sport,
+                     value: modal.count > 0 ? WorkoutSource.localizedSport(modal.sport) : modal.sport,
                      caption: modal.count > 0
                          ? (modal.count == 1 ? String(localized: "1 session") : String(localized: "\(modal.count) sessions"))
                          : nil,
@@ -783,7 +841,7 @@ struct WorkoutsView: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(StrandPalette.effortColor)
                         .frame(width: 22, alignment: .center)
-                    Text(WorkoutSource.displaySport(g.sport))
+                    Text(WorkoutSource.localizedSport(g.sport))
                         .font(StrandFont.headline)
                         .foregroundStyle(StrandPalette.textPrimary)
                         .lineLimit(1)
@@ -1143,7 +1201,7 @@ struct WorkoutsView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(StrandPalette.textSecondary)
                     .frame(width: 16)
-                Text(WorkoutSource.displaySport(row.sport))
+                Text(WorkoutSource.localizedSport(row.sport))
                     .font(StrandFont.subhead)
                     .foregroundStyle(StrandPalette.textPrimary)
                     .lineLimit(1)
@@ -1225,7 +1283,7 @@ struct WorkoutsView: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 8) {
-                        Text(WorkoutSource.displaySport(row.sport))
+                        Text(WorkoutSource.localizedSport(row.sport))
                             .font(StrandFont.subhead)
                             .foregroundStyle(StrandPalette.textPrimary)
                             .lineLimit(1)
@@ -1308,7 +1366,7 @@ struct WorkoutsView: View {
         let effort = row.strain != nil
             ? String(localized: "Effort \(Self.effortCellLabel(strain: row.strain, scale: effortScale))")
             : String(localized: "no Effort recorded")
-        let base = String(localized: "\(WorkoutSource.displaySport(row.sport)), \(compactRowSubtitle(row)), \(effort)")
+        let base = String(localized: "\(WorkoutSource.localizedSport(row.sport)), \(compactRowSubtitle(row)), \(effort)")
         guard selectionMode else { return base }
         if !selectable { return String(localized: "\(base). Imported, can't be merged.") }
         return isSelected ? String(localized: "\(base). Selected.") : String(localized: "\(base). Not selected.")
@@ -1341,7 +1399,7 @@ struct WorkoutsView: View {
         case .detected:
             Menu("Re-label as") {
                 ForEach(Self.relabelSports, id: \.self) { sport in
-                    Button(sport) { relabel(row, to: sport) }
+                    Button(WorkoutSource.localizedSport(sport)) { relabel(row, to: sport) }
                 }
             }
             Button("Edit details…") { editWorkout(row) }
@@ -1465,14 +1523,15 @@ struct WorkoutsView: View {
             case .all:     return String(localized: "all time")
             }
         }
-        /// A short noun for the effort hero's "Effort this …" headline.
-        var heroWord: String {
+        /// The effort hero's headline, one whole phrase per range: a noun dropped into "Effort this %@"
+        /// can't agree in gender with "this" in Italian ("questa settimana", "questo mese", "quest'anno").
+        var heroTitle: String {
             switch self {
-            case .week:    return String(localized: "week")
-            case .month:   return String(localized: "month")
-            case .quarter: return String(localized: "quarter")
-            case .year:    return String(localized: "year")
-            case .all:     return String(localized: "log")
+            case .week:    return String(localized: "Effort this week")
+            case .month:   return String(localized: "Effort this month")
+            case .quarter: return String(localized: "Effort this quarter")
+            case .year:    return String(localized: "Effort this year")
+            case .all:     return String(localized: "Effort this log")
             }
         }
         /// Trailing-window length in days, or nil for "all".
@@ -1496,10 +1555,11 @@ struct WorkoutsView: View {
 
     // MARK: - Formatting
 
+    // Shown to the user: in their language and its order ("27 Sep 2026", "27 set 2026").
     private static let dateFmt: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "d MMM yyyy"
+        f.locale = Locale.autoupdatingCurrent
+        f.setLocalizedDateFormatFromTemplate("dMMMyyyy")
         return f
     }()
 
@@ -1545,7 +1605,7 @@ struct WorkoutsView: View {
         return UnitFormatter.distanceFromMeters(m, system: unitSystem)
     }
 
-    private func oneDecimal(_ v: Double) -> String { String(format: "%.1f", v) }
+    private func oneDecimal(_ v: Double) -> String { DisplayNumber.decimal(v) }
 
     private func grouped(_ v: Double) -> String {
         Self.intFmt.string(from: NSNumber(value: Int(v.rounded()))) ?? "\(Int(v.rounded()))"

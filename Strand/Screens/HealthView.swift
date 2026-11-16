@@ -65,6 +65,9 @@ private struct HealthSectionsStack: View {
             // so the ~1Hz HR stream re-renders only this subtree — the static
             // vitals grid below does not re-render on each HR tick.
             HeartRateSection()
+            // Night heart rhythm: last night's beats screened for an irregular rhythm, and the last 14 nights.
+            // A card with its own loading, depending only on `repo`, so the live HR stream never re-renders it.
+            HeartRhythmCard()
             // Fitness Age (weekly, computed by IntelligenceEngine and read back from the
             // "fitness_age" metricSeries). Its own view depending only on `repo`/`profile`,
             // so the live HR stream never re-renders it.
@@ -494,7 +497,7 @@ private struct RecoveryContributorsSection: View {
 
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                SectionHeader("Contributors", overline: "Recovery", trailing: nil)
+                SectionHeader("Contributors", overline: "Recovery", trailing: dayNote(latest?.day))
                 if ready {
                     ScoreStatePill(.solid)
                 } else {
@@ -516,6 +519,12 @@ private struct RecoveryContributorsSection: View {
                 .foregroundStyle(StrandPalette.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    /// Which day the "latest" row is from, when it is not today ("yesterday", "3 days ago", a short date).
+    private func dayNote(_ day: String?) -> String? {
+        guard let day else { return nil }
+        return TodayView.freshnessCaption(dayKey: day, referenceKey: TodayView.freshnessTodayKey)
     }
 
     /// Resolve each contributor from the latest day against the baseline mean of prior nights.
@@ -550,7 +559,7 @@ private struct RecoveryContributorsSection: View {
                 label: "Respiratory",
                 strength: lowerIsBetter(latest?.respRateBpm, base: respBase),
                 word: word(lowerIsBetter(latest?.respRateBpm, base: respBase)),
-                detail: latest?.respRateBpm.map { String(format: "%.1f rpm", $0) } ?? "—",
+                detail: latest?.respRateBpm.map { "\(DisplayNumber.decimal($0)) rpm" } ?? "—",
                 tint: StrandPalette.sleepLight),       // respiratory shares the blue world
         ]
     }
@@ -651,7 +660,9 @@ private struct FitnessAgeSection: View {
 
     /// Latest weekly Fitness Age (years) read from the "fitness_age" metricSeries, nil until loaded/computed.
     @State private var fitnessAge: Double?
-    /// Latest estimated VO₂max (ml/kg/min) from "vo2max_est" — only present once a waist is set.
+    /// The day key the weekly Fitness Age is banked under, so an old value says how old it is.
+    @State private var fitnessAgeDay: String?
+    /// Latest daily estimated VO₂max (ml/kg/min) from "vo2max_est" — only present once a waist is set.
     @State private var vo2max: Double?
     @State private var loaded = false
 
@@ -665,7 +676,7 @@ private struct FitnessAgeSection: View {
     ///   screens aren't hosted in a per-screen NavigationStack, so a sheet is the in-app drill-down.
     /// - `.settings`: Settings (the profile card) so a required-missing input can be filled in place.
     private enum FitnessSheet: String, Identifiable {
-        case trend, settings
+        case trend, settings, vo2max
         var id: String { rawValue }
     }
     @State private var fitnessSheet: FitnessSheet?
@@ -693,6 +704,7 @@ private struct FitnessAgeSection: View {
             SectionHeader("Fitness Age", overline: "Weekly",
                           trailing: fitnessAge != nil ? String(localized: "vs age \(profile.age)") : nil)
             content
+            vo2maxLink
         }
         .sheet(item: $fitnessSheet) { which in
             NavigationStack {
@@ -701,6 +713,8 @@ private struct FitnessAgeSection: View {
                     if let m = fitnessAgeMetric { MetricDetailView(metric: m) }
                 case .settings:
                     SettingsView()
+                case .vo2max:
+                    VO2maxView()
                 }
             }
             #if os(macOS)
@@ -733,12 +747,51 @@ private struct FitnessAgeSection: View {
         }
     }
 
+    /// Opens the VO₂max screen: the estimate from runs and walks, the one at rest and the user's own values.
+    private var vo2maxLink: some View {
+        Button { fitnessSheet = .vo2max } label: {
+            HStack(spacing: NoopMetrics.space3) {
+                Image(systemName: "lungs.fill")
+                    .foregroundStyle(StrandPalette.metricCyan)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("VO₂max").font(StrandFont.subhead).foregroundStyle(StrandPalette.textPrimary)
+                    Text("From your runs and walks, at rest, and your own values")
+                        .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .accessibilityHidden(true)
+            }
+            .padding(NoopMetrics.space4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                FrostedCardSurface(tint: StrandPalette.metricCyan, cornerRadius: NoopMetrics.cardRadius)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(LiquidPressStyle())
+        .accessibilityLabel("VO₂max: from your runs and walks, at rest, and your own values")
+    }
+
     /// The hero vessel's fill (0…1): younger reads FULLER. Maps a fitness age across a 20…70-year span
     /// onto a full→empty gauge, so a 30-year fitness age fills high and a 65 fills low. Purely a visual
     /// anchor for the gauge — the number and the ± band carry the real read-out.
     private func fitnessAgeFraction(_ age: Double) -> Double {
         let lo = 20.0, hi = 70.0
         return max(0.05, min(1, (hi - age) / (hi - lo)))
+    }
+
+    /// "As of 3 days ago" for a weekly value banked on an earlier day; nil for today's or the current
+    /// week's own value (a weekly figure is keyed to the week's Saturday, which can be ahead of today).
+    private func weeklyAsOfNote(_ day: String?) -> String? {
+        guard let day else { return nil }
+        let today = TodayView.freshnessTodayKey
+        guard day < today, let when = TodayView.freshnessCaption(dayKey: day, referenceKey: today) else { return nil }
+        return String(localized: "As of \(when)")
     }
 
     /// The younger/older-than-your-age subtitle as whole-phrase variants per count and direction, so
@@ -781,12 +834,16 @@ private struct FitnessAgeSection: View {
                         Text(ageDeltaLine(years: years, younger: younger))
                             .font(StrandFont.subhead)
                             .foregroundStyle(younger ? StrandPalette.statusPositive : StrandPalette.statusWarning)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
+                    .layoutPriority(1)
                     Spacer(minLength: 0)
                     if let vo2 = vo2max {
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text("VO₂max").strandOverline()
-                            Text(String(format: "%.0f", vo2))
+                            Text("VO₂max at rest").strandOverline()
+                                .lineLimit(2)
+                                .multilineTextAlignment(.trailing)
+                            Text(DisplayNumber.decimal(vo2, digits: 0))
                                 .font(StrandFont.number(30))
                                 .foregroundStyle(StrandPalette.metricCyan)
                             Text("ml/kg/min")
@@ -808,6 +865,9 @@ private struct FitnessAgeSection: View {
             Text("± \(Int(FitnessAgeEngine.displayBandYears)) yr · a fitness comparison, not a biological age")
                 .font(StrandFont.footnote)
                 .foregroundStyle(StrandPalette.textTertiary)
+            if let note = weeklyAsOfNote(fitnessAgeDay) {
+                Text(note).font(StrandFont.footnote).foregroundStyle(StrandPalette.statusWarning)
+            }
 
             Divider().overlay(StrandPalette.hairline)
 
@@ -846,7 +906,7 @@ private struct FitnessAgeSection: View {
         .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
     }
 
-    /// Load the latest weekly Fitness Age (+ optional VO₂max) from the strap's metricSeries. Uses the
+    /// Load the latest weekly Fitness Age (+ the daily VO₂max estimate) from the strap's metricSeries. Uses the
     /// same `exploreSeries(key:source:)` path every other metric on this screen reads, with source
     /// "my-whoop" (the Repository merges the computed "-noop" rows under any real import). Takes the
     /// freshest point — the weekly value is keyed to the week's Saturday and refines through the week.
@@ -854,6 +914,7 @@ private struct FitnessAgeSection: View {
         let faPts = await repo.exploreSeries(key: "fitness_age", source: "my-whoop")
         let vo2Pts = await repo.exploreSeries(key: "vo2max_est", source: "my-whoop")
         fitnessAge = faPts.last?.value
+        fitnessAgeDay = faPts.last?.day
         vo2max = vo2Pts.last?.value
         loaded = true
     }
@@ -931,10 +992,10 @@ private struct ReadinessChecklistCard: View {
                 .frame(width: 18)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
-                Text(item.label)
+                Text(itemLabel(item))
                     .font(StrandFont.body)
                     .foregroundStyle(StrandPalette.textPrimary)
-                Text(item.detail)
+                Text(itemDetail(item))
                     .font(StrandFont.footnote)
                     .foregroundStyle(StrandPalette.textTertiary)
             }
@@ -946,7 +1007,7 @@ private struct ReadinessChecklistCard: View {
                         .foregroundStyle(StrandPalette.accent)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("\(item.label): \(item.detail). Fix in Settings.")
+                .accessibilityLabel("\(itemLabel(item)): \(itemDetail(item)). Fix in Settings.")
             }
         }
         // When a Fix button is present keep it as its own VoiceOver stop (.contain); otherwise fold the
@@ -956,7 +1017,43 @@ private struct ReadinessChecklistCard: View {
         } else {
             row
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("\(item.label), \(statusWord(item.status)). \(item.detail)")
+                .accessibilityLabel("\(itemLabel(item)), \(statusWord(item.status)). \(itemDetail(item))")
+        }
+    }
+
+    /// The engine hands back plain English strings; a plain String in `Text` never reaches the string
+    /// catalog, so each row is rebuilt from its stable `key` in the reader's language.
+    private func itemLabel(_ item: FitnessReadinessItem) -> String {
+        switch item.key {
+        case "age":         return String(localized: "Your age")
+        case "sex":         return String(localized: "Biological sex")
+        case "rhr":         return String(localized: "Resting heart rate")
+        case "activity":    return String(localized: "Recent activity")
+        case "bodyMetrics": return String(localized: "Height & weight")
+        case "waist":       return String(localized: "Waist (optional)")
+        default:            return item.label
+        }
+    }
+
+    /// The hint under a row. The two "N of last 7 ..." lines carry a count the engine wrote into the
+    /// string, so it is read back from the front of the detail; anything unrecognised is shown as written.
+    private func itemDetail(_ item: FitnessReadinessItem) -> String {
+        switch item.detail {
+        case "Set":                              return String(localized: "Set")
+        case "Add it in Settings":               return String(localized: "Add it in Settings")
+        case "Unlocks your VO₂max":              return String(localized: "Unlocks your VO₂max")
+        case "Add to also see VO₂max":           return String(localized: "Add to also see VO₂max")
+        case "Sharpens VO₂max":                  return String(localized: "Sharpens VO₂max")
+        case "Optional - sharpens VO₂max":       return String(localized: "Optional - sharpens VO₂max")
+        default:
+            let count = Int(item.detail.prefix { $0.isNumber })
+            if let n = count, item.key == "rhr", item.detail.hasSuffix("of last 7 nights") {
+                return String(localized: "\(n) of last 7 nights")
+            }
+            if let n = count, item.key == "activity", item.detail.hasSuffix("of last 7 days") {
+                return String(localized: "\(n) of last 7 days")
+            }
+            return item.detail
         }
     }
 
@@ -994,6 +1091,8 @@ private struct VitalitySection: View {
     @EnvironmentObject var profile: ProfileStore
     @State private var vitality: Double?
     @State private var bodyAge: Double?
+    /// The day key the weekly Vitality is banked under, so an old value says how old it is.
+    @State private var vitalityDay: String?
     @State private var loaded = false
 
     private var contributions: [VitalityEngine.Contribution] {
@@ -1076,16 +1175,20 @@ private struct VitalitySection: View {
             if (best?.lnHazard ?? 0) < 0 || (worst?.lnHazard ?? 0) > 0 {
                 Divider().overlay(StrandPalette.hairline)
                 if let best, best.lnHazard < 0 {
-                    Text("Helping most: \(best.label)")
+                    Text("Helping most: \(factorName(best))")
                         .font(StrandFont.footnote).foregroundStyle(StrandPalette.statusPositive)
                 }
                 if let worst, worst.lnHazard > 0 {
-                    Text("Holding you back: \(worst.label)")
+                    Text("Holding you back: \(factorName(worst))")
                         .font(StrandFont.footnote).foregroundStyle(StrandPalette.statusWarning)
                 }
             }
             Text("A wellness estimate from your habits, not a clinical biological age.")
                 .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+            if let day = vitalityDay, day < TodayView.freshnessTodayKey,
+               let when = TodayView.freshnessCaption(dayKey: day, referenceKey: TodayView.freshnessTodayKey) {
+                Text("As of \(when)").font(StrandFont.footnote).foregroundStyle(StrandPalette.statusWarning)
+            }
         }
         .padding(NoopMetrics.space5)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1095,6 +1198,23 @@ private struct VitalitySection: View {
             FrostedCardSurface(tint: StrandPalette.chargeColor, cornerRadius: NoopMetrics.cardRadius)
         }
         .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
+    }
+
+    /// The engine's factor labels are plain English strings; the sentence names the factor in the reader's
+    /// language, lower-cased because it follows a colon ("Conta di più: variabilità della frequenza
+    /// cardiaca"). Keyed by the factor's stable `key` so a reworded engine label cannot break the lookup.
+    private func factorName(_ c: VitalityEngine.Contribution) -> String {
+        let name: String
+        switch c.key {
+        case "rhr":         name = String(localized: "Resting heart rate")
+        case "vo2max":      name = String(localized: "Cardio fitness")
+        case "sleep":       name = String(localized: "Sleep duration")
+        case "consistency": name = String(localized: "Sleep regularity")
+        case "hrv":         name = String(localized: "Heart-rate variability")
+        case "steps":       name = String(localized: "Daily steps")
+        default:            name = c.label
+        }
+        return name.lowercased()
     }
 
     /// The Body Age delta as whole-phrase variants per count and direction, so translators see
@@ -1110,7 +1230,9 @@ private struct VitalitySection: View {
     }
 
     private func load() async {
-        vitality = (await repo.exploreSeries(key: "vitality", source: "my-whoop")).last?.value
+        let vitLast = (await repo.exploreSeries(key: "vitality", source: "my-whoop")).last
+        vitality = vitLast?.value
+        vitalityDay = vitLast?.day
         bodyAge = (await repo.exploreSeries(key: "body_age", source: "my-whoop")).last?.value
         loaded = true
     }
@@ -1155,6 +1277,19 @@ private struct VitalsSection: View {
                 }
             }
             Text("Once NOOP has 14 nights of history, in-range compares each vital to your own baseline (approximate, not medical advice); until then, typical adult ranges apply.")
+                .font(StrandFont.footnote)
+                .foregroundStyle(StrandPalette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+            skinTempNote(readings)
+        }
+    }
+
+    /// One line under the grid when skin temperature is the on-device CHANGE from the user's usual night:
+    /// it is not a thermometer reading, because wrist temperature follows the surroundings.
+    @ViewBuilder
+    private func skinTempNote(_ readings: [BodyVitalReading]) -> some View {
+        if let v = readings.first(where: { $0.key == "skin" })?.value, !VitalBands.isAbsoluteSkinTemp(v) {
+            Text("Skin temperature is shown as the change from your usual night, not as a temperature: your wrist temperature depends on the surroundings, so the change from your usual is what matters.")
                 .font(StrandFont.footnote)
                 .foregroundStyle(StrandPalette.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1204,7 +1339,7 @@ private struct LiquidVitalTile: View {
                 }
                 #endif
                 Text(reading.stateCaption)
-                    .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary).lineLimit(1)
+                    .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary).lineLimit(2)
                     .padding(.top, 4)
             }
         }
@@ -1225,7 +1360,7 @@ private struct LiquidVitalTile: View {
         case "rhr":        return over(100)
         case "resp_rate":  return over(24)
         case "spo2":       return across(90, 100)
-        case "skin_temp":
+        case "skin_temp", "skin":
             // Absolute skin temp (>= 20 °C) maps across a plausible wrist band; a small ±deviation
             // maps around a half-full centre so a normal night reads mid-gauge, not empty.
             return VitalBands.isAbsoluteSkinTemp(v) ? across(33, 38) : max(0.02, min(1, 0.5 + v / 4))
@@ -1259,7 +1394,8 @@ private struct SkinTempSection: View {
 
             // 1. Illness heads-up — only when the engine returned something worth surfacing.
             if let illness = model.illnessSignal, illness.level != .quiet {
-                HeadsUpCard(result: illness, distance: model.illnessDistance)
+                HeadsUpCard(result: illness, distance: model.illnessDistance,
+                            calibration: model.illnessCalibration)
             }
 
             // 2. Body clock — shows nil-state copy via the engine's own confidence handling.

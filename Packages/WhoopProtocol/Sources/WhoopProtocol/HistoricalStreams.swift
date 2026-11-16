@@ -204,6 +204,12 @@ public func extractHistoricalStreams(_ parsed: [ParsedFrame],
             if let st = p["sleep_state"]?.intValue {
                 out.sleepState.append(SleepStateSample(ts: ts, state: st))
             }
+            // The strap's OWN blood-oxygen byte (@82): nonzero only during its 30 s sleep-time readings, as a
+            // percentage (70...100) or a status code, carried verbatim so the nightly aggregation can count
+            // both. Only the 5.0/MG v18 decoder emits `aux_byte_82`, so a WHOOP 4.0 adds nothing.
+            if let b = p["aux_byte_82"]?.intValue, b != 0 {
+                out.strapSpo2.append(StrapSpo2Sample(ts: ts, raw: b))
+            }
             if let raw = p["resp_rate_raw"]?.intValue {
                 out.resp.append(RespSample(ts: ts, raw: raw))
             }

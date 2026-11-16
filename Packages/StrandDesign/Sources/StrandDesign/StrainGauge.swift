@@ -42,7 +42,7 @@ public struct StrainGauge: View {
         lineWidth: CGFloat = 14,
         showsLabel: Bool = true,
         showsHover: Bool = true,
-        valueFormat: @escaping (Double) -> String = { String(format: "Strain %.1f", $0) }
+        valueFormat: @escaping (Double) -> String = { "Strain \(GaugeNumber.decimal($0))" }
     ) {
         self.strain = strain
         self.outOf = outOf
@@ -132,7 +132,7 @@ public struct StrainGauge: View {
     }
 
     private var strainString: String {
-        String(format: "%.1f", strain)
+        GaugeNumber.decimal(strain)
     }
 }
 

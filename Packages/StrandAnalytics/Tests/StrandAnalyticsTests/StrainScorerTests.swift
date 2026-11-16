@@ -144,4 +144,37 @@ final class StrainScorerTests: XCTestCase {
     func testFitStrainDenominatorThrowsTooFew() {
         XCTAssertThrowsError(try StrainScorer.fitStrainDenominator([(100, 10)]))
     }
+
+    // MARK: sampleDurationMinutes (median spacing)
+
+    func testSampleDurationOneHertzIsOneSecond() {
+        XCTAssertEqual(StrainScorer.sampleDurationMinutes(hr(120, 600)), 1.0 / 60.0, accuracy: 1e-12)
+    }
+
+    func testSampleDurationMinuteData() {
+        let minute = (0..<300).map { HRSample(ts: $0 * 60, bpm: 100) }
+        XCTAssertEqual(StrainScorer.sampleDurationMinutes(minute), 1.0, accuracy: 1e-12)
+    }
+
+    func testSampleDurationIgnoresGapAtStart() {
+        // First two samples 10 minutes apart, then 1 Hz: the old first-two rule said 10 min per sample.
+        var samples = [HRSample(ts: 0, bpm: 90)]
+        samples += (0..<600).map { HRSample(ts: 600 + $0, bpm: 90) }
+        XCTAssertEqual(StrainScorer.sampleDurationMinutes(samples), 1.0 / 60.0, accuracy: 1e-12)
+    }
+
+    func testSampleDurationMixedDataTakesMajority() {
+        // 100 minute-spaced rows then 30 one-second rows: the minute spacing is the median.
+        var samples = (0..<100).map { HRSample(ts: $0 * 60, bpm: 80) }
+        let last = samples.last!.ts
+        samples += (1...30).map { HRSample(ts: last + $0, bpm: 80) }
+        XCTAssertEqual(StrainScorer.sampleDurationMinutes(samples), 1.0, accuracy: 1e-12)
+    }
+
+    func testSampleDurationFallbacks() {
+        XCTAssertEqual(StrainScorer.sampleDurationMinutes([]), 1.0 / 60.0, accuracy: 1e-12)
+        XCTAssertEqual(StrainScorer.sampleDurationMinutes([HRSample(ts: 5, bpm: 70)]), 1.0 / 60.0, accuracy: 1e-12)
+        let dup = [HRSample(ts: 5, bpm: 70), HRSample(ts: 5, bpm: 71)]
+        XCTAssertEqual(StrainScorer.sampleDurationMinutes(dup), 1.0 / 60.0, accuracy: 1e-12)
+    }
 }

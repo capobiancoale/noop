@@ -11,6 +11,7 @@ enum NavItem: String, CaseIterable, Identifiable, Hashable {
     case intervals = "Intervals"
     case explore = "Explore"
     case compare = "Compare"
+    case vo2max = "VO₂max"
     case insights = "Insights"
     case sleep = "Sleep"
     case trends = "Trends"
@@ -47,6 +48,7 @@ enum NavItem: String, CaseIterable, Identifiable, Hashable {
         case .intervals: return "Intervals"
         case .explore: return "Explore"
         case .compare: return "Compare"
+        case .vo2max: return "VO₂max"
         case .insights: return "Insights"
         case .sleep: return "Sleep"
         case .trends: return "Trends"
@@ -90,6 +92,7 @@ enum NavItem: String, CaseIterable, Identifiable, Hashable {
         case .intervals: return String(localized: "Intervals")
         case .explore: return String(localized: "Explore")
         case .compare: return String(localized: "Compare")
+        case .vo2max: return String(localized: "VO₂max")
         case .insights: return String(localized: "Insights")
         case .sleep: return String(localized: "Sleep")
         case .trends: return String(localized: "Trends")
@@ -125,6 +128,7 @@ enum NavItem: String, CaseIterable, Identifiable, Hashable {
         case .intervals: return "timer"
         case .explore: return "square.grid.2x2.fill"
         case .compare: return "chart.line.uptrend.xyaxis"
+        case .vo2max: return "lungs.fill"
         case .insights: return "lightbulb.fill"
         case .sleep: return "moon.stars.fill"
         case .trends: return "chart.xyaxis.line"
@@ -168,7 +172,7 @@ struct NavGroup: Identifiable {
         NavGroup(title: "Today", id: "today", items: [.today]),
         NavGroup(title: "Sleep", id: "sleep", items: [.sleep]),
         NavGroup(title: "Body", id: "body", items: [
-            .workouts, .live, .health, .stress, .intervals, .breathe,
+            .workouts, .live, .health, .vo2max, .stress, .intervals, .breathe,
         ]),
         // S6: the overlapping insight surfaces (Intelligence / What Moves You / Insights / Insights Hub)
         // all collapse under this single Insights group rather than scattering across the flat list.
@@ -422,6 +426,7 @@ struct RootView: View {
         case .intervals: IntervalTimerView()
         case .explore: MetricExplorerView()
         case .compare: CompareView()
+        case .vo2max: VO2maxView()
         case .insights: InsightsView()
         case .sleep: SleepView()
         case .trends: TrendsView()

@@ -10,8 +10,10 @@ import WhoopStore
 // The "overlay metrics & draw conclusions" screen. Pick 2–4 metrics from the
 // catalog, choose a time window, and read them on a single normalized overlay
 // chart (each metric min–max scaled to 0–1 within the window so different units
-// share an axis). Below, every pair of selected metrics gets a live Pearson-r
-// correlation readout with a plain-English conclusion. Pure read-side: each
+// share an axis). Below, every pair of selected metrics gets a significance-tested
+// association readout (detrended, autocorrelation-aware, with a one-day-later test for
+// "training today → recovery tomorrow") and a cautious plain-English conclusion; pairs
+// that are calculated from each other are labelled as such instead. Pure read-side: each
 // metric loads from repo.resolvedSeries (freshest-wins across imported / NOOP-computed /
 // compatible Apple Health, PR#196); everything else is derived in-view.
 
@@ -113,6 +115,100 @@ private struct CompareSeries: Identifiable {
     }
 }
 
+// MARK: - Which pairs may be read as a link
+
+/// Metric-key rules that decide HOW a pair is tested, or whether it is tested at all.
+///
+/// Three facts about daily health data drive them (see `CorrelationEngine.associationTest`
+/// for the statistics): some pairs are linked by construction and carry no information;
+/// training load shows up in the NEXT morning's recovery numbers rather than the same day's;
+/// and neither direction of an association is "good" or "bad" by itself.
+private enum CompareLinkRules {
+
+    /// Unordered key pairs where one metric is calculated from the other, is a part of it, or
+    /// the two overlap by definition. Whatever r they show is arithmetic, not a finding.
+    /// Families (prefix rules) are handled in `isStructural`.
+    private static let structuralKeyPairs: Set<String> = {
+        let pairs: [(String, String)] = [
+            // Sleep: durations, parts of a whole, and ratios of each other.
+            ("sleep_total_min", "in_bed_min"),
+            ("sleep_total_min", "sleep_efficiency"),
+            ("in_bed_min", "sleep_efficiency"),
+            ("sleep_total_min", "sleep_deep_min"),
+            ("sleep_total_min", "sleep_rem_min"),
+            ("sleep_total_min", "sleep_light_min"),
+            ("restorative_min", "restorative_pct"),
+            ("restorative_min", "sleep_deep_min"),
+            ("restorative_min", "sleep_rem_min"),
+            ("restorative_pct", "sleep_deep_min"),
+            ("restorative_pct", "sleep_rem_min"),
+            ("hours_vs_needed_pct", "sleep_total_min"),
+            ("hours_vs_needed_pct", "sleep_need_min"),
+            // Effort inputs and heart-rate zone totals.
+            ("hr_zones_all_min", "hr_zones13_min"),
+            ("hr_zones_all_min", "hr_zones45_min"),
+            ("steps", "steps_est"),
+            ("energy_kcal", "active_kcal"),
+            // CGM summaries: the three bands share one 100 %, the sub-bands sit inside them.
+            ("glucose_tir", "glucose_tar"),
+            ("glucose_tir", "glucose_tbr"),
+            ("glucose_tbr", "glucose_tbr_severe"),
+            ("glucose_tar", "glucose_tar_high"),
+            // Two readings of one blood-pressure measurement.
+            ("bp_systolic", "bp_diastolic"),
+            // Fitness age is derived from VO2max.
+            ("fitness_age", "vo2max_est"),
+            // Charge is computed from these (HRV ~55 %, resting HR ~20 %, Rest ~15 %, respiration and
+            // skin temperature ~5 % each; docs/ANALYTICS.md), so its link to them is largely built in.
+            ("recovery", "hrv"),
+            ("recovery", "rhr"),
+            ("recovery", "resp_rate"),
+            ("recovery", "skin_temp"),
+            ("recovery", "sleep_performance"),
+        ]
+        return Set(pairs.map { CompareLinkRules.pairID($0.0, $0.1) })
+    }()
+
+    private static func pairID(_ a: String, _ b: String) -> String {
+        a < b ? "\(a)|\(b)" : "\(b)|\(a)"
+    }
+
+    /// True when a pair must not be offered as an insight. The same key from two sources
+    /// (e.g. resting HR from WHOOP and from a Mi Band) is the same quantity measured twice.
+    static func isStructural(_ a: String, _ b: String) -> Bool {
+        if a == b { return true }
+        if structuralKeyPairs.contains(pairID(a, b)) { return true }
+        // The Rest score is built from the sleep_* measures (duration, efficiency, stages, timing).
+        if a == "sleep_performance" && b.hasPrefix("sleep_") { return true }
+        if b == "sleep_performance" && a.hasPrefix("sleep_") { return true }
+        // Effort is computed from time in heart-rate zones.
+        if a == "strain" && b.hasPrefix("hr_zones") { return true }
+        if b == "strain" && a.hasPrefix("hr_zones") { return true }
+        // VO2max readings (measured / estimated) are one quantity; fitness age comes from it.
+        if a.hasPrefix("vo2max") && b.hasPrefix("vo2max") { return true }
+        if a == "fitness_age" && b.hasPrefix("vo2max") { return true }
+        if b == "fitness_age" && a.hasPrefix("vo2max") { return true }
+        return false
+    }
+
+    /// Metrics that measure what was DONE or demanded of the body on a day.
+    private static let loadKeys: Set<String> = [
+        "strain", "hr_zones13_min", "hr_zones45_min", "hr_zones_all_min", "strength_min",
+        "energy_kcal", "active_kcal", "steps", "steps_est", "avg_hr", "max_hr",
+    ]
+
+    /// Metrics read the morning AFTER: overnight / resting numbers and the scores built on them.
+    private static let nextMorningKeys: Set<String> = [
+        "recovery", "hrv", "rhr", "resp_rate", "skin_temp", "stress",
+    ]
+
+    static func isLoad(_ key: String) -> Bool { loadKeys.contains(key) }
+
+    static func isNextMorning(_ key: String) -> Bool {
+        nextMorningKeys.contains(key) || key.hasPrefix("sleep_") || key.hasPrefix("glucose_overnight")
+    }
+}
+
 // MARK: - Root
 
 struct CompareView: View {
@@ -126,11 +222,14 @@ struct CompareView: View {
 
     // Distinct, high-legibility series colors (avoid the recovery/strain ramps so
     // overlay lines read as categorical, not as a value gradient).
+    // Four distinct hues in a fixed order. `accent` and `metricCyan` are the same cyan in dark mode, so the
+    // first two series used to draw in one colour; cyan, amber, purple, rose keep every adjacent pair apart
+    // (normal-vision and colour-blind separation checked for both appearances).
     private static let seriesPalette: [Color] = [
-        StrandPalette.accent,        // mint-green
-        StrandPalette.metricCyan,    // cyan
-        StrandPalette.metricPurple,  // purple
+        StrandPalette.accent,        // cyan (dark) / brand blue (light)
         StrandPalette.metricAmber,   // amber
+        StrandPalette.metricPurple,  // purple
+        StrandPalette.metricRose,    // rose
     ]
 
     /// Default starter selection (falls back gracefully if a key is missing).
@@ -144,7 +243,7 @@ struct CompareView: View {
     @State private var loadedOnce = false
 
     /// Cache of the last pairwise-correlation scan + the inputs it was computed for.
-    /// The scan (alignByDay + Pearson over full windows) is expensive and was re-run on
+    /// The scan (detrend + association test over full windows) is expensive and was re-run on
     /// every body evaluation — including hover/animation/HR ticks. We recompute it only
     /// when the windowed series content actually changes (see `correlationKey`).
     @State private var pairCache: [PairResult] = []
@@ -164,8 +263,9 @@ struct CompareView: View {
                        // Liquid finish: the day-of-sky backdrop carries the liquid atmosphere across the
                        // analysis tabs, exactly like Today and the batch-1 screens.
                        topBackground: liquidScaffoldSky()) {
+            // Sections type-erased so the optimised build keeps the column's type shallow (see LiquidTodayView).
             VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
-                metricSection
+                AnyView(metricSection)
 
                 if selected.count < minSelection {
                     ComingSoon(what: "Compare needs at least two metrics with history. Import your WHOOP export in Data Sources first.")
@@ -176,8 +276,8 @@ struct CompareView: View {
                             ? "No data for these metrics in \(range.phrase). Widen the range or pick metrics you've logged."
                             : "Reading your history…")
                     } else {
-                        overlaySection(series)
-                        correlationSection(series)
+                        AnyView(overlaySection(series))
+                        AnyView(correlationSection(series))
                     }
                 }
             }
@@ -449,15 +549,42 @@ struct CompareView: View {
         }
     }
 
-    // MARK: - Pairwise correlations card
+    // MARK: - Pairwise associations card
+
+    /// How a pair came out. The raw value is the sort rank: strongest evidence first.
+    private enum PairVerdict: Int {
+        /// p < 0.05 and |r| >= 0.3.
+        case clear = 0
+        /// p < 0.05 but |r| < 0.3.
+        case possible
+        /// Enough days, nothing that survives the significance test.
+        case noLink
+        /// Too few overlapping days, or one series has no day-to-day variation left.
+        case unmeasurable
+        /// One metric is calculated from the other (or they overlap by definition).
+        case structural
+    }
 
     private struct PairResult: Identifiable {
         let id: String
         let a: CompareSeries
         let b: CompareSeries
-        let r: Double
-        let n: Int
+        let verdict: PairVerdict
+        /// The metric read as the driver (x) and the one read as the outcome (y) in `test`.
+        let driver: CompareSeries
+        let outcome: CompareSeries
+        /// The detrended, autocorrelation-corrected test; nil for structural / unmeasurable pairs.
+        let test: CorrelationTest?
+        /// Calendar days both metrics have a value on (same-day pairing), for the "too few days" note.
+        let overlapDays: Int
     }
+
+    /// Evidence thresholds. p < 0.05 is the usual two-sided level; |r| >= 0.3 is the
+    /// conventional "moderate" boundary (Cohen 1988) that separates a link worth reading from
+    /// one that is statistically detectable but small. 14 days is the engine's floor.
+    private static let significanceLevel = 0.05
+    private static let clearLinkR = 0.3
+    private static let minOverlapDays = 14
 
     /// A stable fingerprint of the inputs the correlation scan depends on: the
     /// non-empty series (in order) and their windowed content. Row content only
@@ -480,23 +607,95 @@ struct CompareView: View {
     }
 
     /// The actual (expensive) pairwise scan. Pure — no view state read/written.
+    ///
+    /// `CompareSeries.rows` are the REAL per-day values from `repo.resolvedSeries` (one value
+    /// per calendar day: the resolver keeps a single point per day, and the engine averages a
+    /// repeated day anyway). The min–max normalisation of the overlay is applied only inside
+    /// `OverlayChart` and the legend, never to these rows, so nothing here is smoothed or scaled.
     private func computePairResults(_ series: [CompareSeries]) -> [PairResult] {
         var out: [PairResult] = []
         let s = series.filter { !$0.rows.isEmpty }
         guard s.count >= 2 else { return out }
         for i in 0..<(s.count - 1) {
             for j in (i + 1)..<s.count {
-                let pairs = CorrelationEngine.alignByDay(s[i].rows, s[j].rows)
-                guard pairs.count >= 3, let c = CorrelationEngine.pearson(pairs) else { continue }
-                out.append(PairResult(
-                    id: "\(s[i].id)~\(s[j].id)",
-                    a: s[i], b: s[j], r: c.r, n: c.n
-                ))
+                out.append(evaluatePair(s[i], s[j]))
             }
         }
-        // Strongest relationships first.
-        out.sort { abs($0.r) > abs($1.r) }
+        // Clear links first (strongest |r| first), then possible, none, unmeasurable, structural.
+        out.sort { lhs, rhs in
+            if lhs.verdict != rhs.verdict { return lhs.verdict.rawValue < rhs.verdict.rawValue }
+            let lr = abs(lhs.test?.r ?? 0)
+            let rr = abs(rhs.test?.r ?? 0)
+            if lr != rr { return lr > rr }
+            return lhs.id < rhs.id
+        }
         return out
+    }
+
+    /// Decide one pair: structural note, or a detrended significance test (same day, plus
+    /// "load today → next morning" when the pair has that shape).
+    private func evaluatePair(_ a: CompareSeries, _ b: CompareSeries) -> PairResult {
+        let id = "\(a.id)~\(b.id)"
+        let overlap = CorrelationEngine.alignByDay(a.rows, b.rows).count
+
+        if CompareLinkRules.isStructural(a.metric.key, b.metric.key) {
+            return PairResult(id: id, a: a, b: b, verdict: .structural,
+                              driver: a, outcome: b, test: nil, overlapDays: overlap)
+        }
+
+        // Orientation. A training-load metric paired with a next-morning metric is read as
+        // load (x) → outcome (y), and also tested one day later. Otherwise, if exactly one is
+        // an outcome-type metric it is y; if neither is, pick order decides.
+        var driver = a
+        var outcome = b
+        var testNextDay = false
+        let aLoad = CompareLinkRules.isLoad(a.metric.key)
+        let bLoad = CompareLinkRules.isLoad(b.metric.key)
+        let aMorning = CompareLinkRules.isNextMorning(a.metric.key)
+        let bMorning = CompareLinkRules.isNextMorning(b.metric.key)
+        if aLoad != bLoad, (aLoad && bMorning) || (bLoad && aMorning) {
+            driver = aLoad ? a : b
+            outcome = aLoad ? b : a
+            testNextDay = true
+        } else if aMorning != bMorning {
+            driver = aMorning ? b : a
+            outcome = aMorning ? a : b
+        }
+
+        let minDays = Self.minOverlapDays
+        let sameDay = CorrelationEngine.associationTest(x: driver.rows, y: outcome.rows,
+                                                       lagDays: 0, minDays: minDays)
+        var best = sameDay
+        if testNextDay {
+            let nextDay = CorrelationEngine.associationTest(x: driver.rows, y: outcome.rows,
+                                                            lagDays: 1, minDays: minDays)
+            best = preferredTest(sameDay, nextDay)
+        }
+
+        guard let t = best else {
+            return PairResult(id: id, a: a, b: b, verdict: .unmeasurable,
+                              driver: driver, outcome: outcome, test: nil, overlapDays: overlap)
+        }
+        let verdict: PairVerdict
+        if t.p < Self.significanceLevel {
+            verdict = abs(t.r) >= Self.clearLinkR ? .clear : .possible
+        } else {
+            verdict = .noLink
+        }
+        return PairResult(id: id, a: a, b: b, verdict: verdict,
+                          driver: driver, outcome: outcome, test: t, overlapDays: overlap)
+    }
+
+    /// Of two candidate tests keep the significant one; if both are, the larger |r|; if
+    /// neither is, the same-day one (it is what the "no reliable link" line reports).
+    private func preferredTest(_ sameDay: CorrelationTest?, _ nextDay: CorrelationTest?) -> CorrelationTest? {
+        guard let s = sameDay else { return nextDay }
+        guard let n = nextDay else { return s }
+        let sSig = s.p < Self.significanceLevel
+        let nSig = n.p < Self.significanceLevel
+        if sSig && nSig { return abs(n.r) > abs(s.r) ? n : s }
+        if nSig { return n }
+        return s
     }
 
     /// Recompute the pair cache if (and only if) the correlation inputs changed.
@@ -512,7 +711,7 @@ struct CompareView: View {
         let pairs = pairResults(series)
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             SectionHeader("How They Move Together",
-                          overline: "Pearson r · \(range.phrase)",
+                          overline: "Detrended, significance-tested · \(range.phrase)",
                           trailing: pairs.isEmpty ? nil
                                     : (pairs.count == 1 ? String(localized: "1 pair")
                                                         : String(localized: "\(pairs.count) pairs")))
@@ -529,25 +728,40 @@ struct CompareView: View {
                 ForEach(pairs) { p in
                     pairCard(p)
                 }
+                // Once per section, not per card: what these numbers are and are not.
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("These are associations in your own data, not causes. Long-term trends are removed first, and consecutive days are counted as partly repeating.")
+                        .font(StrandFont.footnote)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("Informational only, not medical advice.")
+                        .font(StrandFont.footnote)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                }
             }
         }
     }
 
-    /// One pairwise correlation as its own NoopCard.
+    /// One pairwise association as its own NoopCard. Colour carries no good/bad meaning: the
+    /// accent marks a clear link, everything else is the quiet tertiary tone (a negative r is
+    /// not "bad": HRV and resting HR normally move in opposite directions in a healthy body).
     private func pairCard(_ p: PairResult) -> some View {
-        let tint = correlationColor(p.r)
-        // Frosted card washed by the relationship's own colour (green positive / rose negative), with a
-        // TrendChip surfacing the signed direction at a glance — the Today delta idiom, applied to r.
-        return NoopCard(tint: tint) {
+        let isClear = p.verdict == .clear
+        let tint = isClear ? StrandPalette.accent : StrandPalette.textTertiary
+        let showsR = p.verdict == .clear || p.verdict == .possible
+        let strength = min(abs(p.test?.r ?? 0), 1)
+        return NoopCard(tint: isClear ? StrandPalette.accent : nil) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 10) {
-                    // A small liquid vessel filled to the correlation STRENGTH (|r|, a neutral 0–1
-                    // magnitude — not a health value), tinted by the relationship's own colour. Static
-                    // (posed) so a page of pair cards costs one cached frame each, matching Today's small
-                    // vessels. Decorative — the r read-out + sentence carry the meaning for VoiceOver.
-                    LiquidVessel(value: min(abs(p.r), 1), tint: tint, animated: false)
-                        .frame(width: 30, height: 30)
-                        .accessibilityHidden(true)
+                    if showsR {
+                        // A small liquid vessel filled to the association STRENGTH (|r|, a neutral 0–1
+                        // magnitude — not a health value). Static (posed) so a page of pair cards costs
+                        // one cached frame each. Decorative — the sentence + footer carry the meaning
+                        // for VoiceOver.
+                        LiquidVessel(value: strength, tint: tint, animated: false)
+                            .frame(width: 30, height: 30)
+                            .accessibilityHidden(true)
+                    }
                     // Two color swatches for the pair.
                     HStack(spacing: 3) {
                         Circle().fill(p.a.color).frame(width: 8, height: 8)
@@ -557,10 +771,7 @@ struct CompareView: View {
                         .font(StrandFont.headline)
                         .foregroundStyle(StrandPalette.textPrimary)
                     Spacer()
-                    TrendChip(text: signedR(p.r), color: tint)
-                    Text("r = \(signedR(p.r))")
-                        .font(StrandFont.number(18))
-                        .foregroundStyle(tint)
+                    TrendChip(text: verdictLabel(p.verdict), color: tint)
                 }
 
                 Text(insightSentence(p))
@@ -568,39 +779,104 @@ struct CompareView: View {
                     .foregroundStyle(StrandPalette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                // The strength magnitude drawn as a liquid tube — the horizontal progress idiom Today
-                // uses for its key-metric fills, here reading |r| from none (0) to a perfect link (1).
-                LiquidTube(frac: min(abs(p.r), 1), tint: tint, height: 8, animated: false)
-                    .accessibilityHidden(true)
+                if showsR {
+                    // The strength magnitude drawn as a liquid tube, |r| from none (0) to perfect (1).
+                    LiquidTube(frac: strength, tint: tint, height: 8, animated: false)
+                        .accessibilityHidden(true)
+                }
 
-                Text("\(p.n) overlapping days · \(strengthWord(p.r)) \(directionWord(p.r)) correlation")
-                    .font(StrandFont.footnote)
-                    .foregroundStyle(StrandPalette.textTertiary)
+                let footer = footerLine(p)
+                if !footer.isEmpty {
+                    Text(footer)
+                        .font(StrandFont.footnote)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(p.a.metric.title) versus \(p.b.metric.title), r equals \(String(format: "%.2f", p.r)), \(p.n) days")
     }
 
     // MARK: - Insight language
 
-    /// "Weight ↔ Recovery: r = −0.34 (moderate negative) over 1Y" + a plain-English
-    /// conclusion when |r| is notable.
-    private func insightSentence(_ p: PairResult) -> String {
-        let head = String(localized: "\(p.a.metric.title) ↔ \(p.b.metric.title): r = \(signedR(p.r)) (\(strengthWord(p.r)) \(directionWord(p.r))) over \(p.n) shared days.")
-        guard abs(p.r) >= 0.3 else {
-            return String(localized: "\(head) No clear relationship. They move largely independently.")
+    private func verdictLabel(_ verdict: PairVerdict) -> String {
+        switch verdict {
+        case .clear:        return String(localized: "Clear link")
+        case .possible:     return String(localized: "Possible link")
+        case .noLink:       return String(localized: "No reliable link")
+        case .unmeasurable: return String(localized: "Not enough data")
+        case .structural:   return String(localized: "Calculated link")
         }
-        let aT = p.a.metric.title.lowercased()
-        let bT = p.b.metric.title.lowercased()
-        // Whole-phrase variants per direction so translators never see a stitched verb fragment.
-        return p.r < 0
-            ? String(localized: "\(head) When \(aT) rises, \(bT) tends to fall, a \(strengthWord(p.r)) \(directionWord(p.r)) link.")
-            : String(localized: "\(head) When \(aT) rises, \(bT) tends to rise, a \(strengthWord(p.r)) \(directionWord(p.r)) link.")
+    }
+
+    /// The plain-English reading of one pair. Every sentence is a whole-phrase variant, so
+    /// translators never see a stitched fragment. It states an ASSOCIATION, never a cause.
+    private func insightSentence(_ p: PairResult) -> String {
+        switch p.verdict {
+        case .structural:
+            return String(localized: "One is calculated from the other, so they always move together. Not an insight.")
+        case .unmeasurable:
+            if p.overlapDays < Self.minOverlapDays {
+                return String(localized: "Only \(p.overlapDays) overlapping days so far. At least \(Self.minOverlapDays) are needed to compare these reliably.")
+            }
+            return String(localized: "Once long-term trends are removed, one of these barely varies, so no link can be measured.")
+        case .noLink:
+            let days = p.test?.n ?? p.overlapDays
+            return String(localized: "No reliable link between \(p.a.metric.title) and \(p.b.metric.title) in this period (\(days) days).")
+        case .clear, .possible:
+            return linkSentence(p)
+        }
+    }
+
+    private func linkSentence(_ p: PairResult) -> String {
+        guard let t = p.test else { return "" }
+        let x = p.driver.metric.title
+        let y = p.outcome.metric.title
+        let lower = t.r < 0
+        var sentence: String
+        if t.lagDays == 1 {
+            sentence = lower
+                ? String(localized: "After days with more \(x), \(y) the next day tends to be lower.")
+                : String(localized: "After days with more \(x), \(y) the next day tends to be higher.")
+        } else {
+            sentence = lower
+                ? String(localized: "On days when \(x) is higher, \(y) tends to be lower.")
+                : String(localized: "On days when \(x) is higher, \(y) tends to be higher too.")
+        }
+        // Only a clear link earns a value judgement, and only through the OUTCOME metric's own
+        // direction: "higher is better" (Charge, HRV) or "lower is better" (resting HR). Metrics
+        // with no valence (weight, Effort, ...) get none.
+        if p.verdict == .clear, let higherIsBetter = p.outcome.metric.higherIsBetter {
+            let outcomeRises = t.r > 0
+            let tail = outcomeRises == higherIsBetter
+                ? String(localized: "For \(y) that is usually a good sign.")
+                : String(localized: "For \(y) that is worth keeping an eye on.")
+            sentence += " " + tail
+        }
+        return sentence
+    }
+
+    /// "moderate · r = +0.42 · p = 0.01 · 38 days (≈ 21 independent)". r and the strength word
+    /// appear only for clear / possible links; the day count is the paired days and "independent"
+    /// the autocorrelation-corrected effective sample size the p-value is based on.
+    private func footerLine(_ p: PairResult) -> String {
+        guard let t = p.test else { return "" }
+        let pText = t.p < 0.01 ? "< 0.01" : DisplayNumber.decimal(t.p, digits: 2)
+        let independent = Int(t.effectiveN.rounded())
+        if p.verdict == .clear || p.verdict == .possible {
+            let stats = String(localized: "r = \(signedR(t.r)) · p = \(pText) · \(t.n) days (≈ \(independent) independent)")
+            return "\(capitalizedFirst(strengthWord(t.r))) · \(stats)"
+        }
+        return String(localized: "p = \(pText) · \(t.n) days (≈ \(independent) independent)")
+    }
+
+    private func capitalizedFirst(_ s: String) -> String {
+        guard let first = s.first else { return s }
+        return first.uppercased() + s.dropFirst()
     }
 
     private func signedR(_ r: Double) -> String {
-        (r >= 0 ? "+" : "−") + String(format: "%.2f", abs(r))
+        (r >= 0 ? "+" : "−") + DisplayNumber.decimal(abs(r), digits: 2)
     }
 
     private func strengthWord(_ r: Double) -> String {
@@ -611,16 +887,6 @@ struct CompareView: View {
         case ..<0.7:  return String(localized: "strong")
         default:      return String(localized: "very strong")
         }
-    }
-
-    private func directionWord(_ r: Double) -> String {
-        if abs(r) < 0.1 { return "" }
-        return r >= 0 ? String(localized: "positive") : String(localized: "negative")
-    }
-
-    private func correlationColor(_ r: Double) -> Color {
-        let base = r >= 0 ? StrandPalette.statusPositive : StrandPalette.statusCritical
-        return base.opacity(0.55 + 0.45 * min(abs(r), 1.0))
     }
 }
 
@@ -1034,8 +1300,8 @@ private struct MultiTooltip: View {
     /// Shared formatter; was rebuilt from scratch on every hover frame.
     private static let dateLabelFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "EEE d MMM yyyy"
+        f.locale = Locale.autoupdatingCurrent
+        f.setLocalizedDateFormatFromTemplate("EEEdMMMyyyy")
         return f
     }()
 

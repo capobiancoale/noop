@@ -58,6 +58,132 @@ enum WeeklyDigestSource {
     }
 }
 
+// MARK: - Localized prose (the engine hands over data; the app speaks it)
+
+/// The digest's wording in the user's language. The engine (pure, shared with the Android port) returns its
+/// focal points as `WeeklyFocalPoint` data, so every sentence here is ONE whole localized phrase with its
+/// numbers as arguments, never stitched from English fragments. The score names stay "Charge", "Effort"
+/// and "Rest" in every language (the catalog carries them unchanged).
+enum WeeklyDigestText {
+
+    /// A metric's display name: the three score names are fixed, the nightly signals are translated.
+    static func name(_ metric: WeeklyMetric) -> String {
+        switch metric {
+        case .charge: return String(localized: "Charge")
+        case .effort: return String(localized: "Effort")
+        case .rest:   return String(localized: "Rest")
+        case .rhr:    return String(localized: "Resting HR")
+        case .hrv:    return String(localized: "HRV")
+        }
+    }
+
+    /// One focal point as a localized sentence.
+    static func line(_ point: WeeklyFocalPoint) -> String {
+        switch point {
+        case .mover(let metric, let direction, let magnitude, let thisAvg, let lastAvg, let goodness):
+            let who = name(metric)
+            let size = magnitudeText(magnitude)
+            let base: String
+            if direction > 0 {
+                base = String(localized: "\(who) is up \(size) week over week (avg \(thisAvg) vs \(lastAvg))")
+            } else if direction < 0 {
+                base = String(localized: "\(who) is down \(size) week over week (avg \(thisAvg) vs \(lastAvg))")
+            } else {
+                base = String(localized: "\(who) is flat \(size) week over week (avg \(thisAvg) vs \(lastAvg))")
+            }
+            switch goodness {
+            case 1:  return String(localized: "\(base), a good sign.")
+            case -1: return String(localized: "\(base), worth a look.")
+            default: return String(localized: "\(base).")
+            }
+        case .balance(let read):
+            return balance(read)
+        case .earlyWeek(let days):
+            return days == 1
+                ? String(localized: "Only 1 day into this week so far, too early to call a week-over-week trend yet.")
+                : String(localized: "Only \(days) days into this week so far, too early to call a week-over-week trend yet.")
+        case .sparseLastWeek(let days):
+            return days == 1
+                ? String(localized: "Last week only had 1 day of data, so week-over-week changes are rough, not a trend.")
+                : String(localized: "Last week only had \(days) days of data, so week-over-week changes are rough, not a trend.")
+        case .steadyRestHeld(let sd):
+            let spread = DisplayNumber.decimal(sd)
+            return String(localized: "A steady week: Rest held even (±\(spread) pts) and nothing moved much.")
+        case .steady:
+            return String(localized: "A steady week: no metric moved meaningfully from last week.")
+        }
+    }
+
+    /// The Effort-vs-Charge balance read as a localized sentence (the footer and the focal line share it).
+    static func balance(_ read: BalanceRead) -> String {
+        switch read {
+        case .overreaching:
+            return String(localized: "Your Effort outpaced your Charge this week: you leaned into the red. Watch for a recovery dip.")
+        case .balanced:
+            return String(localized: "Effort and Charge tracked together this week: a sustainable load.")
+        case .underloaded:
+            return String(localized: "You carried more Charge than you spent this week: there's room to push if you want it.")
+        case .insufficient:
+            return String(localized: "Not enough Effort and Charge days this week to read your balance.")
+        }
+    }
+
+    /// "12%", "4.5 pts" or "3.0 bpm": the unitless scores say "pts" in the user's language; bpm / ms are universal.
+    private static func magnitudeText(_ magnitude: WeeklyFocalPoint.Magnitude) -> String {
+        switch magnitude {
+        case .percent(let p):
+            return "\(p)%"
+        case .absolute(let value, let unit):
+            let number = DisplayNumber.decimal(value)
+            return unit.isEmpty ? String(localized: "\(number) pts") : "\(number) \(unit)"
+        }
+    }
+
+    /// The Monday–Sunday span in the user's locale and word order ("12–18 ott", "29 set – 5 ott" in Italian,
+    /// "Oct 12 – 18" in English). `DateIntervalFormatter` owns the order, the separator and the month names, so
+    /// nothing here is hand-assembled from "Oct" + day. The "yyyy-MM-dd" ends are timezone-free Gregorian
+    /// days, so they are rebuilt as local noon on a Gregorian calendar and cannot slip a day across a zone.
+    static func weekRange(start: String, end: String) -> String {
+        guard let from = localNoon(start), let to = localNoon(end) else { return "\(start) – \(end)" }
+        return rangeFormatter.string(from: from, to: to)
+    }
+
+    /// "12 ott" (Italian) / "Oct 12" (English) for a "yyyy-MM-dd" day, in the user's locale and word order.
+    static func dayMonth(_ ymd: String) -> String {
+        guard let date = localNoon(ymd) else { return ymd }
+        return dayMonthFormatter.string(from: date)
+    }
+
+    private static let gregorian: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone.autoupdatingCurrent
+        return calendar
+    }()
+
+    private static let rangeFormatter: DateIntervalFormatter = {
+        let formatter = DateIntervalFormatter()
+        formatter.locale = Locale.autoupdatingCurrent
+        formatter.calendar = gregorian
+        formatter.timeZone = TimeZone.autoupdatingCurrent
+        formatter.dateTemplate = "dMMM"
+        return formatter
+    }()
+
+    private static let dayMonthFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.autoupdatingCurrent
+        formatter.calendar = gregorian
+        formatter.timeZone = TimeZone.autoupdatingCurrent
+        formatter.setLocalizedDateFormatFromTemplate("dMMM")
+        return formatter
+    }()
+
+    private static func localNoon(_ ymd: String) -> Date? {
+        guard let (y, m, d) = WeeklyDigestEngine.parseYMD(ymd) else { return nil }
+        return gregorian.date(from: DateComponents(year: y, month: m, day: d, hour: 12))
+    }
+}
+
 // MARK: - Embeddable card
 
 /// The weekly digest as a single card (for Today / Trends). Renders nothing
@@ -203,14 +329,14 @@ struct WeeklyDigestContent: View {
     @ViewBuilder
     private var detailCard: some View {
         let signals = secondarySignals
-        let hasFocal = !digest.focalPoints.isEmpty
+        let hasFocal = !digest.focalItems.isEmpty
         if hasFocal || !signals.isEmpty || !compact {
             NoopCard {
                 VStack(alignment: .leading, spacing: 14) {
                     if hasFocal {
                         VStack(alignment: .leading, spacing: 8) {
-                            ForEach(Array(digest.focalPoints.enumerated()), id: \.offset) { _, line in
-                                focalRow(line)
+                            ForEach(Array(digest.focalItems.enumerated()), id: \.offset) { _, item in
+                                focalRow(WeeklyDigestText.line(item))
                             }
                         }
                     }
@@ -263,7 +389,7 @@ struct WeeklyDigestContent: View {
             Circle().fill(domain(for: s.metric).color)
                 .frame(width: 7, height: 7)
                 .accessibilityHidden(true)
-            Text(s.metric.label)
+            Text(WeeklyDigestText.name(s.metric))
                 .font(StrandFont.subhead)
                 .foregroundStyle(StrandPalette.textSecondary)
                 .frame(width: 84, alignment: .leading)
@@ -301,6 +427,14 @@ struct WeeklyDigestContent: View {
 
     // MARK: Footer (full screen only)
 
+    /// True when the balance read is already shown as one of the card's focal lines.
+    private var balanceIsFocalLine: Bool {
+        digest.focalItems.contains { item in
+            if case .balance = item { return true }
+            return false
+        }
+    }
+
     private var footer: some View {
         VStack(alignment: .leading, spacing: 6) {
             Divider().overlay(StrandPalette.hairline)
@@ -309,10 +443,15 @@ struct WeeklyDigestContent: View {
                     .font(StrandFont.footnote)
                     .foregroundStyle(StrandPalette.textTertiary)
             }
-            Text(digest.balance.sentence)
-                .font(StrandFont.footnote)
-                .foregroundStyle(StrandPalette.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
+            // An over- or under-loaded week already carries its balance read as a focal line at the top of
+            // this same card; repeating it here said the same sentence twice. Only the balanced and
+            // not-enough-data reads, which have no focal line, are written out in the footer.
+            if !balanceIsFocalLine {
+                Text(WeeklyDigestText.balance(digest.balance))
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Text("Informational only, not medical advice.")
                 .font(StrandFont.footnote)
                 .foregroundStyle(StrandPalette.textTertiary)
@@ -321,19 +460,9 @@ struct WeeklyDigestContent: View {
 
     // MARK: - Formatting
 
+    /// The week's span in the user's locale ("12–18 ott" in Italian), not "Ott 12-Ott 18".
     private var weekRangeLabel: String {
-        "\(shortDate(digest.weekStart))-\(shortDate(digest.weekEnd))"
-    }
-
-    /// "Jun 8" from "2026-06-08", via the engine's own pure parse (no Calendar).
-    private func shortDate(_ ymd: String) -> String {
-        guard let (_, m, d) = WeeklyDigestEngine.parseYMD(ymd) else { return ymd }
-        let months = [String(localized: "Jan"), String(localized: "Feb"), String(localized: "Mar"),
-                      String(localized: "Apr"), String(localized: "May"), String(localized: "Jun"),
-                      String(localized: "Jul"), String(localized: "Aug"), String(localized: "Sep"),
-                      String(localized: "Oct"), String(localized: "Nov"), String(localized: "Dec")]
-        let name = (1...12).contains(m) ? months[m - 1] : "\(m)"
-        return "\(name) \(d)"
+        WeeklyDigestText.weekRange(start: digest.weekStart, end: digest.weekEnd)
     }
 
     private func meanText(_ s: WeeklyMetricSummary, effortScale: EffortScale) -> String {
@@ -375,19 +504,20 @@ struct WeeklyDigestContent: View {
 
     private func rowAccessibility(_ s: WeeklyMetricSummary, effortScale: EffortScale) -> String {
         let mean = meanText(s, effortScale: effortScale)
+        let label = WeeklyDigestText.name(s.metric)
         guard s.weekOverWeek.current.n > 0, s.weekOverWeek.previous.n > 0 else {
-            return String(localized: "\(s.metric.label): \(mean) this week, no comparison.")
+            return String(localized: "\(label): \(mean) this week, no comparison.")
         }
         // Whole-phrase variants per direction, then a whole-key wrapper per goodness frame, so
         // VoiceOver never hears a stitched half-English fragment.
         let delta = deltaText(s)
         let base: String
         if s.wowDelta > 0 {
-            base = String(localized: "\(s.metric.label): \(mean) this week, up \(delta) week over week")
+            base = String(localized: "\(label): \(mean) this week, up \(delta) week over week")
         } else if s.wowDelta < 0 {
-            base = String(localized: "\(s.metric.label): \(mean) this week, down \(delta) week over week")
+            base = String(localized: "\(label): \(mean) this week, down \(delta) week over week")
         } else {
-            base = String(localized: "\(s.metric.label): \(mean) this week, unchanged \(delta) week over week")
+            base = String(localized: "\(label): \(mean) this week, unchanged \(delta) week over week")
         }
         // A rough comparison drops the verdict framing too, so VoiceOver matches the neutral chip.
         if WeeklyDigestChipStyle.dropsVerdictFrame(s) { return String(localized: "\(base).") }
@@ -398,7 +528,7 @@ struct WeeklyDigestContent: View {
         }
     }
 
-    private func fmt1(_ x: Double) -> String { String(format: "%.1f", x) }
+    private func fmt1(_ x: Double) -> String { DisplayNumber.decimal(x) }
 }
 
 // MARK: - Rough-comparison chip contract (#463, testable mirror of Android)
@@ -456,7 +586,7 @@ private struct DigestScoreCard: View {
         NoopCard(padding: 14, tint: domain.color) {
             VStack(spacing: 8) {
                 HStack {
-                    Text(summary.metric.label)
+                    Text(WeeklyDigestText.name(summary.metric))
                         .font(StrandFont.overline)
                         .tracking(StrandFont.overlineTracking)
                         .textCase(.uppercase)

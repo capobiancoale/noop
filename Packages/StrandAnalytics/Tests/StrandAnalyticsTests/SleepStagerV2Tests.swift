@@ -100,6 +100,20 @@ final class SleepStagerV2Tests: XCTestCase {
         XCTAssertEqual(early["awake"]!, 0.0)
     }
 
+    /// The two PSG-calibrated constants (PhysioNet sleep-accel, leave-one-subject-out; see the SleepStagerV2
+    /// header and Tools/sleep-staging-validation): the deep gate and the deep/light base rates. Pinned so a
+    /// change has to come with a new check against polysomnography.
+    func testPsgCalibratedConstants() {
+        XCTAssertEqual(SleepStagerV2.deepGateThresh, 0.15)
+        XCTAssertEqual(SleepStagerV2.deepGateSlope, 5.0)
+        XCTAssertEqual(SleepStagerV2.baseLogPrior["deep"]!, log(0.14), accuracy: 1e-12)
+        XCTAssertEqual(SleepStagerV2.baseLogPrior["light"]!, log(0.54), accuracy: 1e-12)
+        XCTAssertEqual(SleepStagerV2.baseLogPrior["rem"]!, log(0.22), accuracy: 1e-12)
+        XCTAssertEqual(SleepStagerV2.baseLogPrior["awake"]!, log(0.10), accuracy: 1e-12)
+        let total = SleepStagerV2.baseLogPrior.values.map { exp($0) }.reduce(0, +)
+        XCTAssertEqual(total, 1.0, accuracy: 1e-12, "the base rates are a distribution")
+    }
+
     /// Viterbi over a single epoch returns the highest-emission stage (uniform start, no transitions).
     func testViterbiSingleEpochPicksMaxEmission() {
         let path = SleepStagerV2.viterbi([["deep": 0.1, "rem": 0.1, "light": 5.0, "awake": 0.1]])
@@ -117,7 +131,7 @@ final class SleepStagerV2Tests: XCTestCase {
         }
     }
 
-    /// #690 (v7 regression): the "Experimental sleep staging (V2)" toggle must affect a NORMAL detected
+    /// #690 (v7 regression): the "Sleep staging V2" toggle must affect a NORMAL detected
     /// night — not only the userEdited self-heal restage. With the flag ON, `detectSleep` stages the
     /// accepted window with V2 (deep + REM present); with the flag OFF it returns the EXACT V1 result, so
     /// the byte-identical default (and the frozen-golden tests) is preserved.

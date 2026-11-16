@@ -105,6 +105,11 @@ public enum AnalyticsEngine {
         /// so the caller persists NULL there rather than a fabricated array. Feeds the H7 re-onset CONFIRM
         /// guard on the NEXT pass; never overrides the derived hypnogram. Empty on a WHOOP 4.0. (#175)
         public let sessionSleepStateByStart: [Int: [Int]]
+        /// The WHOOP 5.0/MG strap's OWN blood-oxygen readings aggregated over the main night (windows,
+        /// attempts, in-range seconds and the nightly value), or nil when the day has no main night or the
+        /// strap sent nothing in it. `daily.spo2Pct` carries `strapSpo2.pct`; this carries the counts the
+        /// strap log reports. Empty on a WHOOP 4.0. See `StrapSpo2`.
+        public let strapSpo2: StrapSpo2.Night?
 
         public init(daily: DailyMetric, sleepSessions: [SleepSession],
                     cachedSleep: [CachedSleepSession], workouts: [ExerciseSession],
@@ -116,7 +121,8 @@ public enum AnalyticsEngine {
                     sessionMotionByStart: [Int: [Double]] = [:],
                     sessionSleepStateByStart: [Int: [Int]] = [:],
                     chargeDrivers: [ChargeDriver] = [],
-                    skinTempRelative: SkinTempRelative? = nil) {
+                    skinTempRelative: SkinTempRelative? = nil,
+                    strapSpo2: StrapSpo2.Night? = nil) {
             self.daily = daily; self.sleepSessions = sleepSessions
             self.cachedSleep = cachedSleep; self.workouts = workouts
             self.recovery = recovery; self.strain = strain
@@ -129,6 +135,7 @@ public enum AnalyticsEngine {
             self.restConfidence = restConfidence
             self.sessionMotionByStart = sessionMotionByStart
             self.sessionSleepStateByStart = sessionSleepStateByStart
+            self.strapSpo2 = strapSpo2
         }
     }
 
@@ -304,11 +311,24 @@ public enum AnalyticsEngine {
                                   // pure-function callers/tests free of it; IntelligenceEngine threads the
                                   // night window's persisted band state. (#531 / H8 consume)
                                   bandSleepState: [(ts: Int, state: Int)] = [],
+                                  // The strap's OWN blood-oxygen byte (v18 @82) per second, nonzero seconds
+                                  // only: a percentage (70...100) or a status code. Aggregated by
+                                  // `StrapSpo2` over the main night into `DailyMetric.spo2Pct` (needs 8
+                                  // usable windows, else nil). Default empty keeps pure-function callers/
+                                  // tests byte-identical (spo2Pct stays nil); IntelligenceEngine threads the
+                                  // night window's persisted samples. Empty on a WHOOP 4.0.
+                                  strapSpo2: [(ts: Int, raw: Int)] = [],
                                   // Opt-in experimental sleep staging (V2). When true, detected nights are
                                   // staged by `SleepStagerV2` instead of V1. Default false keeps V1 the
                                   // byte-identical default for pure-function callers/tests; IntelligenceEngine
                                   // threads `PuffinExperiment.experimentalSleepV2Enabled`. (V7 / #690)
                                   useSleepStagerV2: Bool = false,
+                                  // Logged sessions with a perceived-exertion rating (WODs) for the day. Their
+                                  // session-RPE load adds to Effort only where the heart rate recorded for them
+                                  // under-reads it (StrainScorer, Foster 2001 / Tibana 2018). Default empty keeps
+                                  // pure-function callers/tests byte-identical; IntelligenceEngine passes the
+                                  // day's logged WODs.
+                                  loggedSessions: [StrainScorer.LoggedSession] = [],
                                   // Sleep PROVENANCE for the per-day sleep trace (CAPTURE-C / #799). The
                                   // measured BLE path is `.measured` (the default); the caller passes
                                   // `.imported(...)` when a previously-imported sleep row WON the daily merge,
@@ -365,6 +385,15 @@ public enum AnalyticsEngine {
             matched.map { SleepStageTotals.NightBlock(start: $0.start, end: $0.end) },
             offsetSec: tzOffsetSeconds, habitualMidsleepSec: habitualMidsleepSec) ?? []
         let mainGroup: [SleepSession] = mainGroupIdx.map { matched[$0] }
+
+        // ── The main night's blood oxygen from the strap's own readings ──────
+        // Padded by 15 min each side: a reading window can sit just outside NOOP's detected edges. The strap
+        // only reads while ITS band scores sleep, so the pad cannot pull in waking readings. nil when the
+        // day has no main night or the strap sent nothing in the span; `pct` is nil under 8 usable windows.
+        var strapSpo2Night: StrapSpo2.Night?
+        if let nightStart = mainGroup.map({ $0.start }).min(), let nightEnd = mainGroup.map({ $0.end }).max() {
+            strapSpo2Night = StrapSpo2.night(strapSpo2, from: nightStart - 900, to: nightEnd + 900)
+        }
 
         // ── Daily sleep aggregates (AASM) SUMMED over the main-night GROUP (#525 / #561) ──
         var deepS = 0.0, remS = 0.0, lightS = 0.0, tstS = 0.0
@@ -515,23 +544,27 @@ public enum AnalyticsEngine {
         // today's Effort same-day instead of being cut off at the night window's ≈ noon bound, and
         // the prior evening's HR (the night window's −30h tail) no longer bleeds in. Falls back to the
         // night `hr` for pure-function callers/tests.
-        let effMaxHR: Double? = maxHROverride ?? (profile.age > 0 ? StrainScorer.tanakaHRmax(age: profile.age) : nil)
-        let restForStrain = restingHRDaily.map(Double.init) ?? StrainScorer.defaultRestingHR
-        let strain = StrainScorer.strain(dayHr ?? hr, maxHR: effMaxHR, restingHR: restForStrain,
-                                         sex: profile.sex)
-
         // ── Workouts ──────────────────────────────────────────────────────────
         // Detect over the full CALENDAR day (dayHr/dayGravity) when the caller supplies it, so a
         // current-day afternoon/evening workout is caught on its own day rather than lagging until
         // a later pass re-reads it through the next night window (which ends at ≈ noon). Falls back
         // to the night window for pure-function callers/tests. restingHR still comes from the night's
-        // sleep sessions; nil → WorkoutDetector derives it from the day's own HR floor.
+        // sleep sessions; nil → WorkoutDetector derives it from the day's own HR floor. Detected before
+        // Effort so logged WODs can be matched to the heart rate that recorded them.
         let workouts = WorkoutDetector.detect(
             hr: dayHr ?? hr, gravity: dayGravity ?? gravity,
             restingHR: restingHRDaily.map(Double.init),
             maxHR: maxHROverride,
             age: profile.age > 0 ? profile.age : nil,
             profile: profile)
+
+        let effMaxHR: Double? = maxHROverride ?? (profile.age > 0 ? StrainScorer.tanakaHRmax(age: profile.age) : nil)
+        let restForStrain = restingHRDaily.map(Double.init) ?? StrainScorer.defaultRestingHR
+        let strain = StrainScorer.strain(dayHr ?? hr, maxHR: effMaxHR, restingHR: restForStrain,
+                                         sex: profile.sex, sessions: loggedSessions,
+                                         bouts: workouts.map { (start: $0.start, end: $0.end) },
+                                         dayStart: dayStartUtc - tzOffsetSeconds,
+                                         dayEnd: dayEndUtc - tzOffsetSeconds)
 
         // ── Steps (APPROXIMATE) ───────────────────────────────────────────────
         // step_motion_counter@57 is a CUMULATIVE u16 running counter (it climbs while you move, holds
@@ -597,7 +630,7 @@ public enum AnalyticsEngine {
             recovery: recovery,
             strain: strain,
             exerciseCount: workouts.count,
-            spo2Pct: nil,
+            spo2Pct: strapSpo2Night?.pct,
             skinTempDevC: skinTempDevC,
             respRateBpm: respRateDaily,
             steps: stepsTotal,
@@ -661,7 +694,8 @@ public enum AnalyticsEngine {
                          sessionMotionByStart: sessionMotionByStart,
                          sessionSleepStateByStart: sessionSleepStateByStart,
                          chargeDrivers: chargeDrivers,
-                         skinTempRelative: skinTempRelative)
+                         skinTempRelative: skinTempRelative,
+                         strapSpo2: strapSpo2Night)
     }
 
     // MARK: - Rest composite (Charge/Effort/Rest)

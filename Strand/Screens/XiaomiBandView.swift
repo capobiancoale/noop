@@ -56,10 +56,10 @@ struct XiaomiBandView: View {
         return f
     }()
     private static let spanFormatter: DateFormatter = {
-        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "d MMM yyyy"; return f
+        let f = DateFormatter(); f.locale = Locale.autoupdatingCurrent; f.setLocalizedDateFormatFromTemplate("dMMMyyyy"); return f
     }()
     private static let asOfFormatter: DateFormatter = {
-        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "d MMM"; return f
+        let f = DateFormatter(); f.locale = Locale.autoupdatingCurrent; f.setLocalizedDateFormatFromTemplate("dMMM"); return f
     }()
     private static let groupedIntFmt: NumberFormatter = {
         let f = NumberFormatter(); f.numberStyle = .decimal; f.maximumFractionDigits = 0; return f
@@ -165,7 +165,7 @@ struct XiaomiBandView: View {
             .chart("Sleep score", "sleep_score", accentGradient, 0...100, { "\(Int($0.rounded()))" }),
             .header("Activity & Energy", "Movement"),
             .chart("Steps", "steps", cyanGradient, 0...12000, { intString($0) }),
-            .chart("Distance", "distance_m", cyanGradient, 0...10000, { String(format: "%.2f km", $0 / 1000) }),
+            .chart("Distance", "distance_m", cyanGradient, 0...10000, { "\(DisplayNumber.decimal($0 / 1000, digits: 2)) km" }),
             .chart("Active energy", "energy_kcal", amberGradient, 0...1000, { "\(intString($0)) kcal" }),
             .chart("Intensity minutes", "intensity_min", amberGradient, 0...120, { "\(Int($0.rounded())) min" }),
             .header("Wellbeing", "Body energy"),
@@ -210,10 +210,20 @@ struct XiaomiBandView: View {
 
     private var rangeControl: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                SegmentedPillControl(RangeWindow.allCases, selection: $range) { $0.label }
-                Spacer()
-                Text(range.caption).strandOverline()
+            // The pills never truncate: the trailing window caption is dropped when it does not fit
+            // beside them (the summary line below names the window too).
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    SegmentedPillControl(RangeWindow.allCases, selection: $range) { $0.label }
+                    Spacer(minLength: 8)
+                    Text(range.caption).strandOverline()
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                HStack(spacing: 0) {
+                    SegmentedPillControl(RangeWindow.allCases, selection: $range) { $0.label }
+                    Spacer(minLength: 0)
+                }
             }
             Text(rangeSummaryCaption)
                 .font(StrandFont.footnote)
@@ -321,7 +331,7 @@ struct XiaomiBandView: View {
     }
 
     private static let nightFormatter: DateFormatter = {
-        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "d MMM"; return f
+        let f = DateFormatter(); f.locale = Locale.autoupdatingCurrent; f.setLocalizedDateFormatFromTemplate("dMMM"); return f
     }()
 
     // MARK: - Tiles

@@ -217,4 +217,66 @@ final class WorkoutDetectorTests: XCTestCase {
         let sessions = WorkoutDetector.detect(hr: hr, gravity: grav, age: 30)
         XCTAssertEqual(sessions.count, 2, "separate workouts were over-merged")
     }
+
+    // MARK: - Mixed sessions: a CrossFit class
+
+    /// A one-hour CrossFit class inside a quiet day: 15 min warm-up (HR ~115), 20 min of strength (a minute
+    /// of work at ~128 bpm, then two minutes' rest at ~100 with little movement, repeated), a 15-min WOD at
+    /// ~168, 10 min cool-down (~105). The wearer's resting HR is 45 (the night's floor), max 187 (age 30):
+    /// zone 2 (60 % of heart-rate reserve) starts at 130 bpm. Moving all through the class except in the rests.
+    private func crossFitClassDay(classStart: Int) -> (hr: [HRSample], grav: [GravitySample], wod: ClosedRange<Int>) {
+        var hr: [HRSample] = []
+        var grav: [GravitySample] = []
+        let warmUpEnd = classStart + 15 * 60
+        let strengthEnd = warmUpEnd + 20 * 60
+        let wodEnd = strengthEnd + 15 * 60
+        let classEnd = wodEnd + 10 * 60
+        for t in (classStart - 60 * 60)..<(classEnd + 60 * 60) {
+            var bpm = 58
+            var moving = false
+            if t >= classStart && t < warmUpEnd {
+                bpm = 112 + (t % 7); moving = true
+            } else if t >= warmUpEnd && t < strengthEnd {
+                let working = (t - warmUpEnd) % 180 < 60
+                bpm = working ? 126 + (t % 5) : 98 + (t % 5); moving = working
+            } else if t >= strengthEnd && t < wodEnd {
+                bpm = 164 + (t % 9); moving = true
+            } else if t >= wodEnd && t < classEnd {
+                bpm = 104 + (t % 4); moving = true
+            }
+            hr.append(HRSample(ts: t, bpm: bpm))
+            let osc = moving ? Double(t % 2) * 0.5 : 0
+            grav.append(GravitySample(ts: t, x: osc, y: 0, z: 1))
+        }
+        return (hr, grav, strengthEnd...wodEnd)
+    }
+
+    func testACrossFitClassYieldsItsWod() {
+        // The class as a whole is mostly below zone 2 (warm-up, strength rests, cool-down), so the intensity
+        // gate rejected all of it and a CrossFit athlete's sessions were never detected. Its intense part, the
+        // WOD, is found inside it.
+        let start = 11_000_000
+        let (hr, grav, wod) = crossFitClassDay(classStart: start)
+        let sessions = WorkoutDetector.detect(hr: hr, gravity: grav, restingHR: 45, age: 30)
+        XCTAssertEqual(sessions.count, 1, "found \(sessions.count) workouts")
+        guard let w = sessions.first else { return }
+        XCTAssertLessThanOrEqual(abs(w.start - wod.lowerBound), 60)
+        XCTAssertLessThanOrEqual(abs(w.end - wod.upperBound), 60)
+        XCTAssertGreaterThan(w.avgHR, 160)
+    }
+
+    func testAnEasyLongSessionWithABriefSprintIsNotAWorkout() {
+        // An hour of easy movement (HR ~100) with a 3-minute hard stretch in the middle: the intense part is
+        // too short to count on its own, and the hour as a whole is easy, so nothing is detected.
+        let start = 12_000_000
+        var hr: [HRSample] = []
+        var grav: [GravitySample] = []
+        for t in (start - 30 * 60)..<(start + 90 * 60) {
+            let inHour = t >= start && t < start + 60 * 60
+            let sprint = t >= start + 30 * 60 && t < start + 33 * 60
+            hr.append(HRSample(ts: t, bpm: sprint ? 165 : (inHour ? 100 : 58)))
+            grav.append(GravitySample(ts: t, x: inHour ? Double(t % 2) * 0.5 : 0, y: 0, z: 1))
+        }
+        XCTAssertTrue(WorkoutDetector.detect(hr: hr, gravity: grav, restingHR: 45, age: 30).isEmpty)
+    }
 }

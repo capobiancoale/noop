@@ -573,7 +573,7 @@ struct InsightsView: View {
                     experimentField("Behaviour") {
                         Picker("Behaviour", selection: experimentBehaviourBinding) {
                             ForEach(candidates, id: \.self) { q in
-                                Text(verbatim: q).tag(q)
+                                Text(verbatim: JournalCatalogStore.displayLabel(forQuestion: q)).tag(q)
                             }
                         }
                         .labelsHidden()
@@ -603,11 +603,11 @@ struct InsightsView: View {
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(verbatim: snapshot.behavior)
+                    Text(verbatim: JournalCatalogStore.displayLabel(forQuestion: snapshot.behavior))
                         .font(StrandFont.headline)
                         .foregroundStyle(StrandPalette.textPrimary)
                         .lineLimit(2)
-                    Text("Started \(snapshot.startDay) · testing \(snapshot.outcome.outcomeName.lowercased())")
+                    Text("Started \(snapshot.startDay) · testing \(snapshot.outcome.outcomeName)")
                         .font(StrandFont.footnote)
                         .foregroundStyle(StrandPalette.textTertiary)
                 }
@@ -976,13 +976,25 @@ struct InsightsView: View {
         // `ranked` is memoized in @State (see recomputeRanked()); reading it
         // here does no expensive work per render.
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-            // Header + the ONE segmented pill control for choosing the outcome.
-            HStack(alignment: .center) {
-                SectionHeader("Behaviour Effects",
-                              overline: "What moves your \(outcome.outcomeName.lowercased())")
-                Spacer()
-                SegmentedPillControl(Outcome.allCases, selection: $outcome) { $0.label }
-                    .accessibilityLabel("Outcome metric")
+            // Header + the ONE segmented pill control for choosing the outcome. Beside a header that
+            // wraps ("Cosa influenza il tuo Charge") the four pills were squeezed until the first read
+            // "Cha…", so when they do not fit side by side the pills take their own row (as in the hub).
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center) {
+                    SectionHeader("Behaviour Effects",
+                                  overline: "What moves your \(outcome.outcomeName)")
+                        .fixedSize(horizontal: true, vertical: false)
+                    Spacer(minLength: 8)
+                    SegmentedPillControl(Outcome.allCases, selection: $outcome) { $0.label }
+                        .accessibilityLabel("Outcome metric")
+                }
+                VStack(alignment: .leading, spacing: NoopMetrics.space2) {
+                    SectionHeader("Behaviour Effects",
+                                  overline: "What moves your \(outcome.outcomeName)")
+                    SegmentedPillControl(Outcome.allCases, selection: $outcome) { $0.label }
+                        .accessibilityLabel("Outcome metric")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
 
             if ranked.isEmpty {
@@ -998,7 +1010,7 @@ struct InsightsView: View {
 
     private var noEffects: some View {
         NoopCard {
-            Text(String(localized: "Not enough overlap between your journal answers and \(outcome.outcomeName.lowercased()) to measure an effect yet. Keep logging. Effects need days both with and without each behaviour."))
+            Text(String(localized: "Not enough overlap between your journal answers and \(outcome.outcomeName) to measure an effect yet. Keep logging. Effects need days both with and without each behaviour."))
                 .font(StrandFont.subhead)
                 .foregroundStyle(StrandPalette.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1025,11 +1037,11 @@ struct InsightsView: View {
         let deltaText: String = {
             let arrow = e.delta > 0 ? "↑" : (e.delta < 0 ? "↓" : "→")
             if let pct = e.pctChange { return "\(arrow) \(Int(abs(pct).rounded()))%" }
-            return "\(arrow) \(String(format: "%.1f", abs(e.delta)))"
+            return "\(arrow) \(DisplayNumber.decimal(abs(e.delta)))"
         }()
         // Build the plain-English sentence ONCE and reuse it for both the visible
         // copy and the accessibility label (was computed twice per card).
-        let sentence = BehaviorInsights.sentence(e)
+        let sentence = InsightsCopy.effectSentence(e)
 
         // The card wash reads as the OUTCOME's colour world (so the whole Behaviour
         // Effects section sits in one world), while the dot / StatTile accents stay
@@ -1045,7 +1057,7 @@ struct InsightsView: View {
                         LiquidVessel(value: min(1, abs(e.cohensD) / 0.8), tint: tintColor, animated: false)
                             .frame(width: 26, height: 26)
                             .accessibilityHidden(true)
-                        Text(e.behavior)
+                        Text(verbatim: JournalCatalogStore.displayLabel(forQuestion: e.behavior))
                             .font(StrandFont.headline)
                             .foregroundStyle(StrandPalette.textPrimary)
                     }
@@ -1086,7 +1098,7 @@ struct InsightsView: View {
                     Text("Effect size").strandOverline()
                     Spacer()
                     HStack(spacing: 6) {
-                        Text(String(format: "d = %.2f", e.cohensD))
+                        Text(verbatim: "d = \(DisplayNumber.decimal(e.cohensD, digits: 2))")
                             .font(StrandFont.captionNumber)
                             .foregroundStyle(tintColor)
                         Text(effectMagnitudeWord(e.cohensD))
@@ -1099,8 +1111,8 @@ struct InsightsView: View {
         .accessibilityElement(children: .combine)
         // Whole-string key per variant (never a concatenated localized tail on an a11y label).
         .accessibilityLabel(e.significant
-            ? String(localized: "\(sentence) Cohen's d \(String(format: "%.2f", e.cohensD)). Statistically significant.")
-            : String(localized: "\(sentence) Cohen's d \(String(format: "%.2f", e.cohensD)). Exploratory, not yet significant."))
+            ? String(localized: "\(sentence) Cohen's d \(DisplayNumber.decimal(e.cohensD, digits: 2)). Statistically significant.")
+            : String(localized: "\(sentence) Cohen's d \(DisplayNumber.decimal(e.cohensD, digits: 2)). Exploratory, not yet significant."))
     }
 
     // MARK: - Metric relationships section
@@ -1149,14 +1161,14 @@ struct InsightsView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(accent)
                         .frame(width: 20)
-                    Text(cost.sport)
+                    Text(WorkoutSource.localizedSport(cost.sport))
                         .font(StrandFont.headline)
                         .foregroundStyle(StrandPalette.textPrimary)
                         .lineLimit(1)
                     Spacer(minLength: 8)
                     ScoreStatePill(scoreState)
                 }
-                Text(cost.sentence())
+                Text(InsightsCopy.activityCostSentence(cost))
                     .font(StrandFont.subhead)
                     .foregroundStyle(StrandPalette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1281,7 +1293,7 @@ struct InsightsView: View {
                     .font(StrandFont.headline)
                     .foregroundStyle(StrandPalette.textPrimary)
                 Spacer()
-                Text(String(format: "r = %+.2f", r))
+                Text(verbatim: "r = \(DisplayNumber.signed(r, digits: 2))")
                     .font(StrandFont.number(16))
                     .foregroundStyle(strength)
                 StatePill(rel.corr.pApprox < 0.05 ? "p < 0.05" : "n.s.",
@@ -1374,7 +1386,7 @@ struct InsightsView: View {
         let r = rel.corr.r
         let dir = r > 0 ? String(localized: "positive") : (r < 0 ? String(localized: "negative") : String(localized: "flat"))
         let strength = strengthWord(r)
-        return String(localized: "\(strength.capitalizedFirst) \(dir) relationship (r = \(String(format: "%.2f", r)), n = \(rel.corr.n)).")
+        return String(localized: "\(strength.capitalizedFirst) \(dir) relationship (r = \(DisplayNumber.decimal(r, digits: 2)), n = \(rel.corr.n)).")
     }
 }
 
@@ -1415,7 +1427,7 @@ private struct RBar: View {
         .overlay(alignment: .center) {
             if hovering {
                 ChartTooltip(
-                    value: String(format: "r = %+.2f", r),
+                    value: "r = \(DisplayNumber.signed(r, digits: 2))",
                     label: label,
                     accent: color
                 )

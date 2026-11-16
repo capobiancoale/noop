@@ -21,6 +21,13 @@ struct RootTabView: View {
     /// Selected tab — bound so tab switches can crossfade (README §Motion: ~240ms opacity swap
     /// between tab roots, calm easing). Defaults to Today.
     @State private var selectedTab: Int = 0
+
+    /// Tab tags: 0 Today, 1 Progress, 2 Log, 3 Coach, 4 More. (Older builds had 0 Today, 1 Trends, 2 Sleep,
+    /// 3 More; the tab is never persisted, so no stored tag can point at a missing tab, and `validTab` clamps
+    /// any index that is ever fed in.)
+    static let coachTab = 3
+    static let lastTab = 4
+    static func validTab(_ tag: Int) -> Int { min(lastTab, max(0, tag)) }
     /// Which More-tab groups are expanded (S2). Insights + Body stay open at rest; Data + App collapse to
     /// just their header until tapped. Persisted (#860 item 2): the user's open/closed choice must SURVIVE
     /// leaving and re-entering the More tab (and relaunch), not reset to the seed every visit. Backed by an
@@ -62,9 +69,10 @@ struct RootTabView: View {
             // native TabView still drives content + per-tab nav state; only its bar is hidden.
             TabView(selection: $selectedTab) {
                 tab(todayTabRoot, "Today", "square.grid.2x2").tag(0)
-                tab(TrendsView(), "Trends", "chart.line.uptrend.xyaxis").tag(1)
-                tab(SleepView(), "Sleep", "bed.double").tag(2)
-                moreTab.tag(3)
+                tab(ProgressOverviewView(), "Progress", "chart.line.uptrend.xyaxis").tag(1)
+                tab(LogTabRoot(), "Training log", "list.bullet.rectangle").tag(2)
+                tab(CoachView(), "Coach", "sparkles").tag(3)
+                moreTab.tag(4)
             }
             .tint(StrandPalette.accent)
             .toolbar(.hidden, for: .tabBar)
@@ -76,21 +84,29 @@ struct RootTabView: View {
             .simultaneousGesture(
                 DragGesture(minimumDistance: 24)
                     .onEnded { v in
-                        // Today (tab 0) uses horizontal swipe to change DAYS, so tab-swipe is off there.
-                        guard selectedTab != 0 else { return }
+                        // Today (tab 0) uses horizontal swipe to change DAYS, so tab-swipe is off there; the
+                        // Coach chat (tab 3) has a text field, so a stray flick must not leave it.
+                        guard selectedTab != 0, selectedTab != Self.coachTab else { return }
                         let dx = v.translation.width, dy = v.translation.height
                         guard abs(dx) > 60, abs(dx) > abs(dy) * 1.6 else { return }
-                        let next = min(3, max(0, selectedTab + (dx < 0 ? 1 : -1)))
+                        let next = Self.validTab(selectedTab + (dx < 0 ? 1 : -1))
                         if next != selectedTab {
                             withAnimation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.24)) { selectedTab = next }
                         }
                     }
             )
 
-            FloatingTabBar(selection: $selectedTab, onReselect: { _ in
-                // Re-tapping the active tab refreshes that page's data (2026-07-02).
-                Task { await repo.refresh() }
-            })
+            VStack(spacing: 0) {
+                // Apple Health import progress (history import / a sync the user started), floating just
+                // above the bar on every tab, so the app stays usable while the data comes in. Zero-height
+                // and gap-free when idle (its own bottom padding only exists while it shows), so the bar
+                // never moves.
+                HealthSyncBanner()
+                FloatingTabBar(selection: $selectedTab, onReselect: { _ in
+                    // Re-tapping the active tab refreshes that page's data (2026-07-02).
+                    Task { await repo.refresh() }
+                })
+            }
         }
         .task {
             await repo.refresh()
@@ -128,8 +144,8 @@ struct RootTabView: View {
                 routedPillar = dest
                 router.requestedDestination = nil
             case .trends:
-                // Trends is a primary tab on iPhone (not a pillar sheet) — switch to it.
-                withAnimation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.24)) { selectedTab = 1 }
+                // Trends moved under More (Progress is the tab now): present it as a pillar sheet.
+                routedPillar = dest
                 router.requestedDestination = nil
             case .activeWorkout:
                 // The Today active-workout indicator opens Live through the quick-action Live sheet; once
@@ -166,9 +182,7 @@ struct RootTabView: View {
                 case .fusedRecord: FusedRecordHost()
                 case .rhythm: RhythmHost(onClose: { routedPillar = nil })
                 case .devices: DevicesView()
-                // .trends is never presented as a pillar sheet on iPhone (it's a primary tab — the
-                // requestedDestination handler switches `selectedTab` instead), but the switch must stay
-                // exhaustive. Fall back to Trends inside the sheet host if it ever arrives here.
+                // Trends lives under More on iPhone; a deep link to it presents here.
                 case .trends: TrendsView()
                 // .activeWorkout routes through the quick-action Live sheet (handled above); this keeps the
                 // switch exhaustive and falls back to Live if it ever reaches the pillar host.
@@ -291,6 +305,9 @@ struct RootTabView: View {
                            onRefresh: { await repo.refresh() },
                            topBackground: liquidScaffoldSky()) {
                 moreSection("Insights") {
+                    MoreRow("Sleep", "bed.double") { SleepView() }
+                    MoreRow("Trends", "chart.line.uptrend.xyaxis") { TrendsView() }
+                    MoreRow("Your Week", "calendar") { WeeklyReviewView() }
                     MoreRow("What Moves You", "wand.and.sparkles") { InsightsHubView() }
                     MoreRow("Intelligence", "brain.head.profile") { IntelligenceView() }
                     MoreRow("Coach", "sparkles") { CoachView() }
@@ -301,7 +318,9 @@ struct RootTabView: View {
                 moreSection("Body") {
                     MoreRow("Live", "waveform.path.ecg") { LiveView() }
                     MoreRow("Workouts", "figure.run") { WorkoutsView() }
+                    MoreRow("WOD Log", "figure.strengthtraining.traditional") { WodLogView() }
                     MoreRow("Health", "heart.text.square.fill") { HealthView() }
+                    MoreRow("VO₂max", "lungs.fill") { VO2maxView() }
                     MoreRow("Lab Book", "books.vertical.fill") { LabBookView() }
                     MoreRow("Stress", "bolt.heart.fill") { StressView() }
                     MoreRow("Breathe", "wind") { BreathingView() }
@@ -369,7 +388,10 @@ struct RootTabView: View {
                 }
             } label: {
                 HStack(spacing: 6) {
-                    Text(title).strandOverline()
+                    // `title` is also the persistence key (English, stable across languages), so it is looked
+                    // up in the catalog here rather than shown raw: a bare `Text(title)` takes a String and
+                    // never localizes, which left INSIGHTS / BODY / DATA / APP in English on an Italian UI.
+                    Text(LocalizedStringKey(title)).strandOverline()
                     Spacer(minLength: 8)
                     Image(systemName: "chevron.down")
                         .font(.system(size: 11, weight: .semibold))
@@ -380,7 +402,7 @@ struct RootTabView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text(title))
+            .accessibilityLabel(Text(LocalizedStringKey(title)))
             .accessibilityValue(Text(isOpen ? String(localized: "Expanded") : String(localized: "Collapsed")))
             .accessibilityHint(Text(isOpen ? String(localized: "Double tap to collapse") : String(localized: "Double tap to expand")))
 
@@ -541,10 +563,34 @@ private struct QuickActionSheet: View {
     }
 }
 
+// MARK: - Log tab
+
+/// The Log tab: WOD log with a segmented switch to every workout, so both stay one tap away. The switch is
+/// pinned above the scrolling screens (their liquid sky runs under it).
+private struct LogTabRoot: View {
+    @State private var showWorkouts = false
+
+    var body: some View {
+        Group {
+            if showWorkouts { WorkoutsView() } else { WodLogView() }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            Picker("Log", selection: $showWorkouts) {
+                Text("WODs").tag(false)
+                Text("Workouts").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
+            .padding(.bottom, 6)
+        }
+    }
+}
+
 // MARK: - Floating tab bar
 
-/// The signature bottom bar: two frosted "glass" islands (Today·Trends / Sleep·More) with the gold
-/// action button nested cleanly in the gap between them — no overlap, no glow. Real iOS 26 Liquid
+/// The signature bottom bar: one frosted "glass" capsule with five tabs (Today / Progress / Log / Coach /
+/// More) — no overlap, no glow. Real iOS 26 Liquid
 /// Glass where available, a `.ultraThinMaterial` fallback below. Replaces the hidden native tab bar.
 private struct FloatingTabBar: View {
     @Binding var selection: Int
@@ -553,18 +599,20 @@ private struct FloatingTabBar: View {
 
     private struct Item: Identifiable { let title: LocalizedStringKey; let icon: String; let tag: Int; var id: Int { tag } }
     private let nav = [Item(title: "Today", icon: "square.grid.2x2", tag: 0),
-                       Item(title: "Trends", icon: "chart.line.uptrend.xyaxis", tag: 1),
-                       Item(title: "Sleep", icon: "bed.double", tag: 2),
-                       Item(title: "More", icon: "ellipsis", tag: 3)]
+                       Item(title: "Progress", icon: "chart.line.uptrend.xyaxis", tag: 1),
+                       Item(title: "Training log", icon: "list.bullet.rectangle", tag: 2),
+                       Item(title: "Coach", icon: "sparkles", tag: 3),
+                       Item(title: "More", icon: "ellipsis", tag: 4)]
 
     var body: some View {
-        // One frosted glass bar, four evenly-spaced tabs. The quick-action "+" now lives in the
+        // One frosted glass bar, five evenly-spaced tabs. The quick-action "+" now lives in the
         // top-right of each screen's header (balancing the profile avatar on the left).
         HStack(spacing: 2) {
             tabButton(nav[0])
             tabButton(nav[1])
             tabButton(nav[2])
             tabButton(nav[3])
+            tabButton(nav[4])
         }
         .padding(.vertical, 7)
         .padding(.horizontal, 8)
@@ -619,12 +667,18 @@ private struct FloatingTabBar: View {
 private extension View {
     /// Real iOS 26 Liquid Glass where available; `.ultraThinMaterial` on iOS 17–25 — a clean
     /// blended degrade so the bar stays modern on new OSes without breaking older ones.
+    /// `glassEffect` only exists in the iOS 26 SDK (Xcode 26, Swift 6.2): an older Xcode builds the
+    /// material fallback instead of failing to compile.
     @ViewBuilder func liquidGlass(in shape: some Shape) -> some View {
+        #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
             self.glassEffect(.regular, in: shape)
         } else {
             self.background(.ultraThinMaterial, in: shape)
         }
+        #else
+        self.background(.ultraThinMaterial, in: shape)
+        #endif
     }
 }
 #endif

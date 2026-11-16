@@ -150,6 +150,35 @@ final class MetricSeriesStoreTests: XCTestCase {
         XCTAssertEqual(stepsSpan?.latest, "2026-06-01")
     }
 
+    // MARK: - delete
+
+    func testDeleteRemovesOnlyThatKeyDeviceAndDayRange() async throws {
+        let store = try await WhoopStore.inMemory()
+        try await store.upsertMetricSeries([
+            MetricPoint(day: "2026-05-01", key: "vo2max_manual", value: 48),
+            MetricPoint(day: "2026-05-10", key: "vo2max_manual", value: 50),
+            MetricPoint(day: "2026-05-10", key: "vo2max_manual_method", value: 1),
+        ], deviceId: "manual-vo2max")
+        try await store.upsertMetricSeries([MetricPoint(day: "2026-05-10", key: "vo2max_manual", value: 60)],
+                                           deviceId: "other")
+
+        let deleted = try await store.deleteMetricSeries(deviceId: "manual-vo2max", key: "vo2max_manual",
+                                                         from: "2026-05-10", to: "2026-05-10")
+        XCTAssertEqual(deleted, 1)
+        let left = try await store.metricSeries(deviceId: "manual-vo2max", key: "vo2max_manual",
+                                                from: "0000-01-01", to: "9999-12-31")
+        XCTAssertEqual(left.map(\.day), ["2026-05-01"])
+        let method = try await store.metricSeries(deviceId: "manual-vo2max", key: "vo2max_manual_method",
+                                                  from: "0000-01-01", to: "9999-12-31")
+        XCTAssertEqual(method.count, 1, "another key on the same day stays")
+        let other = try await store.metricSeries(deviceId: "other", key: "vo2max_manual",
+                                                 from: "0000-01-01", to: "9999-12-31")
+        XCTAssertEqual(other.count, 1, "another device stays")
+        let none = try await store.deleteMetricSeries(deviceId: "manual-vo2max", key: "vo2max_manual",
+                                                      from: "2026-06-01", to: "2026-06-30")
+        XCTAssertEqual(none, 0)
+    }
+
     func testMetricDaysNilWhenAbsent() async throws {
         let store = try await WhoopStore.inMemory()
         let span = try await store.metricDays(deviceId: "devA", key: "missing")

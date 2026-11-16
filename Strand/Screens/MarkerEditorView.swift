@@ -25,6 +25,14 @@ import WhoopStore
 struct MarkerEditorView: View {
     /// Persist the validated draft row(s). Async so the caller can write + refresh.
     let onSave: (_ drafts: [LabMarkerRow]) async -> Void
+    /// A catalog marker to open on (e.g. the blood-pressure pair from the metric detail), so the sheet
+    /// lands straight on its value fields instead of the marker list. nil = the usual marker list.
+    let initialMarkerKey: String?
+
+    init(initialMarkerKey: String? = nil, onSave: @escaping (_ drafts: [LabMarkerRow]) async -> Void) {
+        self.initialMarkerKey = initialMarkerKey
+        self.onSave = onSave
+    }
 
     @EnvironmentObject var repo: Repository
     @Environment(\.dismiss) private var dismiss
@@ -72,6 +80,17 @@ struct MarkerEditorView: View {
         #endif
         .background(StrandPalette.surfaceBase)
         .keyboardDoneToolbar($focused)
+        .onAppear { preselectInitialMarker() }
+    }
+
+    /// Open on `initialMarkerKey` when one was asked for and nothing is chosen yet. Same state `choose`
+    /// sets, without grabbing keyboard focus on appear.
+    private func preselectInitialMarker() {
+        guard selection == nil, !addingCustom, let key = initialMarkerKey,
+              let def = MarkerCatalog.definition(for: key) else { return }
+        selection = def
+        unit = def.canonicalUnit
+        unitChoice = 0
     }
 
     // MARK: - Marker picker
@@ -450,8 +469,10 @@ struct MarkerEditorView: View {
         )
     }
 
+    /// A typed number. An Italian (or any comma-decimal) keyboard types "5,2", which `Double(_:)` rejects,
+    /// so the comma is read as the decimal point; that alone made such a value impossible to save.
     private func parsed(_ s: String) -> Double? {
-        Double(s.trimmingCharacters(in: .whitespaces))
+        Double(s.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: "."))
     }
 
     private func save() {
@@ -520,7 +541,9 @@ enum MarkerUnits {
     }
 
     /// A short label for the conversion factor (4 sig figs), e.g. "0.02586".
-    static func factorLabel(_ f: Double) -> String { String(format: "%.5g", f) }
+    static func factorLabel(_ f: Double) -> String {
+        f.formatted(.number.precision(.significantDigits(1...5)).grouping(.never))
+    }
 
     /// A lower-cased, underscored slug for a custom marker name → its stable key.
     static func slug(_ name: String) -> String {

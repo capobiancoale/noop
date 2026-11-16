@@ -129,6 +129,51 @@ class IllnessSignalEngineTest {
         }
     }
 
+    @Test fun nocturnalLowSuppressesLikeOtherConfounders() {
+        val inputs = IllnessSignalEngine.Inputs(
+            restingHR = reading(3.2), skinTemp = reading(3.0), hrv = reading(3.5))
+        val raised = IllnessSignalEngine.evaluate(inputs, IllnessSignalEngine.Context(), labels)
+        val low = IllnessSignalEngine.evaluate(
+            inputs, IllnessSignalEngine.Context(nocturnalLow = true), labels)
+        assertEquals(IllnessSignalEngine.Level.RAISED, raised.level)
+        assertEquals(IllnessSignalEngine.Level.SUPPRESSED, low.level)
+        assertEquals(listOf("a low glucose at night"), low.suppressedBy)
+        assertEquals(raised.score * IllnessSignalEngine.confounderDampen, low.score, 1e-9)
+        assertTrue(low.copy.contains("a low glucose at night"))
+        assertTrue(low.copy.contains("not a diagnosis"))
+    }
+
+    @Test fun nocturnalLowComesAfterTheOtherReasons() {
+        val inputs = IllnessSignalEngine.Inputs(
+            restingHR = reading(3.2), skinTemp = reading(3.0), hrv = reading(3.5))
+        val r = IllnessSignalEngine.evaluate(
+            inputs,
+            IllnessSignalEngine.Context(alcohol = true, travelPhaseJump = true, nocturnalLow = true),
+            labels)
+        assertEquals(listOf("alcohol", "travel", "a low glucose at night"), r.suppressedBy)
+        assertTrue(r.copy.contains("alcohol, travel and a low glucose at night"))
+    }
+
+    @Test fun personalRaiseThresholdIsOnlyEverStricter() {
+        // Two signals at z 3.5: 2 x 22 x 1.5 = 66.
+        val inputs = IllnessSignalEngine.Inputs(restingHR = reading(3.5), hrv = reading(3.5))
+        val base = IllnessSignalEngine.evaluate(inputs, IllnessSignalEngine.Context(), labels)
+        assertEquals(IllnessSignalEngine.Level.RAISED, base.level)
+        assertEquals(66.0, base.score, 1e-9)
+        val strict = IllnessSignalEngine.evaluate(
+            inputs, IllnessSignalEngine.Context(personalRaiseThreshold = 70.0), labels)
+        assertEquals(IllnessSignalEngine.Level.MILD, strict.level)
+        assertEquals(66.0, strict.score, 1e-9)
+        val atScore = IllnessSignalEngine.evaluate(
+            inputs, IllnessSignalEngine.Context(personalRaiseThreshold = 66.0), labels)
+        assertEquals(IllnessSignalEngine.Level.RAISED, atScore.level)
+        // A "personal" value below the shipped 50 changes nothing: two signals at z 3.0 score 44, still mild.
+        val at44 = IllnessSignalEngine.Inputs(restingHR = reading(3.0), hrv = reading(3.0))
+        val low = IllnessSignalEngine.evaluate(
+            at44, IllnessSignalEngine.Context(personalRaiseThreshold = 10.0), labels)
+        assertEquals(IllnessSignalEngine.Level.MILD, low.level)
+    }
+
     @Test fun scorePerSignalCapping() {
         val inputs = IllnessSignalEngine.Inputs(restingHR = reading(100.0), skinTemp = reading(2.5))
         val r = IllnessSignalEngine.evaluate(inputs, IllnessSignalEngine.Context(), labels)

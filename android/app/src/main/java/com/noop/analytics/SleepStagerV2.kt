@@ -153,17 +153,18 @@ object SleepStagerV2 {
         return segments
     }
 
-    // ── Recipe constants (all fixed a-priori — NOT fit to labels) ────────────────────────────────────
+    // ── Recipe constants (a-priori, except the PSG-calibrated deep gate and base rates — see the Swift
+    //    SleepStagerV2 header for the PhysioNet sleep-accel check) ─────────────────────────────────────
 
     private val stageNames = listOf("deep", "rem", "light", "awake")
 
-    /** Population sleep-architecture base rates as log-priors (adult TST ≈ light 50 / deep 18 / rem 22 /
-     *  waso 10 %). Calibrates the boundary so light wins weak-evidence epochs. */
+    /** Sleep-architecture base rates as log-priors (light 54 / deep 14 / rem 22 / waso 10 %). Deep 0.14 (first
+     *  shipped 0.18, light 0.50) is the PSG calibration: with 0.18 the recipe scored ~25 % deep against 15 %. */
     private val baseLogPrior: Map<String, Double> = mapOf(
-        "light" to ln(0.50), "deep" to ln(0.18), "rem" to ln(0.22), "awake" to ln(0.10))
+        "light" to ln(0.54), "deep" to ln(0.14), "rem" to ln(0.22), "awake" to ln(0.10))
 
-    /** Deep is eligible only in the night's lowest ~20 % HR-flatness epochs (≈ deep base rate + margin). */
-    private const val deepGateThresh = 0.20
+    /** Deep is eligible only in the night's lowest ~15 % HR-flatness epochs (PSG-calibrated; first shipped 0.20). */
+    private const val deepGateThresh = 0.15
     private const val deepGateSlope = 5.0
 
     /** Motion thresholds are RELATIVE to each night's own quiescent jerk floor (median per-second jerk over

@@ -388,6 +388,10 @@ public struct SegmentedPillControl<T: Hashable>: View {
                 } label: {
                     Text(label(item))
                         .font(StrandFont.captionNumber)
+                        // A segment label never wraps: a longer translation ("TUTTO" for ALL) used to break
+                        // onto two lines once the row was squeezed by a sibling. It shrinks a little instead.
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                         // Active segment is SELECTION CHROME, so it follows the accent: on dark a
                         // gold-gradient pill with gold-deep ink; on light a flat blue accent pill with
                         // white ink (so the light theme's selection matches its blue chrome, not gold).

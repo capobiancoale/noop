@@ -59,6 +59,7 @@ struct CustomClient: AIProviderClient {
     func fetchModels(key: String, session: URLSession) async throws -> [String] {
         var req = URLRequest(url: AIProvider.custom.modelsEndpoint)
         req.httpMethod = "GET"
+        req.timeoutInterval = 15
         if !key.isEmpty { req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization") }
 
         return parseModels(try await performRequest(req, session: session))
@@ -95,6 +96,7 @@ struct CustomClient: AIProviderClient {
 
         var req = URLRequest(url: AIProvider.custom.endpoint)
         req.httpMethod = "POST"
+        req.timeoutInterval = 180   // a local model's first answer (cold load) can take well over 60 s
         if !key.isEmpty { req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization") }
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)

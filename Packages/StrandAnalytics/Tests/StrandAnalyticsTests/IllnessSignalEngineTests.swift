@@ -140,6 +140,116 @@ final class IllnessSignalEngineTests: XCTestCase {
         }
     }
 
+    // MARK: - A low glucose at night is a confounder like the others
+
+    func testNocturnalLowSuppressesLikeOtherConfounders() {
+        let inputs = IllnessSignalEngine.Inputs(
+            restingHR: reading(3.2), skinTemp: reading(3.0), hrv: reading(3.5))
+        let raised = IllnessSignalEngine.evaluate(inputs, context: .init(), firedLabels: labels)
+        let low = IllnessSignalEngine.evaluate(
+            inputs, context: .init(nocturnalLow: true), firedLabels: labels)
+        XCTAssertEqual(raised.level, .raised)
+        XCTAssertEqual(low.level, .suppressed)
+        XCTAssertEqual(low.suppressedBy, ["a low glucose at night"])
+        XCTAssertEqual(low.score, raised.score * IllnessSignalEngine.confounderDampen, accuracy: 1e-9)
+        XCTAssertTrue(low.copy.contains("a low glucose at night"))
+        XCTAssertTrue(low.copy.contains("not a diagnosis"))
+    }
+
+    func testNocturnalLowComesAfterTheOtherReasons() {
+        let inputs = IllnessSignalEngine.Inputs(
+            restingHR: reading(3.2), skinTemp: reading(3.0), hrv: reading(3.5))
+        let r = IllnessSignalEngine.evaluate(
+            inputs, context: .init(alcohol: true, travelPhaseJump: true, nocturnalLow: true),
+            firedLabels: labels)
+        XCTAssertEqual(r.suppressedBy, ["alcohol", "travel", "a low glucose at night"])
+        XCTAssertTrue(r.copy.contains("alcohol, travel and a low glucose at night"))
+    }
+
+    func testNocturnalLowDefaultsOffAndLeavesEveryOtherPathUnchanged() {
+        XCTAssertFalse(IllnessSignalEngine.Context().nocturnalLow)
+        XCTAssertNil(IllnessSignalEngine.Context().personalRaiseThreshold)
+        // A quiet day stays quiet and an already-unwell day stays already-unwell with the flag set:
+        // the flag only adds a reason where the engine would otherwise have raised.
+        let quiet = IllnessSignalEngine.evaluate(
+            IllnessSignalEngine.Inputs(restingHR: reading(4.0)),
+            context: .init(nocturnalLow: true), firedLabels: labels)
+        XCTAssertEqual(quiet.level, .quiet)
+        XCTAssertTrue(quiet.suppressedBy.isEmpty)
+        let unwell = IllnessSignalEngine.evaluate(
+            IllnessSignalEngine.Inputs(restingHR: reading(3.2), hrv: reading(3.5)),
+            context: .init(alreadyUnwell: true, nocturnalLow: true), firedLabels: labels)
+        XCTAssertEqual(unwell.level, .alreadyUnwell)
+    }
+
+    func testNocturnalLowThresholdIsLevelOneHypoglycaemia() {
+        XCTAssertEqual(IllnessSignalEngine.nocturnalLowMgdl, 70.0)
+    }
+
+    // MARK: - Personal raise threshold (only ever stricter)
+
+    /// Two signals: z 3.5 and 3.5 → 2 × 22 × 1.5 = 66.
+    private let midInputs = IllnessSignalEngine.Inputs(restingHR: .init(zIllnessward: 3.5),
+                                                       hrv: .init(zIllnessward: 3.5))
+
+    func testPersonalThresholdAboveScoreTurnsRaisedIntoMild() {
+        let base = IllnessSignalEngine.evaluate(midInputs, context: .init(), firedLabels: labels)
+        XCTAssertEqual(base.level, .raised)
+        XCTAssertEqual(base.score, 66, accuracy: 1e-9)
+        let strict = IllnessSignalEngine.evaluate(
+            midInputs, context: .init(personalRaiseThreshold: 70), firedLabels: labels)
+        XCTAssertEqual(strict.level, .mild)
+        XCTAssertEqual(strict.score, 66, accuracy: 1e-9)          // the score itself is untouched
+        let atScore = IllnessSignalEngine.evaluate(
+            midInputs, context: .init(personalRaiseThreshold: 66), firedLabels: labels)
+        XCTAssertEqual(atScore.level, .raised)                    // at the threshold counts
+    }
+
+    func testPersonalThresholdBelowTheDefaultIsIgnored() {
+        // Two signals at z 2.6: score 26.4 (mild) and still mild with a "personal" 10, never raised.
+        let inputs = IllnessSignalEngine.Inputs(restingHR: reading(2.6), skinTemp: reading(2.6))
+        let r = IllnessSignalEngine.evaluate(
+            inputs, context: .init(personalRaiseThreshold: 10), firedLabels: labels)
+        XCTAssertEqual(r.level, .mild)
+        // A score of 44 (two signals at z 3.0) is below the shipped 50, so a "personal" 10 cannot raise it.
+        let at44 = IllnessSignalEngine.Inputs(restingHR: reading(3.0), hrv: reading(3.0))
+        XCTAssertEqual(IllnessSignalEngine.evaluate(at44, context: .init(personalRaiseThreshold: 10),
+                                                    firedLabels: labels).level, .mild)
+        XCTAssertEqual(IllnessSignalEngine.effectiveRaiseThreshold(personal: 10), 50)
+        XCTAssertEqual(IllnessSignalEngine.effectiveRaiseThreshold(personal: nil), 50)
+        XCTAssertEqual(IllnessSignalEngine.effectiveRaiseThreshold(personal: 83), 83)
+    }
+
+    func testPersonalThresholdDoesNotTouchSuppressedOrUnwellPaths() {
+        let strong = IllnessSignalEngine.Inputs(
+            restingHR: reading(3.2), skinTemp: reading(3.0), hrv: reading(3.5))
+        let alc = IllnessSignalEngine.evaluate(
+            strong, context: .init(alcohol: true, personalRaiseThreshold: 95), firedLabels: labels)
+        XCTAssertEqual(alc.level, .suppressed)
+        let unwell = IllnessSignalEngine.evaluate(
+            strong, context: .init(alreadyUnwell: true, personalRaiseThreshold: 95), firedLabels: labels)
+        XCTAssertEqual(unwell.level, .alreadyUnwell)
+    }
+
+    /// `wouldRaise` (what the calibration replay counts) must be exactly "evaluate reaches .raised on a
+    /// day with no confounder and a trusted baseline", over a grid of z's and personal thresholds.
+    func testWouldRaiseAgreesWithEvaluate() {
+        let zs: [Double] = [0, 1.9, 2.2, 2.6, 3.0, 3.5, 4.2, 6, 12]
+        for a in zs { for b in zs { for c in [0.0, 2.5, 5.0] {
+            let inputs = IllnessSignalEngine.Inputs(restingHR: reading(a), skinTemp: reading(b),
+                                                    hrv: reading(c))
+            let comp = IllnessSignalEngine.composite(inputs)
+            for personal in [nil, 20.0, 50.0, 62.0, 80.0, 100.0] as [Double?] {
+                let r = IllnessSignalEngine.evaluate(
+                    inputs, context: .init(personalRaiseThreshold: personal), firedLabels: labels)
+                let predicted = IllnessSignalEngine.wouldRaise(
+                    score: comp.score, signalCount: comp.firedKeys.count, personalRaiseThreshold: personal)
+                XCTAssertEqual(r.level == .raised, predicted, "z=\(a),\(b),\(c) personal=\(String(describing: personal))")
+                XCTAssertEqual(r.score, comp.score, accuracy: 1e-12)
+            }
+        } } }
+    }
+
     func testScorePerSignalCapping() {
         // A single enormous z is capped, so it alone can't saturate the composite.
         let inputs = IllnessSignalEngine.Inputs(restingHR: reading(100.0), skinTemp: reading(2.5))
